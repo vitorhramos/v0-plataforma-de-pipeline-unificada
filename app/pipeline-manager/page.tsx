@@ -2,18 +2,25 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Breadcrumbs } from '@/components/common/breadcrumbs-tooltips';
-import { Card } from '@/components/ui/card';
 
 const PART_PREFIXES = ['NX', 'HP', 'DL', 'CP', 'LN', 'ST', 'VX', 'AX'];
 const USD_VALUES = [702000, 241000, 451000, 2348000, 1614000, 2301000, 890000, 340000, 1200000, 560000];
 const AGES = [12, 34, 7, 56, 23, 45, 8, 67, 15, 30];
 const CLOSE_DATES = ['2025-07-15', '2025-08-01', '2025-06-30', '2025-09-10', '2025-07-22', '2025-08-14', '2025-10-01', '2025-06-20', '2025-09-28', '2025-07-05'];
 const STATUS_INFO: Record<string, { color: string; description: string }> = {
-  S: { color: 'bg-green-100 text-green-800', description: 'Agendado' },
-  N: { color: 'bg-gray-100 text-gray-700', description: 'Nao iniciado' },
+  S: { color: 'bg-emerald-100 text-emerald-800', description: 'Agendado' },
+  N: { color: 'bg-gray-100 text-gray-600', description: 'Nao iniciado' },
   U: { color: 'bg-blue-100 text-blue-800', description: 'Atualizado' },
+};
+
+const STAGE_COLORS: Record<string, string> = {
+  'Pipelined':      'bg-blue-100 text-blue-800',
+  'Pricing 25%':    'bg-violet-100 text-violet-800',
+  'Up Selling 50%': 'bg-amber-100 text-amber-800',
+  'Committed 75%':  'bg-emerald-100 text-emerald-800',
+  'Net Lost':       'bg-red-100 text-red-700',
 };
 const mockQuotes = Array.from({ length: 85 }, (_, i) => ({
   id: i + 1,
@@ -69,188 +76,194 @@ export default function PipelineManagerPage() {
   const totalPages = Math.ceil(mockQuotes.length / pageSize);
   const paginatedQuotes = mockQuotes.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
+  const totalUsd = mockQuotes.reduce((s, q) => s + q.usd_value, 0);
+  const committed = mockQuotes.filter(q => q.stage === 'Committed 75%').reduce((s, q) => s + q.usd_value, 0);
+  const avgProb = Math.round(mockQuotes.reduce((s, q) => s + q.probability, 0) / mockQuotes.length);
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="sticky top-0 z-40 bg-white border-b shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link href="/" className="font-bold text-blue-600 hover:text-blue-700">← Home</Link>
-            <h1 className="text-2xl font-bold text-gray-900">Pipeline Manager</h1>
-          </div>
-          <div className="flex gap-2">
-            <Link href="/dashboard" className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition">
-              Dashboard
-            </Link>
-            <Link href="/pipeline-details" className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition">
-              Details
-            </Link>
-            <Link href="/batch-query" className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition">
-              Batch
-            </Link>
-          </div>
-        </div>
-      </nav>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
         <Breadcrumbs items={[{ label: 'Pipeline Manager' }]} />
 
-        <Card className="p-6 bg-white border-t-4 border-t-indigo-600">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-gray-900">Toggle View</h2>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setView('charts')}
-                className={`px-4 py-2 rounded text-sm font-medium transition ${
-                  view === 'charts'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                📊 Gráficos
-              </button>
-              <button
-                onClick={() => setView('table')}
-                className={`px-4 py-2 rounded text-sm font-medium transition ${
-                  view === 'table'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                📋 Tabela
-              </button>
-            </div>
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Pipeline Manager</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Graficos e tabela de 85 quotes ativos.</p>
           </div>
-        </Card>
+          {/* View toggle */}
+          <div className="flex items-center bg-gray-100 rounded-lg p-1 gap-1">
+            <button
+              onClick={() => setView('charts')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition ${
+                view === 'charts' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+              Graficos
+            </button>
+            <button
+              onClick={() => setView('table')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition ${
+                view === 'table' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18M10 4v16M3 6a1 1 0 011-1h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6z" /></svg>
+              Tabela
+            </button>
+          </div>
+        </div>
 
-        {view === 'charts' ? (
-          <div className="space-y-8">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="p-6 bg-white">
-                <h3 className="text-sm font-bold text-gray-900 mb-4">Volume por Revenda (Top 10)</h3>
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={mockData.revendas} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" tick={{ fontSize: 11 }} />
-                    <YAxis dataKey="name" type="category" width={90} tick={{ fontSize: 10 }} />
-                    <Tooltip formatter={(value) => `$${(value / 1000000).toFixed(1)}M`} />
-                    <Bar dataKey="value" fill="#8b5cf6" radius={[0, 8, 8, 0]} />
+        {/* Summary cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-blue-500 px-4 py-3">
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Quotes</p>
+            <p className="text-xl font-bold text-gray-900 mt-1">{mockQuotes.length}</p>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 px-4 py-3">
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Total USD</p>
+            <p className="text-xl font-bold text-gray-900 mt-1">${(totalUsd / 1000000).toFixed(1)}M</p>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-violet-500 px-4 py-3">
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Committed</p>
+            <p className="text-xl font-bold text-gray-900 mt-1">${(committed / 1000000).toFixed(1)}M</p>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-amber-500 px-4 py-3">
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Prob Media</p>
+            <p className="text-xl font-bold text-gray-900 mt-1">{avgProb}%</p>
+          </div>
+        </div>
+
+        {/* Charts view */}
+        {view === 'charts' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-gray-900">Volume por Revenda</h3>
+                  <span className="text-xs text-gray-400">Top 5</span>
+                </div>
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={mockData.revendas} layout="vertical" barSize={16}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 10, fill: '#6b7280' }} tickFormatter={(v) => `$${(v/1000000).toFixed(0)}M`} />
+                    <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 10, fill: '#6b7280' }} />
+                    <Tooltip formatter={(value) => [`$${(Number(value) / 1000000).toFixed(1)}M`, 'USD']} />
+                    <Bar dataKey="value" fill="#8b5cf6" radius={[0, 6, 6, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
-              </Card>
+              </div>
 
-              <Card className="p-6 bg-white">
-                <h3 className="text-sm font-bold text-gray-900 mb-4">Volume por Fabricante</h3>
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={mockData.vendors}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" angle={-45} height={80} tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(value) => `$${(value / 1000000).toFixed(1)}M`} />
-                    <Bar dataKey="value" fill="#f59e0b" radius={[8, 8, 0, 0]} />
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-gray-900">Volume por Fabricante</h3>
+                  <span className="text-xs text-gray-400">USD</span>
+                </div>
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={mockData.vendors} barSize={36}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} />
+                    <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickFormatter={(v) => `$${(v/1000000).toFixed(0)}M`} />
+                    <Tooltip formatter={(value) => [`$${(Number(value) / 1000000).toFixed(1)}M`, 'USD']} />
+                    <Bar dataKey="value" fill="#f59e0b" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
-              </Card>
+              </div>
             </div>
 
-            <Card className="p-6 bg-white">
-              <h3 className="text-sm font-bold text-gray-900 mb-4">Distribuição de Stages (6 meses)</h3>
-              <ResponsiveContainer width="100%" height={300}>
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-gray-900">Distribuicao de Stages — Ultimos 6 Meses</h3>
+                <span className="text-xs text-emerald-600 font-semibold">Committed em alta</span>
+              </div>
+              <ResponsiveContainer width="100%" height={260}>
                 <LineChart data={mockData.monthlyTrend}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => `$${(value / 1000000).toFixed(1)}M`} />
-                  <Line type="monotone" dataKey="committed" stroke="#10b981" strokeWidth={2} name="Committed" />
-                  <Line type="monotone" dataKey="upselling" stroke="#f59e0b" strokeWidth={2} name="Up Selling" />
-                  <Line type="monotone" dataKey="pricing" stroke="#3b82f6" strokeWidth={2} name="Pricing" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} />
+                  <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickFormatter={(v) => `$${(v/1000000).toFixed(0)}M`} />
+                  <Tooltip formatter={(value) => [`$${(Number(value) / 1000000).toFixed(1)}M`]} />
+                  <Legend iconSize={10} iconType="circle" wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                  <Line type="monotone" dataKey="committed" stroke="#10b981" strokeWidth={2.5} dot={{ r: 3, fill: '#10b981' }} name="Committed 75%" />
+                  <Line type="monotone" dataKey="upselling" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 3, fill: '#f59e0b' }} name="Up Selling 50%" />
+                  <Line type="monotone" dataKey="pricing" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 3, fill: '#3b82f6' }} name="Pricing 25%" />
                 </LineChart>
               </ResponsiveContainer>
-            </Card>
+            </div>
           </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between text-sm">
-              <p className="text-gray-600">
-                Mostrando {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, mockQuotes.length)} de {mockQuotes.length} registros
+        )}
+
+        {/* Table view */}
+        {view === 'table' && (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+              <p className="text-xs text-gray-500">
+                Mostrando <span className="font-semibold text-gray-700">{(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, mockQuotes.length)}</span> de <span className="font-semibold text-gray-700">{mockQuotes.length}</span> registros
               </p>
             </div>
-            <Card className="overflow-hidden bg-white shadow">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-100 border-b">
-                    <tr>
-                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-700 whitespace-nowrap">CPO ID</th>
-                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-700 whitespace-nowrap">Part No</th>
-                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-700 whitespace-nowrap">Territory</th>
-                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-700 whitespace-nowrap">Vendor</th>
-                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-700 whitespace-nowrap">Revenda</th>
-                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-700 whitespace-nowrap">End User</th>
-                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-700 whitespace-nowrap">Quote Name</th>
-                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-700 whitespace-nowrap">Stage</th>
-                      <th className="px-3 py-2 text-right text-xs font-bold text-gray-700 whitespace-nowrap">Prob %</th>
-                      <th className="px-3 py-2 text-right text-xs font-bold text-gray-700 whitespace-nowrap">USD Value</th>
-                      <th className="px-3 py-2 text-center text-xs font-bold text-gray-700 whitespace-nowrap">Budget</th>
-                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-700 whitespace-nowrap">Close Date</th>
-                      <th className="px-3 py-2 text-center text-xs font-bold text-gray-700 whitespace-nowrap">Age</th>
-                      <th className="px-3 py-2 text-center text-xs font-bold text-gray-700 whitespace-nowrap">Status</th>
-                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-700 whitespace-nowrap">BU</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedQuotes.map((q, idx) => (
-                      <tr key={idx} className="border-b hover:bg-indigo-50 transition text-gray-900">
-                        <td className="px-3 py-2 text-xs font-mono text-blue-600 font-bold whitespace-nowrap">{q.cpo_id}</td>
-                        <td className="px-3 py-2 text-xs font-mono text-gray-800 whitespace-nowrap">{q.part_no}</td>
-                        <td className="px-3 py-2 text-xs text-gray-800 whitespace-nowrap">{q.sales_territory}</td>
-                        <td className="px-3 py-2 text-xs text-gray-800 whitespace-nowrap">{q.vendor}</td>
-                        <td className="px-3 py-2 text-xs font-medium text-gray-900 whitespace-nowrap">{q.master_customer}</td>
-                        <td className="px-3 py-2 text-xs text-gray-800 whitespace-nowrap">{q.end_user}</td>
-                        <td className="px-3 py-2 text-xs font-medium text-gray-900 whitespace-nowrap">{q.quote_name}</td>
-                        <td className="px-3 py-2 text-xs whitespace-nowrap">
-                          <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded text-xs font-semibold">{q.stage}</span>
-                        </td>
-                        <td className="px-3 py-2 text-right text-xs font-bold text-gray-900">{q.probability}%</td>
-                        <td className="px-3 py-2 text-right text-xs font-bold text-green-700">${(q.usd_value / 1000).toFixed(0)}K</td>
-                        <td className="px-3 py-2 text-center text-xs">
-                          <span className={`px-2 py-0.5 rounded text-xs font-semibold ${q.budgetary === 'Yes' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-600'}`}>{q.budgetary}</span>
-                        </td>
-                        <td className="px-3 py-2 text-xs text-gray-800 whitespace-nowrap">{q.close_date}</td>
-                        <td className="px-3 py-2 text-center text-xs font-medium text-gray-800">{q.quote_age}d</td>
-                        <td className="px-3 py-2 text-center text-xs">
-                          <span className={`px-2 py-0.5 rounded text-xs font-semibold ${STATUS_INFO[q.status]?.color ?? ''}`}>{q.status}</span>
-                        </td>
-                        <td className="px-3 py-2 text-xs text-gray-800 whitespace-nowrap">{q.bu}</td>
-                      </tr>
+            <div className="overflow-x-auto">
+              <table className="min-w-[1400px] w-full text-xs">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    {['CPO ID','Part No','Territory','Vendor','Revenda','End User','Quote Name','Stage','Prob','USD','Budget','Close Date','Age','Status','BU'].map(h => (
+                      <th key={h} className="px-3 py-2.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap first:pl-5 last:pr-5">
+                        {h}
+                      </th>
                     ))}
-                  </tbody>
-                </table>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {paginatedQuotes.map((q, idx) => (
+                    <tr key={idx} className={`hover:bg-blue-50 transition-colors text-gray-900 ${idx % 2 === 1 ? 'bg-gray-50/50' : 'bg-white'}`}>
+                      <td className="px-3 py-2.5 pl-5 font-mono text-blue-600 font-bold whitespace-nowrap">{q.cpo_id}</td>
+                      <td className="px-3 py-2.5 font-mono text-gray-700 whitespace-nowrap">{q.part_no}</td>
+                      <td className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{q.sales_territory}</td>
+                      <td className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{q.vendor}</td>
+                      <td className="px-3 py-2.5 font-medium text-gray-800 whitespace-nowrap">{q.master_customer}</td>
+                      <td className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{q.end_user}</td>
+                      <td className="px-3 py-2.5 font-medium text-gray-800 whitespace-nowrap">{q.quote_name}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${STAGE_COLORS[q.stage] ?? 'bg-gray-100 text-gray-700'}`}>{q.stage}</span>
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-bold text-gray-800">{q.probability}%</td>
+                      <td className="px-3 py-2.5 text-right font-bold text-emerald-700 whitespace-nowrap">${(q.usd_value / 1000).toFixed(0)}K</td>
+                      <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${q.budgetary === 'Yes' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500'}`}>{q.budgetary}</span>
+                      </td>
+                      <td className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{q.close_date}</td>
+                      <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                        <span className={`font-semibold ${q.quote_age > 30 ? 'text-red-600' : 'text-gray-700'}`}>{q.quote_age}d</span>
+                      </td>
+                      <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${STATUS_INFO[q.status]?.color ?? ''}`}>{q.status}</span>
+                      </td>
+                      <td className="px-3 py-2.5 pr-5 text-gray-600 whitespace-nowrap text-[11px]">{q.bu}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 bg-gray-50">
+              <p className="text-xs text-gray-500">Pagina {currentPage} de {totalPages}</p>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1}
+                  className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                  Anterior
+                </button>
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  const page = Math.max(1, Math.min(currentPage - 2, totalPages - 4)) + i;
+                  if (page > totalPages) return null;
+                  return (
+                    <button key={page} onClick={() => setCurrentPage(page)}
+                      className={`w-8 h-8 text-xs font-medium rounded-lg transition ${currentPage === page ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'}`}>
+                      {page}
+                    </button>
+                  );
+                })}
+                <button onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition">
+                  Proximo
+                </button>
               </div>
-            </Card>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded text-sm font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition"
-              >
-                Anterior
-              </button>
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const page = currentPage - 2 + i;
-                if (page < 1 || page > totalPages) return null;
-                return (
-                  <button key={page} onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-2 rounded text-sm font-medium transition ${currentPage === page ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-                    {page}
-                  </button>
-                );
-              })}
-              <button
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded text-sm font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition"
-              >
-                Proximo
-              </button>
             </div>
           </div>
         )}
