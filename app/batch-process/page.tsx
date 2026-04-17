@@ -12,7 +12,7 @@ export default function BatchProcessPage() {
 
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Batch Process - Upload Excel</h1>
-          <p className="text-gray-600 text-sm">Faça upload de um arquivo Excel com template • Validação automática • Preview de resultados • Processamento seguro</p>
+          <p className="text-gray-600 text-sm">Faça upload de um arquivo Excel com template. Validação automática, preview de resultados e processamento seguro.</p>
         </div>
 
         <BatchProcessUploader />

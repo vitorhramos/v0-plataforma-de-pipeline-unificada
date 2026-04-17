@@ -43,10 +43,10 @@ export function ModeToggle() {
             </p>
             <div className="p-4 bg-purple-50 border border-purple-200 rounded">
               <p className="font-semibold text-purple-900 mb-2">Impacto previsto:</p>
-              <ul className="text-sm text-purple-800 space-y-1">
-                <li>• 15 cotações seriam atualizadas</li>
-                <li>• Total USD impactado: $2.3M</li>
-                <li>• Mudanças em estágio, data de fechamento, etc</li>
+              <ul className="text-sm text-purple-800 space-y-1 list-disc list-inside">
+                <li>15 cotacoes seriam atualizadas</li>
+                <li>Total USD impactado: $2.3M</li>
+                <li>Mudancas em estagio, data de fechamento, etc</li>
               </ul>
             </div>
             <button className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-all">

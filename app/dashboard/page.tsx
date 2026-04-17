@@ -73,7 +73,7 @@ export default function DashboardPage() {
 
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Executivo</h1>
-          <p className="text-gray-600 text-sm">12 KPIs, 8 gráficos e 14 filtros avançados • Pressione <kbd className="px-2 py-1 bg-gray-200 rounded text-xs">Ctrl+F</kbd> para filtros</p>
+          <p className="text-gray-600 text-sm">12 KPIs, 8 gráficos e 14 filtros avançados. Pressione <kbd className="px-2 py-1 bg-gray-200 rounded text-xs">Ctrl+F</kbd> para filtros.</p>
         </div>
 
         <div>

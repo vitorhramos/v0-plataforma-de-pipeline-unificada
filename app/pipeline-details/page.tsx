@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Breadcrumbs, Tooltip } from '@/components/common/breadcrumbs-tooltips';
@@ -29,10 +28,10 @@ const mockQuotes = Array.from({ length: 85 }, (_, i) => ({
   status: ['S', 'N', 'U'][i % 3],
 }));
 
-const STATUS_DESCRIPTIONS = {
-  S: { label: 'Scheduled', color: 'bg-green-100 text-green-800', description: 'Agendado para processamento' },
-  N: { label: 'Not Started', color: 'bg-gray-100 text-gray-800', description: 'Não iniciado' },
-  U: { label: 'Updated', color: 'bg-blue-100 text-blue-800', description: 'Atualizado recentemente' },
+const STATUS_INFO: Record<string, { color: string; description: string }> = {
+  S: { color: 'bg-green-100 text-green-800', description: 'Agendado para processamento' },
+  N: { color: 'bg-gray-100 text-gray-800', description: 'Nao iniciado' },
+  U: { color: 'bg-blue-100 text-blue-800', description: 'Atualizado recentemente' },
 };
 
 export default function PipelineDetailsPage() {
@@ -41,9 +40,8 @@ export default function PipelineDetailsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const { add: addToHistory } = useOperationHistory();
   const toast = useToast();
-  const [showHistory, setShowHistory] = useState(false);
 
-  const filteredQuotes = mockQuotes.filter(q => 
+  const filteredQuotes = mockQuotes.filter(q =>
     q.quote_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     q.cpo_id.includes(searchTerm) ||
     q.part_no.includes(searchTerm)
@@ -57,18 +55,20 @@ export default function PipelineDetailsPage() {
   const totalPages = Math.ceil(filteredQuotes.length / pageSize);
 
   const handleExport = (format: string) => {
-    addToHistory('Export', `Exportado ${filteredQuotes.length} registros em formato ${format}`, 'success');
+    addToHistory('Export', `Exportado ${filteredQuotes.length} registros em ${format}`, 'success');
     toast.success(`Exportados ${filteredQuotes.length} registros em ${format}`);
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        <Breadcrumbs items={[{ label: 'Pipeline' }, { label: 'Details', href: '/pipeline-details' }]} />
+        <Breadcrumbs items={[{ label: 'Pipeline' }, { label: 'Details' }]} />
 
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Pipeline Details</h1>
-          <p className="text-gray-600 text-sm">19 campos de análise • Busca em tempo real • Paginação inteligente • Status badges S/N/U</p>
+          <p className="text-gray-600 text-sm">
+            19 campos de analise. Busca em tempo real, paginacao inteligente e Status badges S/N/U.
+          </p>
         </div>
 
         <Card className="p-6 bg-white border-t-4 border-t-amber-600">
@@ -77,7 +77,7 @@ export default function PipelineDetailsPage() {
               <label className="block text-xs font-medium text-gray-700 mb-1">Busca</label>
               <input
                 type="text"
-                placeholder="Search by Quote Name, CPO ID, or Part Number..."
+                placeholder="Buscar por Quote Name, CPO ID ou Part Number..."
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
@@ -87,7 +87,7 @@ export default function PipelineDetailsPage() {
               />
             </div>
             <Tooltip content="Exportar em CSV">
-              <button 
+              <button
                 onClick={() => handleExport('CSV')}
                 className="px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 transition"
               >
@@ -95,44 +95,36 @@ export default function PipelineDetailsPage() {
               </button>
             </Tooltip>
             <Tooltip content="Exportar em Excel">
-              <button 
+              <button
                 onClick={() => handleExport('Excel')}
                 className="px-4 py-2 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700 transition"
               >
                 Excel
               </button>
             </Tooltip>
-            <button 
-              onClick={() => setShowHistory(!showHistory)}
-              className="px-4 py-2 bg-purple-600 text-white rounded text-sm font-medium hover:bg-purple-700 transition"
-            >
-              Histórico
-            </button>
           </div>
         </Card>
 
         <div className="flex items-center justify-between text-sm">
           <p className="text-gray-600">
-            Mostrando {filteredQuotes.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, filteredQuotes.length)} de {filteredQuotes.length} registros
+            Mostrando {filteredQuotes.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}
+            -{Math.min(currentPage * pageSize, filteredQuotes.length)} de {filteredQuotes.length} registros
           </p>
           <select
             value={pageSize}
-            onChange={(e) => {
-              setPageSize(parseInt(e.target.value));
-              setCurrentPage(1);
-            }}
+            onChange={(e) => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }}
             className="px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value={25}>25 por página</option>
-            <option value={50}>50 por página</option>
-            <option value={100}>100 por página</option>
+            <option value={25}>25 por pagina</option>
+            <option value={50}>50 por pagina</option>
+            <option value={100}>100 por pagina</option>
           </select>
         </div>
 
         <Card className="overflow-hidden bg-white shadow">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gradient-to-r from-gray-100 to-gray-200 border-b">
+              <thead className="bg-gray-100 border-b">
                 <tr>
                   <th className="px-4 py-3 text-left font-bold text-gray-700">CPO ID</th>
                   <th className="px-4 py-3 text-left font-bold text-gray-700">Part No</th>
@@ -167,7 +159,9 @@ export default function PipelineDetailsPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right font-bold text-xs">{quote.probability}%</td>
-                    <td className="px-4 py-3 text-right font-bold text-green-700">${(quote.usd_value / 1000).toFixed(0)}K</td>
+                    <td className="px-4 py-3 text-right font-bold text-green-700">
+                      ${(quote.usd_value / 1000).toFixed(0)}K
+                    </td>
                     <td className="px-4 py-3 text-center text-xs">
                       <span className={`px-2 py-1 rounded text-xs font-semibold ${quote.budgetary === 'Yes' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-600'}`}>
                         {quote.budgetary}
@@ -175,9 +169,9 @@ export default function PipelineDetailsPage() {
                     </td>
                     <td className="px-4 py-3 text-xs">{quote.close_date}</td>
                     <td className="px-4 py-3 text-center text-xs font-medium">{quote.quote_age}d</td>
-                    <td className="px-4 py-3 text-center text-xs font-bold">
-                      <Tooltip content={STATUS_DESCRIPTIONS[quote.status as keyof typeof STATUS_DESCRIPTIONS].description}>
-                        <span className={`px-2 py-1 rounded text-xs font-semibold ${STATUS_DESCRIPTIONS[quote.status as keyof typeof STATUS_DESCRIPTIONS].color}`}>
+                    <td className="px-4 py-3 text-center">
+                      <Tooltip content={STATUS_INFO[quote.status]?.description ?? ''}>
+                        <span className={`px-2 py-1 rounded text-xs font-semibold ${STATUS_INFO[quote.status]?.color ?? ''}`}>
                           {quote.status}
                         </span>
                       </Tooltip>
@@ -196,42 +190,36 @@ export default function PipelineDetailsPage() {
           </Card>
         )}
 
-        <div className="flex items-center justify-between">
-          <div />
-          <div className="flex gap-2">
-            <button
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded text-sm font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-              ← Anterior
-            </button>
-            <div className="flex items-center gap-2">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const page = currentPage - 2 + i;
-                return page > 0 && page <= totalPages ? (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-2 rounded text-sm font-medium transition ${
-                      currentPage === page
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ) : null;
-              })}
-            </div>
-            <button
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded text-sm font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-              Próximo →
-            </button>
-          </div>
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded text-sm font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            Anterior
+          </button>
+          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            const page = currentPage - 2 + i;
+            if (page < 1 || page > totalPages) return null;
+            return (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`px-3 py-2 rounded text-sm font-medium transition ${
+                  currentPage === page ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {page}
+              </button>
+            );
+          })}
+          <button
+            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage === totalPages}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded text-sm font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            Proximo
+          </button>
         </div>
       </div>
     </div>
