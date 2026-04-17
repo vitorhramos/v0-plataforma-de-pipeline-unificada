@@ -156,14 +156,14 @@ export default function PipelineDetailsPage() {
               </thead>
               <tbody>
                 {paginatedQuotes.map((quote, idx) => (
-                  <tr key={idx} className="border-b hover:bg-blue-50 transition">
+                  <tr key={idx} className="border-b hover:bg-blue-50 transition text-gray-900">
                     <td className="px-3 py-2 font-mono text-blue-600 font-bold whitespace-nowrap">{quote.cpo_id}</td>
-                    <td className="px-3 py-2 font-mono whitespace-nowrap">{quote.part_no}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{quote.sales_territory}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{quote.vendor}</td>
-                    <td className="px-3 py-2 font-medium whitespace-nowrap">{quote.master_customer}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{quote.end_user}</td>
-                    <td className="px-3 py-2 font-medium whitespace-nowrap">{quote.quote_name}</td>
+                    <td className="px-3 py-2 font-mono text-gray-800 whitespace-nowrap">{quote.part_no}</td>
+                    <td className="px-3 py-2 text-gray-800 whitespace-nowrap">{quote.sales_territory}</td>
+                    <td className="px-3 py-2 text-gray-800 whitespace-nowrap">{quote.vendor}</td>
+                    <td className="px-3 py-2 font-medium text-gray-900 whitespace-nowrap">{quote.master_customer}</td>
+                    <td className="px-3 py-2 text-gray-800 whitespace-nowrap">{quote.end_user}</td>
+                    <td className="px-3 py-2 font-medium text-gray-900 whitespace-nowrap">{quote.quote_name}</td>
                     <td className="px-3 py-2 whitespace-nowrap">
                       <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded font-semibold whitespace-nowrap">
                         {quote.stage}
@@ -178,8 +178,8 @@ export default function PipelineDetailsPage() {
                         {quote.budgetary}
                       </span>
                     </td>
-                    <td className="px-3 py-2 whitespace-nowrap">{quote.close_date}</td>
-                    <td className="px-3 py-2 text-center font-medium whitespace-nowrap">{quote.quote_age}d</td>
+                    <td className="px-3 py-2 text-gray-800 whitespace-nowrap">{quote.close_date}</td>
+                    <td className="px-3 py-2 text-center font-medium text-gray-800 whitespace-nowrap">{quote.quote_age}d</td>
                     <td className="px-3 py-2 text-center whitespace-nowrap">
                       <Tooltip content={STATUS_INFO[quote.status]?.description ?? ''}>
                         <span className={`px-2 py-0.5 rounded font-semibold ${STATUS_INFO[quote.status]?.color ?? ''}`}>

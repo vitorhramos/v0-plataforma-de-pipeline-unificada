@@ -198,28 +198,28 @@ export default function PipelineManagerPage() {
                   </thead>
                   <tbody>
                     {paginatedQuotes.map((q, idx) => (
-                      <tr key={idx} className="border-b hover:bg-indigo-50 transition">
+                      <tr key={idx} className="border-b hover:bg-indigo-50 transition text-gray-900">
                         <td className="px-3 py-2 text-xs font-mono text-blue-600 font-bold whitespace-nowrap">{q.cpo_id}</td>
-                        <td className="px-3 py-2 text-xs font-mono whitespace-nowrap">{q.part_no}</td>
-                        <td className="px-3 py-2 text-xs whitespace-nowrap">{q.sales_territory}</td>
-                        <td className="px-3 py-2 text-xs whitespace-nowrap">{q.vendor}</td>
-                        <td className="px-3 py-2 text-xs font-medium whitespace-nowrap">{q.master_customer}</td>
-                        <td className="px-3 py-2 text-xs whitespace-nowrap">{q.end_user}</td>
-                        <td className="px-3 py-2 text-xs font-medium whitespace-nowrap">{q.quote_name}</td>
+                        <td className="px-3 py-2 text-xs font-mono text-gray-800 whitespace-nowrap">{q.part_no}</td>
+                        <td className="px-3 py-2 text-xs text-gray-800 whitespace-nowrap">{q.sales_territory}</td>
+                        <td className="px-3 py-2 text-xs text-gray-800 whitespace-nowrap">{q.vendor}</td>
+                        <td className="px-3 py-2 text-xs font-medium text-gray-900 whitespace-nowrap">{q.master_customer}</td>
+                        <td className="px-3 py-2 text-xs text-gray-800 whitespace-nowrap">{q.end_user}</td>
+                        <td className="px-3 py-2 text-xs font-medium text-gray-900 whitespace-nowrap">{q.quote_name}</td>
                         <td className="px-3 py-2 text-xs whitespace-nowrap">
                           <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded text-xs font-semibold">{q.stage}</span>
                         </td>
-                        <td className="px-3 py-2 text-right text-xs font-bold">{q.probability}%</td>
+                        <td className="px-3 py-2 text-right text-xs font-bold text-gray-900">{q.probability}%</td>
                         <td className="px-3 py-2 text-right text-xs font-bold text-green-700">${(q.usd_value / 1000).toFixed(0)}K</td>
                         <td className="px-3 py-2 text-center text-xs">
                           <span className={`px-2 py-0.5 rounded text-xs font-semibold ${q.budgetary === 'Yes' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-600'}`}>{q.budgetary}</span>
                         </td>
-                        <td className="px-3 py-2 text-xs whitespace-nowrap">{q.close_date}</td>
-                        <td className="px-3 py-2 text-center text-xs font-medium">{q.quote_age}d</td>
+                        <td className="px-3 py-2 text-xs text-gray-800 whitespace-nowrap">{q.close_date}</td>
+                        <td className="px-3 py-2 text-center text-xs font-medium text-gray-800">{q.quote_age}d</td>
                         <td className="px-3 py-2 text-center text-xs">
                           <span className={`px-2 py-0.5 rounded text-xs font-semibold ${STATUS_INFO[q.status]?.color ?? ''}`}>{q.status}</span>
                         </td>
-                        <td className="px-3 py-2 text-xs whitespace-nowrap">{q.bu}</td>
+                        <td className="px-3 py-2 text-xs text-gray-800 whitespace-nowrap">{q.bu}</td>
                       </tr>
                     ))}
                   </tbody>
