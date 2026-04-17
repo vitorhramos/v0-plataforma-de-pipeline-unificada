@@ -51,6 +51,38 @@ export default function QuoteDetailsPage() {
           open={confirmOpen}
           title="Confirmar Alterações"
           description="Você tem certeza que deseja salvar essas alterações?"
+          confirmText="Salvar"
+          cancelText="Cancelar"
+          onConfirm={handleConfirm}
+          onCancel={() => setConfirmOpen(false)}
+        />
+      </div>
+    </div>
+  );
+}
+          <p className="text-gray-600 text-sm">Edite os 19 campos disponíveis • Campos em cinza são somente leitura • Campos em amarelo são críticos</p>
+        </div>
+
+        <BatchQuoteDetailsForm />
+
+        <div className="flex gap-2">
+          <button
+            onClick={handleSave}
+            className="px-6 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 transition"
+          >
+            Salvar Alterações
+          </button>
+          <Link href="/dashboard">
+            <button className="px-6 py-2 bg-gray-200 text-gray-700 rounded font-medium hover:bg-gray-300 transition">
+              Cancelar
+            </button>
+          </Link>
+        </div>
+
+        <ConfirmDialog
+          open={confirmOpen}
+          title="Confirmar Alterações"
+          description="Você tem certeza que deseja salvar essas alterações?"
           confirmLabel="Salvar"
           cancelLabel="Cancelar"
           preview={<p className="text-sm">19 campos atualizados • Auditoria será registrada</p>}
