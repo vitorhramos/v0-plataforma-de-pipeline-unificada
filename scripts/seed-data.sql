@@ -1,0 +1,19 @@
+-- Insert sample pipeline data
+INSERT INTO pipeline_quotes (
+  cpo_id, quote_number, master_customer_name, customer_account, sales_territory, 
+  vendor_name, vendor_number, end_user_company, quote_name, quote_stage, probability_percentage,
+  cif_value, net_value, fob_value, margin_percentage, created_date, close_date,
+  is_lost, part_number, product_type, vpc_code, renewal_type, payment_method, po_comments
+) VALUES
+('CPO-2024-001', 'QT-001', 'Revenda ABC', 'ACC-001', 'São Paulo', 'Dell', 'DELL-001', 'XYZ Company', 'Enterprise Suite Q1', '75%', 75, 250000.00, 180000.00, 150000.00, 25.50, '2024-01-15', '2024-04-30', FALSE, 'DELL-PN-123', 'HW', 'VP-001', 'Aquisição', 'Crédito', 'Cliente importante'),
+('CPO-2024-002', 'QT-002', 'Revenda XYZ', 'ACC-002', 'Rio de Janeiro', 'HP', 'HP-002', 'Tech Solutions', 'Server Bundle', '50%', 50, 180000.00, 140000.00, 120000.00, 22.00, '2024-01-20', '2024-05-15', FALSE, 'HP-PN-456', 'HW', 'VP-002', 'Renovação', 'Débito', NULL),
+('CPO-2024-003', 'QT-003', 'Revenda Global', 'ACC-003', 'Brasília', 'Lenovo', 'LENOVO-003', 'Industries Corp', 'Laptop Fleet', '25%', 25, 95000.00, 75000.00, 65000.00, 18.75, '2024-01-25', '2024-06-01', FALSE, 'LENOVO-PN-789', 'HW', 'VP-003', 'Aquisição', 'Crédito', 'Sujeito a aprovação'),
+('CPO-2024-004', 'QT-004', 'Revenda Master', 'ACC-004', 'São Paulo', 'Cisco', 'CISCO-004', 'Networks Plus', 'Switch Infrastructure', '75%', 75, 320000.00, 250000.00, 200000.00, 28.00, '2024-02-01', '2024-04-15', FALSE, 'CISCO-PN-321', 'HW', 'VP-004', 'Renovação', 'Crédito', 'Urgente'),
+('CPO-2024-005', 'QT-005', 'Revenda Tech', 'ACC-005', 'Minas Gerais', 'EMC', 'EMC-005', 'Data Centers Ltd', 'Storage Solution', '50%', 50, 450000.00, 350000.00, 280000.00, 26.50, '2024-02-05', '2024-05-20', FALSE, 'EMC-PN-654', 'HW', 'VP-005', 'Aquisição', 'Débito', NULL),
+('CPO-2024-006', 'QT-006', 'Revenda ABC', 'ACC-001', 'São Paulo', 'Oracle', 'ORACLE-006', 'ERP Systems', 'Database Licensing', '75%', 75, 180000.00, 160000.00, 140000.00, 11.11, '2024-02-10', '2024-04-25', FALSE, 'ORACLE-PN-987', 'SVC', 'VP-006', 'Renovação', 'Crédito', NULL),
+('CPO-2024-007', 'QT-007', 'Revenda XYZ', 'ACC-002', 'Rio de Janeiro', 'Microsoft', 'MSFT-007', 'Cloud Providers', 'Enterprise Cloud', '50%', 50, 220000.00, 180000.00, 150000.00, 22.73, '2024-02-15', '2024-06-10', FALSE, 'MSFT-PN-123', 'SVC', 'VP-007', 'Aquisição', 'Crédito', NULL),
+('CPO-2024-008', 'QT-008', 'Revenda Global', 'ACC-003', 'Brasília', 'Red Hat', 'REDHAT-008', 'Linux Specialists', 'Support Services', '25%', 25, 65000.00, 55000.00, 45000.00, 18.18, '2024-02-20', '2024-07-15', FALSE, 'RH-PN-456', 'SVC', 'VP-008', 'Renovação', 'Débito', 'A confirmar orçamento'),
+('CPO-2024-009', 'QT-009', 'Revenda Master', 'ACC-004', 'São Paulo', 'VMware', 'VMWARE-009', 'Virtualization Team', 'Hypervisor Bundle', '50%', 50, 145000.00, 125000.00, 105000.00, 20.00, '2024-03-01', '2024-05-30', FALSE, 'VM-PN-789', 'HW', 'VP-009', 'Aquisição', 'Crédito', NULL),
+('CPO-2024-010', 'QT-010', 'Revenda Tech', 'ACC-005', 'Minas Gerais', 'Juniper', 'JUNIPER-010', 'Network Pros', 'Routing Equipment', '25%', 25, 98000.00, 85000.00, 72000.00, 18.24, '2024-03-05', '2024-06-30', FALSE, 'JNP-PN-321', 'HW', 'VP-010', 'Renovação', 'Crédito', 'Aguardando feedback cliente'),
+('CPO-2024-011', 'QT-011', 'Revenda ABC', 'ACC-001', 'São Paulo', 'Apple', 'APPLE-011', 'Design Studio', 'MacBook Pro', '50%', 50, 120000.00, 100000.00, 85000.00, 20.00, '2024-03-10', '2024-05-15', TRUE, 'APPLE-PN-654', 'HW', 'VP-011', 'Aquisição', 'Crédito', 'Cliente migrou para concorrente'),
+('CPO-2024-012', 'QT-012', 'Revenda XYZ', 'ACC-002', 'Rio de Janeiro', 'Samsung', 'SAMSUNG-012', 'Retail Chain', 'Display Solutions', '75%', 75, 285000.00, 235000.00, 195000.00, 21.28, '2024-03-15', '2024-04-20', FALSE, 'SAM-PN-987', 'HW', 'VP-012', 'Renovação', 'Débito', NULL);
