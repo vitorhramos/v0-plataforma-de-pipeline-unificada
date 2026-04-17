@@ -1,4 +1,4 @@
-import PipelineManager from '@/components/pipeline-manager-new';
+import PipelineManager from '@/components/pipeline-manager-complete';
 
 export const metadata = {
   title: 'Pipeline Manager - Pipeline UPP',

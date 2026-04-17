@@ -1,4 +1,4 @@
-import LandingDashboard from '@/components/landing-dashboard-new';
+import LandingDashboard from '@/components/landing-dashboard-complete';
 
 export const metadata = {
   title: 'Dashboard Executivo - Pipeline UPP',

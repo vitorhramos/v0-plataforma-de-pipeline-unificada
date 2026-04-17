@@ -1,4 +1,4 @@
-import PipelineOperations from '@/components/pipeline-operations-new';
+import PipelineOperations from '@/components/pipeline-operations-complete';
 
 export const metadata = {
   title: 'Pipeline Operations - Pipeline UPP',
