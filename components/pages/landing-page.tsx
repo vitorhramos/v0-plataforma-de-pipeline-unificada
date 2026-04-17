@@ -4,11 +4,181 @@ import { useAppContext } from '@/context/AppContext';
 import { dataService } from '@/lib/data-service-v2';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card } from '@/components/ui/card';
+import { GradientKPICard } from '@/components/common/gradient-kpi-card';
+import { AlertBadge } from '@/components/common/alert-badges';
+import { SkeletonCard, SkeletonTable } from '@/components/common/skeleton-loaders';
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4', '#ec4899', '#14b8a6'];
 
 export default function LandingPage() {
-  const { quotes, filters, setFilters, clearFilters } = useAppContext();
+  const { quotes, filters, setFilters, clearFilters, dataCompactMode } = useAppContext();
+  const kpis = dataService.getKPIs(quotes);
+  const stageData = dataService.getStageDistribution(quotes);
+  const vendorData = dataService.getTopVendors(quotes);
+  const revendaData = dataService.getTopRevendas(quotes);
+  const territoryData = dataService.getTerritoryDistribution(quotes);
+
+  return (
+    <div className={`min-h-screen ${dataCompactMode ? 'space-y-4' : 'space-y-8'}`}>
+      <main className="max-w-7xl mx-auto px-4">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard Executivo</h1>
+          <p className="text-gray-600 mt-2">Visão executiva do pipeline comercial com 12 KPIs e 8 gráficos analíticos</p>
+        </div>
+
+        {/* KPIs Grid - Com Gradients */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 animate-fadeIn">
+          {kpis.map((kpi, idx) => (
+            <GradientKPICard
+              key={idx}
+              title={kpi.label}
+              value={kpi.format === 'currency' ? `$${(kpi.value / 1000).toFixed(0)}K` : kpi.format === 'percentage' ? `${kpi.value}%` : kpi.value.toLocaleString()}
+              trend={kpi.trend ? `+${kpi.trend}%` : undefined}
+              color={COLORS[idx]}
+              icon={idx % 2 === 0 ? '📈' : '💰'}
+            />
+          ))}
+        </div>
+
+        {/* Filters */}
+        <Card className="p-6 mb-8 border-t-4 border-t-blue-500 shadow-lg hover:shadow-xl transition-shadow">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Filtros Avançados</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <input
+              type="text"
+              placeholder="Quote #"
+              onChange={(e) => setFilters({ ...filters, quote_number: e.target.value })}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+            />
+            <select
+              onChange={(e) => setFilters({ ...filters, quote_stage: e.target.value || undefined })}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+            >
+              <option value="">All Stages</option>
+              <option value="Pipelined">Pipelined</option>
+              <option value="Pricing 25%">Pricing 25%</option>
+              <option value="Up Selling 50%">Up Selling 50%</option>
+              <option value="Committed 75%">Committed 75%</option>
+              <option value="Net Lost">Net Lost</option>
+            </select>
+            <select
+              onChange={(e) => setFilters({ ...filters, vendor_name: e.target.value || undefined })}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+            >
+              <option value="">All Vendors</option>
+              {dataService.getUniqueValues('vendor_name').map(v => (
+                <option key={v} value={v}>{v}</option>
+              ))}
+            </select>
+            <button
+              onClick={clearFilters}
+              className="px-4 py-2 bg-gradient-to-r from-gray-200 to-gray-300 text-gray-900 rounded-lg text-sm font-medium hover:from-gray-300 hover:to-gray-400 transition-all transform hover:scale-105"
+            >
+              Clear Filters
+            </button>
+          </div>
+        </Card>
+
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Stage Distribution */}
+          <Card className="p-6 shadow-lg hover:shadow-xl transition-all duration-300 animate-slideIn" style={{ animationDelay: '100ms' }}>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Pipeline por Stage (USD)</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={stageData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="name" angle={-45} height={80} tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip 
+                  formatter={(value) => `$${(value / 1000).toFixed(0)}K`}
+                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                />
+                <Bar dataKey="value" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+
+          {/* Top Revendas */}
+          <Card className="p-6 shadow-lg hover:shadow-xl transition-all duration-300 animate-slideIn" style={{ animationDelay: '200ms' }}>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Top 10 Revendas por Volume</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={revendaData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis type="number" tick={{ fontSize: 12 }} />
+                <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 11 }} />
+                <Tooltip 
+                  formatter={(value) => `$${(value / 1000).toFixed(0)}K`}
+                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                />
+                <Bar dataKey="value" fill="#8b5cf6" radius={[0, 8, 8, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+
+          {/* Territory Distribution */}
+          <Card className="p-6 shadow-lg hover:shadow-xl transition-all duration-300 animate-slideIn" style={{ animationDelay: '300ms' }}>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Distribuição por Territory</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie data={territoryData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
+                  {territoryData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => `$${(value / 1000).toFixed(0)}K`} />
+              </PieChart>
+            </ResponsiveContainer>
+          </Card>
+
+          {/* Vendor Distribution */}
+          <Card className="p-6 shadow-lg hover:shadow-xl transition-all duration-300 animate-slideIn" style={{ animationDelay: '400ms' }}>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Top Vendors por Volume</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={vendorData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="name" angle={-45} height={80} tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip 
+                  formatter={(value) => `$${(value / 1000).toFixed(0)}K`}
+                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                />
+                <Bar dataKey="value" fill="#f59e0b" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+        </div>
+
+        {/* Deals At Risk Section */}
+        <Card className="p-6 mb-8 bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-l-red-500">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-900">Deals em Risco</h3>
+            <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
+              {quotes.filter(q => {
+                const daysToClose = Math.ceil((new Date(q.close_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                return daysToClose <= 7 && daysToClose > 0;
+              }).length} alerts
+            </span>
+          </div>
+          <div className="space-y-2">
+            {quotes.filter(q => {
+              const daysToClose = Math.ceil((new Date(q.close_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+              return daysToClose <= 7 && daysToClose > 0;
+            }).slice(0, 5).map(q => (
+              <div key={q.id} className="flex items-center justify-between p-3 bg-white rounded-lg hover:bg-gray-50 transition-colors">
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900">{q.quote_name}</p>
+                  <p className="text-sm text-gray-600">{q.revenda}</p>
+                </div>
+                <AlertBadge type="expires" label={`${Math.ceil((new Date(q.close_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} dias`} />
+              </div>
+            ))}
+          </div>
+        </Card>
+      </main>
+    </div>
+  );
+}
   const kpis = dataService.getKPIs(quotes);
   const stageData = dataService.getStageDistribution(quotes);
   const vendorData = dataService.getTopVendors(quotes);
