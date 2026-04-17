@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { Card } from '@/components/ui/card';
 import { Breadcrumbs, Tooltip } from '@/components/common/breadcrumbs-tooltips';
 import { useOperationHistory } from '@/components/common/operation-history';
 import { useToast } from '@/components/common/toast';
@@ -40,9 +39,17 @@ const mockQuotes = Array.from({ length: 85 }, (_, i) => ({
 }));
 
 const STATUS_INFO: Record<string, { color: string; description: string }> = {
-  S: { color: 'bg-green-100 text-green-800', description: 'Agendado para processamento' },
-  N: { color: 'bg-gray-100 text-gray-800', description: 'Nao iniciado' },
+  S: { color: 'bg-emerald-100 text-emerald-800', description: 'Agendado para processamento' },
+  N: { color: 'bg-gray-100 text-gray-600', description: 'Nao iniciado' },
   U: { color: 'bg-blue-100 text-blue-800', description: 'Atualizado recentemente' },
+};
+
+const STAGE_COLORS: Record<string, string> = {
+  'Pipelined':      'bg-blue-100 text-blue-800',
+  'Pricing 25%':    'bg-violet-100 text-violet-800',
+  'Up Selling 50%': 'bg-amber-100 text-amber-800',
+  'Committed 75%':  'bg-emerald-100 text-emerald-800',
+  'Net Lost':       'bg-red-100 text-red-700',
 };
 
 export default function PipelineDetailsPage() {
@@ -70,37 +77,28 @@ export default function PipelineDetailsPage() {
     toast.success(`Exportados ${filteredQuotes.length} registros em ${format}`);
   };
 
+  const totalUsd = filteredQuotes.reduce((sum, q) => sum + q.usd_value, 0);
+  const budgetaryCount = filteredQuotes.filter(q => q.budgetary === 'Yes').length;
+  const avgProb = filteredQuotes.length > 0
+    ? Math.round(filteredQuotes.reduce((s, q) => s + q.probability, 0) / filteredQuotes.length)
+    : 0;
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
         <Breadcrumbs items={[{ label: 'Pipeline' }, { label: 'Details' }]} />
 
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Pipeline Details</h1>
-          <p className="text-gray-600 text-sm">
-            19 campos de analise. Busca em tempo real, paginacao inteligente e Status badges S/N/U.
-          </p>
-        </div>
-
-        <Card className="p-6 bg-white border-t-4 border-t-amber-600">
-          <div className="flex gap-4 flex-col md:flex-row md:items-end">
-            <div className="flex-1">
-              <label className="block text-xs font-medium text-gray-700 mb-1">Busca</label>
-              <input
-                type="text"
-                placeholder="Buscar por Quote Name, CPO ID ou Part Number..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full px-4 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Pipeline Details</h1>
+            <p className="text-sm text-gray-500 mt-0.5">19 campos de analise — busca em tempo real, paginacao e badges S/N/U.</p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
             <Tooltip content="Exportar em CSV">
               <button
                 onClick={() => handleExport('CSV')}
-                className="px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 transition"
+                className="px-3 py-1.5 text-xs font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
               >
                 CSV
               </button>
@@ -108,129 +106,188 @@ export default function PipelineDetailsPage() {
             <Tooltip content="Exportar em Excel">
               <button
                 onClick={() => handleExport('Excel')}
-                className="px-4 py-2 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700 transition"
+                className="px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition shadow-sm"
               >
                 Excel
               </button>
             </Tooltip>
           </div>
-        </Card>
+        </div>
 
-        <div className="flex items-center justify-between text-sm">
-          <p className="text-gray-600">
-            Mostrando {filteredQuotes.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}
-            -{Math.min(currentPage * pageSize, filteredQuotes.length)} de {filteredQuotes.length} registros
-          </p>
+        {/* Summary cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-blue-500 px-4 py-3">
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Registros</p>
+            <p className="text-xl font-bold text-gray-900 mt-1">{filteredQuotes.length}</p>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 px-4 py-3">
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Total USD</p>
+            <p className="text-xl font-bold text-gray-900 mt-1">${(totalUsd / 1000000).toFixed(1)}M</p>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-violet-500 px-4 py-3">
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Prob Media</p>
+            <p className="text-xl font-bold text-gray-900 mt-1">{avgProb}%</p>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-amber-500 px-4 py-3">
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Budgetary</p>
+            <p className="text-xl font-bold text-gray-900 mt-1">{budgetaryCount}</p>
+          </div>
+        </div>
+
+        {/* Toolbar */}
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Buscar por Quote Name, CPO ID ou Part Number..."
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => { setSearchTerm(''); setCurrentPage(1); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                &times;
+              </button>
+            )}
+          </div>
           <select
             value={pageSize}
             onChange={(e) => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }}
-            className="px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
           >
-            <option value={25}>25 por pagina</option>
-            <option value={50}>50 por pagina</option>
-            <option value={100}>100 por pagina</option>
+            <option value={25}>25 / pag</option>
+            <option value={50}>50 / pag</option>
+            <option value={100}>100 / pag</option>
           </select>
         </div>
 
-        <Card className="overflow-hidden bg-white shadow">
+        {/* Count */}
+        <p className="text-xs text-gray-500">
+          Mostrando <span className="font-semibold text-gray-700">{filteredQuotes.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredQuotes.length)}</span> de <span className="font-semibold text-gray-700">{filteredQuotes.length}</span> registros
+        </p>
+
+        {/* Table */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-[1400px] w-full text-xs">
-              <thead className="bg-gray-100 border-b sticky top-0">
-                <tr>
-                  <th className="px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap">CPO ID</th>
-                  <th className="px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap">Part No</th>
-                  <th className="px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap">Territory</th>
-                  <th className="px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap">Vendor</th>
-                  <th className="px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap">Revenda</th>
-                  <th className="px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap">End User</th>
-                  <th className="px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap">Quote Name</th>
-                  <th className="px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap">Stage</th>
-                  <th className="px-3 py-2 text-right font-bold text-gray-700 whitespace-nowrap">Prob %</th>
-                  <th className="px-3 py-2 text-right font-bold text-gray-700 whitespace-nowrap">USD Value</th>
-                  <th className="px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap">Budget</th>
-                  <th className="px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap">Close Date</th>
-                  <th className="px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap">Age</th>
-                  <th className="px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap">Status</th>
-                  <th className="px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap">BU</th>
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="px-3 py-2.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap">CPO ID</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap">Part No</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap">Territory</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap">Vendor</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap">Revenda</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap">End User</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap">Quote Name</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap">Stage</th>
+                  <th className="px-3 py-2.5 text-right text-[11px] font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap">Prob</th>
+                  <th className="px-3 py-2.5 text-right text-[11px] font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap">USD</th>
+                  <th className="px-3 py-2.5 text-center text-[11px] font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap">Budget</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap">Close Date</th>
+                  <th className="px-3 py-2.5 text-center text-[11px] font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap">Age</th>
+                  <th className="px-3 py-2.5 text-center text-[11px] font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap">Status</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap">BU</th>
                 </tr>
               </thead>
-              <tbody>
-                {paginatedQuotes.map((quote, idx) => (
-                  <tr key={idx} className="border-b hover:bg-blue-50 transition text-gray-900">
-                    <td className="px-3 py-2 font-mono text-blue-600 font-bold whitespace-nowrap">{quote.cpo_id}</td>
-                    <td className="px-3 py-2 font-mono text-gray-800 whitespace-nowrap">{quote.part_no}</td>
-                    <td className="px-3 py-2 text-gray-800 whitespace-nowrap">{quote.sales_territory}</td>
-                    <td className="px-3 py-2 text-gray-800 whitespace-nowrap">{quote.vendor}</td>
-                    <td className="px-3 py-2 font-medium text-gray-900 whitespace-nowrap">{quote.master_customer}</td>
-                    <td className="px-3 py-2 text-gray-800 whitespace-nowrap">{quote.end_user}</td>
-                    <td className="px-3 py-2 font-medium text-gray-900 whitespace-nowrap">{quote.quote_name}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded font-semibold whitespace-nowrap">
+              <tbody className="divide-y divide-gray-100">
+                {paginatedQuotes.length === 0 ? (
+                  <tr>
+                    <td colSpan={15} className="py-16 text-center">
+                      <p className="text-sm font-medium text-gray-400">Nenhum resultado encontrado</p>
+                      <p className="text-xs text-gray-400 mt-1">Tente outro termo de busca</p>
+                    </td>
+                  </tr>
+                ) : paginatedQuotes.map((quote, idx) => (
+                  <tr
+                    key={idx}
+                    className={`hover:bg-blue-50 transition-colors text-gray-900 ${idx % 2 === 1 ? 'bg-gray-50/50' : 'bg-white'}`}
+                  >
+                    <td className="px-3 py-2.5 font-mono text-blue-600 font-bold whitespace-nowrap">{quote.cpo_id}</td>
+                    <td className="px-3 py-2.5 font-mono text-gray-700 whitespace-nowrap">{quote.part_no}</td>
+                    <td className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.sales_territory}</td>
+                    <td className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.vendor}</td>
+                    <td className="px-3 py-2.5 font-medium text-gray-800 whitespace-nowrap">{quote.master_customer}</td>
+                    <td className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.end_user}</td>
+                    <td className="px-3 py-2.5 font-medium text-gray-800 whitespace-nowrap">{quote.quote_name}</td>
+                    <td className="px-3 py-2.5 whitespace-nowrap">
+                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${STAGE_COLORS[quote.stage] ?? 'bg-gray-100 text-gray-700'}`}>
                         {quote.stage}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-right font-bold whitespace-nowrap">{quote.probability}%</td>
-                    <td className="px-3 py-2 text-right font-bold text-green-700 whitespace-nowrap">
+                    <td className="px-3 py-2.5 text-right font-bold text-gray-800 whitespace-nowrap">{quote.probability}%</td>
+                    <td className="px-3 py-2.5 text-right font-bold text-emerald-700 whitespace-nowrap">
                       ${(quote.usd_value / 1000).toFixed(0)}K
                     </td>
-                    <td className="px-3 py-2 text-center whitespace-nowrap">
-                      <span className={`px-2 py-0.5 rounded font-semibold ${quote.budgetary === 'Yes' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-600'}`}>
+                    <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${quote.budgetary === 'Yes' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500'}`}>
                         {quote.budgetary}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-gray-800 whitespace-nowrap">{quote.close_date}</td>
-                    <td className="px-3 py-2 text-center font-medium text-gray-800 whitespace-nowrap">{quote.quote_age}d</td>
-                    <td className="px-3 py-2 text-center whitespace-nowrap">
+                    <td className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.close_date}</td>
+                    <td className="px-3 py-2.5 text-center text-gray-600 whitespace-nowrap">
+                      <span className={`font-semibold ${quote.quote_age > 30 ? 'text-red-600' : 'text-gray-700'}`}>
+                        {quote.quote_age}d
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 text-center whitespace-nowrap">
                       <Tooltip content={STATUS_INFO[quote.status]?.description ?? ''}>
-                        <span className={`px-2 py-0.5 rounded font-semibold ${STATUS_INFO[quote.status]?.color ?? ''}`}>
+                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${STATUS_INFO[quote.status]?.color ?? ''}`}>
                           {quote.status}
                         </span>
                       </Tooltip>
                     </td>
-                    <td className="px-3 py-2 whitespace-nowrap">{quote.bu}</td>
+                    <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap text-[11px]">{quote.bu}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </Card>
 
-        {filteredQuotes.length === 0 && (
-          <Card className="p-12 bg-white text-center">
-            <p className="text-gray-500">Nenhum resultado encontrado</p>
-          </Card>
-        )}
-
-        <div className="flex justify-end gap-2">
-          <button
-            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded text-sm font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition"
-          >
-            Anterior
-          </button>
-          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-            const page = currentPage - 2 + i;
-            if (page < 1 || page > totalPages) return null;
-            return (
-              <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                className={`px-3 py-2 rounded text-sm font-medium transition ${
-                  currentPage === page ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {page}
-              </button>
-            );
-          })}
-          <button
-            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage === totalPages}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded text-sm font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition"
-          >
-            Proximo
-          </button>
+          {/* Pagination inside table card */}
+          {filteredQuotes.length > 0 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
+              <p className="text-xs text-gray-500">Pagina {currentPage} de {totalPages}</p>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  Anterior
+                </button>
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  const page = Math.max(1, Math.min(currentPage - 2, totalPages - 4)) + i;
+                  if (page > totalPages) return null;
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`w-8 h-8 text-xs font-medium rounded-lg transition ${
+                        currentPage === page
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  Proximo
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
