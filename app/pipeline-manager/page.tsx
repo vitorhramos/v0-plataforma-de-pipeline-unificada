@@ -1,4 +1,4 @@
-import PipelineManagerComponent from '@/components/pipeline-manager';
+import PipelineManagerPage from '@/components/pages/pipeline-manager-page';
 
 export const metadata = {
   title: 'Pipeline Manager - Pipeline UPP',
@@ -6,5 +6,5 @@ export const metadata = {
 };
 
 export default function ManagerPage() {
-  return <PipelineManagerComponent />;
+  return <PipelineManagerPage />;
 }

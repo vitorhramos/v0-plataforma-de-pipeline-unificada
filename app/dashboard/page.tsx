@@ -1,4 +1,4 @@
-import LandingPage from '@/components/landing-page';
+import LandingPage from '@/components/pages/landing-page';
 
 export const metadata = {
   title: 'Dashboard Executivo - Pipeline UPP',

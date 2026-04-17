@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
+import { AppProvider } from '@/context/AppContext';
+import { NotificationCenter } from '@/components/ui/notification-center';
+import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import './globals.css';
 
 const _geist = Geist({ subsets: ['latin'] });
@@ -26,8 +29,18 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className="bg-gray-50 scroll-smooth">
       <body className="font-sans antialiased bg-gray-50">
-        {children}
-        {process.env.NODE_ENV === 'production' && <Analytics />}
+        <AppProvider>
+          <div className="flex">
+            <main className="flex-1">
+              <div className="max-w-7xl mx-auto px-4 py-4">
+                <Breadcrumbs />
+              </div>
+              {children}
+            </main>
+          </div>
+          <NotificationCenter />
+          {process.env.NODE_ENV === 'production' && <Analytics />}
+        </AppProvider>
       </body>
     </html>
   );
