@@ -22,36 +22,54 @@ export default function QuoteDetailsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <Breadcrumbs items={[{ label: 'Edit' }, { label: 'Quote Details' }]} />
 
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Quote Details Editor</h1>
-          <p className="text-gray-600 text-sm">
-            Edite os 19 campos disponíveis. Campos em cinza são somente leitura. Campos em amarelo são críticos.
-          </p>
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Quote Details</h1>
+            <p className="text-sm text-gray-500 mt-1">19 campos. Use os badges para identificar campos criticos e somente leitura.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link href="/dashboard">
+              <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                Cancelar
+              </button>
+            </Link>
+            <button
+              onClick={handleSave}
+              className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition shadow-sm"
+            >
+              Salvar Alterações
+            </button>
+          </div>
         </div>
 
         <BatchQuoteDetailsForm />
 
-        <div className="flex gap-2">
-          <button
-            onClick={handleSave}
-            className="px-6 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 transition"
-          >
-            Salvar Alterações
-          </button>
-          <Link href="/dashboard">
-            <button className="px-6 py-2 bg-gray-200 text-gray-700 rounded font-medium hover:bg-gray-300 transition">
-              Cancelar
+        {/* Footer actions */}
+        <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+          <p className="text-xs text-gray-400">Ultima atualizacao: hoje</p>
+          <div className="flex items-center gap-2">
+            <Link href="/dashboard">
+              <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                Cancelar
+              </button>
+            </Link>
+            <button
+              onClick={handleSave}
+              className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition shadow-sm"
+            >
+              Salvar Alterações
             </button>
-          </Link>
+          </div>
         </div>
 
         <ConfirmDialog
           open={confirmOpen}
           title="Confirmar Alterações"
-          description="Você tem certeza que deseja salvar essas alterações?"
+          description="Voce tem certeza que deseja salvar essas alterações?"
           confirmText="Salvar"
           cancelText="Cancelar"
           onConfirm={handleConfirm}
