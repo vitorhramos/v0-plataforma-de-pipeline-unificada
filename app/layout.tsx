@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next';
 import { AppProvider } from '@/context/AppContext';
 import { NotificationCenter } from '@/components/ui/notification-center';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
+import { AppHeader } from '@/components/common/app-header';
 import './globals.css';
 
 const _geist = Geist({ subsets: ['latin'] });
@@ -30,11 +31,10 @@ export default function RootLayout({
     <html lang="pt-BR" className="bg-gray-50 scroll-smooth">
       <body className="font-sans antialiased bg-gray-50">
         <AppProvider>
-          <div className="flex">
-            <main className="flex-1">
-              <div className="max-w-7xl mx-auto px-4 py-4">
-                <Breadcrumbs />
-              </div>
+          <AppHeader />
+          <div className="flex flex-col min-h-screen">
+            <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-8">
+              <Breadcrumbs />
               {children}
             </main>
           </div>
