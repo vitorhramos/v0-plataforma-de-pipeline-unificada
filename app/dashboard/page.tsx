@@ -77,15 +77,17 @@ export default function DashboardPage() {
         </div>
 
         <div>
-          <h2 className="text-xl font-bold text-gray-900 mb-4">12 KPIs Executivos</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">12 KPIs Executivos</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {mockData.kpis.map((kpi, idx) => (
-              <CustomTooltip key={idx} content={`${kpi.trend} from last month`}>
-                <Card className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 border-l-4 border-l-blue-600 hover:shadow-lg transition cursor-help">
-                  <p className="text-gray-600 text-sm font-medium">{kpi.label}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-2">{kpi.unit}</p>
-                  <p className="text-xs text-green-600 mt-2">{kpi.value} {kpi.trend}</p>
-                </Card>
+              <CustomTooltip key={idx} content={`${kpi.trend} vs. mes anterior`}>
+                <div className="bg-white rounded-lg border border-gray-200 px-3 py-3 hover:border-blue-400 hover:shadow-sm transition cursor-help">
+                  <p className="text-xs text-gray-500 font-medium truncate">{kpi.label}</p>
+                  <p className="text-base font-bold text-gray-900 mt-1">{kpi.unit}</p>
+                  <span className={`text-xs font-medium ${kpi.trend.startsWith('+') ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {kpi.trend}
+                  </span>
+                </div>
               </CustomTooltip>
             ))}
           </div>
