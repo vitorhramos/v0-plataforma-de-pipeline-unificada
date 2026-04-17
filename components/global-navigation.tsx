@@ -13,7 +13,11 @@ export default function GlobalNavigation() {
     { href: '/dashboard', label: 'Dashboard', icon: '📊' },
     { href: '/pipeline-manager', label: 'Manager', icon: '⚡' },
     { href: '/pipeline-details', label: 'Details', icon: '📋' },
-    { href: '/pipeline-operations', label: 'Operations', icon: '✓' },
+    { href: '/batch-query', label: 'Query', icon: '🔍' },
+    { href: '/batch-details', label: 'Batch', icon: '📦' },
+    { href: '/batch-process', label: 'Process', icon: '⚙️' },
+    { href: '/classification', label: 'Classify', icon: '✓' },
+    { href: '/overview-download', label: 'Export', icon: '💾' },
   ];
 
   return (

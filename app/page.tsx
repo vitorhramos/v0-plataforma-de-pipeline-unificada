@@ -75,7 +75,7 @@ export default function Home() {
             </Card>
           </Link>
 
-          <Link href="/pipeline-operations">
+          <Link href="/batch-query">
             <Card className="p-6 bg-white hover:shadow-lg transition cursor-pointer h-full">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
@@ -84,7 +84,7 @@ export default function Home() {
                   </svg>
                 </div>
               </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Pipeline Operations</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Batch Operations</h3>
               <p className="text-gray-600 text-sm">Edição manual ou em massa via batch Excel</p>
             </Card>
           </Link>
@@ -103,8 +103,8 @@ export default function Home() {
                 </div>
               </div>
               <div>
-                <h3 className="text-lg font-medium text-gray-900">KPIs Executivos</h3>
-                <p className="mt-2 text-gray-600">Visualização clara de Pipelined, Pricing, Up Selling, Committed e Net Lost</p>
+                <h3 className="text-lg font-medium text-gray-900">12 KPIs Executivos</h3>
+                <p className="mt-2 text-gray-600">Pipelined, Not Classified, Pricing, Up Selling, Committed, Net Lost + Total e Budgetary</p>
               </div>
             </div>
 
@@ -117,8 +117,8 @@ export default function Home() {
                 </div>
               </div>
               <div>
-                <h3 className="text-lg font-medium text-gray-900">Filtros Avançados</h3>
-                <p className="mt-2 text-gray-600">15+ critérios: Range USD, Fabricante, Revenda, Território, Status, Data, etc.</p>
+                <h3 className="text-lg font-medium text-gray-900">14 Filtros Avançados</h3>
+                <p className="mt-2 text-gray-600">Range USD, Stage, Revenda, Fabricante, Território, Budgetary, Search e mais</p>
               </div>
             </div>
 
@@ -131,8 +131,8 @@ export default function Home() {
                 </div>
               </div>
               <div>
-                <h3 className="text-lg font-medium text-gray-900">Toggle Gráficos/Tabelas</h3>
-                <p className="mt-2 text-gray-600">Pipeline Manager com visualização em gráficos ou tabelas com um clique</p>
+                <h3 className="text-lg font-medium text-gray-900">8 Gráficos Analíticos</h3>
+                <p className="mt-2 text-gray-600">Stage, Fabricante, Território, Range USD, Probabilidade, Quote Count</p>
               </div>
             </div>
 
@@ -145,8 +145,8 @@ export default function Home() {
                 </div>
               </div>
               <div>
-                <h3 className="text-lg font-medium text-gray-900">Edição em Lote</h3>
-                <p className="mt-2 text-gray-600">Atualização manual ou via Excel com validação e auditoria completa</p>
+                <h3 className="text-lg font-medium text-gray-900">19 Campos de Análise</h3>
+                <p className="mt-2 text-gray-600">Pipeline Details com CPO, End User, Fabricante, USD, Stage, Probabilidade e mais</p>
               </div>
             </div>
 
@@ -159,8 +159,8 @@ export default function Home() {
                 </div>
               </div>
               <div>
-                <h3 className="text-lg font-medium text-gray-900">Exportação Forecast</h3>
-                <p className="mt-2 text-gray-600">Download compatível com Forecast com campos padronizados</p>
+                <h3 className="text-lg font-medium text-gray-900">Exportação Múltipla</h3>
+                <p className="mt-2 text-gray-600">CSV, Excel e formato Forecast com campos padronizados</p>
               </div>
             </div>
 
@@ -173,8 +173,8 @@ export default function Home() {
                 </div>
               </div>
               <div>
-                <h3 className="text-lg font-medium text-gray-900">Controle de Acesso</h3>
-                <p className="mt-2 text-gray-600">Perfis: Vendedor, Gerente, Operações, Executivo, Admin</p>
+                <h3 className="text-lg font-medium text-gray-900">Batch Processing</h3>
+                <p className="mt-2 text-gray-600">Upload Excel com template, validação, histórico de operações e auditoria</p>
               </div>
             </div>
           </div>
@@ -190,3 +190,4 @@ export default function Home() {
     </div>
   );
 }
+

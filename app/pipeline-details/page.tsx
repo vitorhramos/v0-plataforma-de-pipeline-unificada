@@ -1,10 +1,10 @@
-import Details from '@/components/details';
+import PipelineDetailsComponent from '@/components/pipeline-details';
 
 export const metadata = {
   title: 'Pipeline Details - Pipeline UPP',
-  description: 'Visão analítica linha a linha com edição e exportação',
+  description: 'Line-by-line analytical view with 19 fields, filters and export',
 };
 
 export default function DetailsPage() {
-  return <Details />;
+  return <PipelineDetailsComponent />;
 }
