@@ -1,4 +1,4 @@
-import LandingDashboard from '@/components/landing-dashboard-complete';
+import Dashboard from '@/components/dashboard';
 
 export const metadata = {
   title: 'Dashboard Executivo - Pipeline UPP',
@@ -6,5 +6,5 @@ export const metadata = {
 };
 
 export default function DashboardPage() {
-  return <LandingDashboard />;
+  return <Dashboard />;
 }

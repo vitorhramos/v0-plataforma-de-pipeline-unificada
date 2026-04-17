@@ -1,4 +1,4 @@
-import PipelineOperations from '@/components/pipeline-operations-complete';
+import Operations from '@/components/operations';
 
 export const metadata = {
   title: 'Pipeline Operations - Pipeline UPP',
@@ -6,5 +6,5 @@ export const metadata = {
 };
 
 export default function OperationsPage() {
-  return <PipelineOperations />;
+  return <Operations />;
 }

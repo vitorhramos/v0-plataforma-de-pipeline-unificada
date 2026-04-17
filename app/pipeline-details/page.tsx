@@ -1,4 +1,4 @@
-import PipelineDetails from '@/components/pipeline-details-complete';
+import Details from '@/components/details';
 
 export const metadata = {
   title: 'Pipeline Details - Pipeline UPP',
@@ -6,5 +6,5 @@ export const metadata = {
 };
 
 export default function DetailsPage() {
-  return <PipelineDetails />;
+  return <Details />;
 }
