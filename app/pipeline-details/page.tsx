@@ -134,60 +134,60 @@ export default function PipelineDetailsPage() {
 
         <Card className="overflow-hidden bg-white shadow">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-100 border-b">
+            <table className="min-w-[1400px] w-full text-xs">
+              <thead className="bg-gray-100 border-b sticky top-0">
                 <tr>
-                  <th className="px-4 py-3 text-left font-bold text-gray-700">CPO ID</th>
-                  <th className="px-4 py-3 text-left font-bold text-gray-700">Part No</th>
-                  <th className="px-4 py-3 text-left font-bold text-gray-700">Territory</th>
-                  <th className="px-4 py-3 text-left font-bold text-gray-700">Vendor</th>
-                  <th className="px-4 py-3 text-left font-bold text-gray-700">Revenda</th>
-                  <th className="px-4 py-3 text-left font-bold text-gray-700">End User</th>
-                  <th className="px-4 py-3 text-left font-bold text-gray-700">Quote Name</th>
-                  <th className="px-4 py-3 text-left font-bold text-gray-700">Stage</th>
-                  <th className="px-4 py-3 text-right font-bold text-gray-700">Prob %</th>
-                  <th className="px-4 py-3 text-right font-bold text-gray-700">USD Value</th>
-                  <th className="px-4 py-3 text-center font-bold text-gray-700">Budget</th>
-                  <th className="px-4 py-3 text-left font-bold text-gray-700">Close Date</th>
-                  <th className="px-4 py-3 text-center font-bold text-gray-700">Age</th>
-                  <th className="px-4 py-3 text-center font-bold text-gray-700">Status</th>
-                  <th className="px-4 py-3 text-left font-bold text-gray-700">BU</th>
+                  <th className="px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap">CPO ID</th>
+                  <th className="px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap">Part No</th>
+                  <th className="px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap">Territory</th>
+                  <th className="px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap">Vendor</th>
+                  <th className="px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap">Revenda</th>
+                  <th className="px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap">End User</th>
+                  <th className="px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap">Quote Name</th>
+                  <th className="px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap">Stage</th>
+                  <th className="px-3 py-2 text-right font-bold text-gray-700 whitespace-nowrap">Prob %</th>
+                  <th className="px-3 py-2 text-right font-bold text-gray-700 whitespace-nowrap">USD Value</th>
+                  <th className="px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap">Budget</th>
+                  <th className="px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap">Close Date</th>
+                  <th className="px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap">Age</th>
+                  <th className="px-3 py-2 text-center font-bold text-gray-700 whitespace-nowrap">Status</th>
+                  <th className="px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap">BU</th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedQuotes.map((quote, idx) => (
                   <tr key={idx} className="border-b hover:bg-blue-50 transition">
-                    <td className="px-4 py-3 font-mono text-blue-600 font-bold text-xs">{quote.cpo_id}</td>
-                    <td className="px-4 py-3 text-xs font-mono">{quote.part_no}</td>
-                    <td className="px-4 py-3 text-xs">{quote.sales_territory}</td>
-                    <td className="px-4 py-3 text-xs">{quote.vendor}</td>
-                    <td className="px-4 py-3 text-xs font-medium">{quote.master_customer}</td>
-                    <td className="px-4 py-3 text-xs truncate max-w-xs">{quote.end_user}</td>
-                    <td className="px-4 py-3 text-xs font-medium">{quote.quote_name}</td>
-                    <td className="px-4 py-3 text-xs">
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-semibold whitespace-nowrap">
+                    <td className="px-3 py-2 font-mono text-blue-600 font-bold whitespace-nowrap">{quote.cpo_id}</td>
+                    <td className="px-3 py-2 font-mono whitespace-nowrap">{quote.part_no}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{quote.sales_territory}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{quote.vendor}</td>
+                    <td className="px-3 py-2 font-medium whitespace-nowrap">{quote.master_customer}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{quote.end_user}</td>
+                    <td className="px-3 py-2 font-medium whitespace-nowrap">{quote.quote_name}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded font-semibold whitespace-nowrap">
                         {quote.stage}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right font-bold text-xs">{quote.probability}%</td>
-                    <td className="px-4 py-3 text-right font-bold text-green-700">
+                    <td className="px-3 py-2 text-right font-bold whitespace-nowrap">{quote.probability}%</td>
+                    <td className="px-3 py-2 text-right font-bold text-green-700 whitespace-nowrap">
                       ${(quote.usd_value / 1000).toFixed(0)}K
                     </td>
-                    <td className="px-4 py-3 text-center text-xs">
-                      <span className={`px-2 py-1 rounded text-xs font-semibold ${quote.budgetary === 'Yes' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-600'}`}>
+                    <td className="px-3 py-2 text-center whitespace-nowrap">
+                      <span className={`px-2 py-0.5 rounded font-semibold ${quote.budgetary === 'Yes' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-600'}`}>
                         {quote.budgetary}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-xs">{quote.close_date}</td>
-                    <td className="px-4 py-3 text-center text-xs font-medium">{quote.quote_age}d</td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-3 py-2 whitespace-nowrap">{quote.close_date}</td>
+                    <td className="px-3 py-2 text-center font-medium whitespace-nowrap">{quote.quote_age}d</td>
+                    <td className="px-3 py-2 text-center whitespace-nowrap">
                       <Tooltip content={STATUS_INFO[quote.status]?.description ?? ''}>
-                        <span className={`px-2 py-1 rounded text-xs font-semibold ${STATUS_INFO[quote.status]?.color ?? ''}`}>
+                        <span className={`px-2 py-0.5 rounded font-semibold ${STATUS_INFO[quote.status]?.color ?? ''}`}>
                           {quote.status}
                         </span>
                       </Tooltip>
                     </td>
-                    <td className="px-4 py-3 text-xs">{quote.bu}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{quote.bu}</td>
                   </tr>
                 ))}
               </tbody>
