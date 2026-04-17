@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
 import { AppProvider } from '@/context/AppContext';
 import { Sidebar } from '@/components/layout/sidebar';
+import { ToastContainer } from '@/components/common/toast';
 import './globals.css';
 
 const _geist = Geist({ subsets: ['latin'] });
@@ -35,6 +36,7 @@ export default function RootLayout({
               {children}
             </main>
           </div>
+          <ToastContainer />
           {process.env.NODE_ENV === 'production' && <Analytics />}
         </AppProvider>
       </body>

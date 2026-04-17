@@ -4,6 +4,9 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card } from '@/components/ui/card';
+import { Breadcrumbs, Tooltip as CustomTooltip } from '@/components/common/breadcrumbs-tooltips';
+import { AdditionalCharts } from '@/components/common/additional-charts';
+import { useKeyboardShortcuts } from '@/components/common/keyboard-shortcuts';
 
 const COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4', '#ec4899', '#14b8a6'];
 
@@ -58,38 +61,32 @@ const mockData = {
 export default function DashboardPage() {
   const [expandFilters, setExpandFilters] = useState(true);
 
+  useKeyboardShortcuts({
+    export: () => alert('Exportando dados...'),
+    filter: () => setExpandFilters(!expandFilters),
+  });
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="sticky top-0 z-40 bg-white border-b shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link href="/" className="font-bold text-blue-600 hover:text-blue-700">← Home</Link>
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard Executivo</h1>
-          </div>
-          <div className="flex gap-2">
-            <Link href="/pipeline-manager" className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition">
-              Manager
-            </Link>
-            <Link href="/pipeline-details" className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition">
-              Details
-            </Link>
-            <Link href="/batch-query" className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition">
-              Batch
-            </Link>
-          </div>
-        </div>
-      </nav>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        <Breadcrumbs items={[{ label: 'Dashboard' }]} />
+
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Executivo</h1>
+          <p className="text-gray-600 text-sm">12 KPIs, 8 gráficos e 14 filtros avançados • Pressione <kbd className="px-2 py-1 bg-gray-200 rounded text-xs">Ctrl+F</kbd> para filtros</p>
+        </div>
+
         <div>
           <h2 className="text-xl font-bold text-gray-900 mb-4">12 KPIs Executivos</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-fadeIn">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {mockData.kpis.map((kpi, idx) => (
-              <Card key={idx} className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 border-l-4 border-l-blue-600 hover:shadow-lg transition">
-                <p className="text-gray-600 text-sm font-medium">{kpi.label}</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">{kpi.unit}</p>
-                <p className="text-xs text-green-600 mt-2">{kpi.value} {kpi.trend}</p>
-              </Card>
+              <CustomTooltip key={idx} content={`${kpi.trend} from last month`}>
+                <Card className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 border-l-4 border-l-blue-600 hover:shadow-lg transition cursor-help">
+                  <p className="text-gray-600 text-sm font-medium">{kpi.label}</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-2">{kpi.unit}</p>
+                  <p className="text-xs text-green-600 mt-2">{kpi.value} {kpi.trend}</p>
+                </Card>
+              </CustomTooltip>
             ))}
           </div>
         </div>
@@ -104,14 +101,18 @@ export default function DashboardPage() {
           </div>
           {expandFilters && (
             <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Min USD</label>
-                <input type="number" placeholder="0" className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Max USD</label>
-                <input type="number" placeholder="999M" className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
+              <CustomTooltip content="Filtro por valor mínimo em USD">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Min USD</label>
+                  <input type="number" placeholder="0" className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+              </CustomTooltip>
+              <CustomTooltip content="Filtro por valor máximo em USD">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Max USD</label>
+                  <input type="number" placeholder="999M" className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+              </CustomTooltip>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Stage</label>
                 <select className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -180,7 +181,7 @@ export default function DashboardPage() {
         </Card>
 
         <div>
-          <h2 className="text-lg font-bold text-gray-900 mb-4">8 Gráficos Analíticos</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Primeiros 4 Gráficos Analíticos</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className="p-6 bg-white">
               <h3 className="text-sm font-bold text-gray-900 mb-4">Stage Distribution (USD)</h3>
@@ -236,6 +237,8 @@ export default function DashboardPage() {
             </Card>
           </div>
         </div>
+
+        <AdditionalCharts />
       </div>
     </div>
   );
