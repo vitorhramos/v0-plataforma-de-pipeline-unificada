@@ -68,9 +68,10 @@ const buildMock = (): Quote[] =>
 // ─── Constants ────────────────────────────────────────────────────────────────
 const VENDORS_LIST = ['Cisco', 'HPE', 'Dell', 'Lenovo'];
 const TERRITORIES_LIST = ['Sao Paulo', 'Rio de Janeiro', 'Minas Gerais'];
-const TEAMS_LIST = ['Team Alpha', 'Team Beta', 'Team Gamma'];
 const BU_LIST = ['BU Storage', 'BU Network', 'BU Compute'];
 const STAGES_LIST = ['Pipelined', 'Pricing 25%', 'Up Selling 50%', 'Committed 75%', 'Net Lost'];
+const REVENDA_LIST = ['Revenda A', 'Revenda B', 'Revenda C', 'Revenda D', 'Revenda E'];
+const ALL_STATUSES = ['BACKORDER', 'BOSOSPLIT', 'CONVERTOK', 'PARTIALBO', 'SALESORDER', 'TERMSFIX', 'QUOTEPO', 'QUOTESHEET', 'READYAF', 'POCHANGE', 'POLINEQC', 'CANCELLED'];
 
 const STATUS_GROUPS = {
   'Virou Pedido': ['BACKORDER', 'BOSOSPLIT', 'CONVERTOK', 'PARTIALBO', 'SALESORDER', 'TERMSFIX'],
@@ -102,10 +103,18 @@ const STAGE_COLORS: Record<string, string> = {
 };
 
 const EMPTY_FILTERS = {
-  stage: '', vendor: '', territory: '', team: '', bu: '',
+  // Identification
+  cpo_id: '', part_no: '', quote_name: '',
+  // Classification
+  stage: '', vendor: '', territory: '', bu: '', revenda: '', end_user: '',
+  // Status
+  status: '',
+  // Values
   min_usd: '', max_usd: '', min_prob: '', max_prob: '',
+  // Date & flags
   budgetary: '', close_date_from: '', close_date_to: '',
-  status_group: '',
+  // Age
+  max_age: '',
 };
 
 // Editable fields config for bulk edit and modal
@@ -161,24 +170,33 @@ export default function PipelineDetailsPage() {
   // ── Filtering ──
   const filteredQuotes = quotes.filter(q => {
     const term = searchTerm.toLowerCase();
-    if (term && !q.quote_name.toLowerCase().includes(term) && !q.cpo_id.includes(searchTerm) && !q.part_no.includes(searchTerm)) return false;
+    if (term && !q.quote_name.toLowerCase().includes(term) && !q.cpo_id.toLowerCase().includes(term) && !q.part_no.toLowerCase().includes(term)) return false;
+    // Identification
+    if (applied.cpo_id && !q.cpo_id.toLowerCase().includes(applied.cpo_id.toLowerCase())) return false;
+    if (applied.part_no && !q.part_no.toLowerCase().includes(applied.part_no.toLowerCase())) return false;
+    if (applied.quote_name && !q.quote_name.toLowerCase().includes(applied.quote_name.toLowerCase())) return false;
+    // Classification
     if (applied.stage && q.stage !== applied.stage) return false;
     if (applied.vendor && q.vendor !== applied.vendor) return false;
     if (applied.territory && q.sales_territory !== applied.territory) return false;
-    if (applied.team && q.team !== applied.team) return false;
     if (applied.bu && q.bu !== applied.bu) return false;
+    if (applied.revenda && q.master_customer !== applied.revenda) return false;
+    if (applied.end_user && !q.end_user.toLowerCase().includes(applied.end_user.toLowerCase())) return false;
+    // Status
+    if (applied.status && q.status !== applied.status) return false;
+    // Values
     if (applied.min_usd && q.usd_value < parseInt(applied.min_usd)) return false;
     if (applied.max_usd && q.usd_value > parseInt(applied.max_usd)) return false;
     if (applied.min_prob && q.probability < parseInt(applied.min_prob)) return false;
     if (applied.max_prob && q.probability > parseInt(applied.max_prob)) return false;
+    // Flags
     if (applied.budgetary === 'yes' && q.budgetary !== 'Yes') return false;
     if (applied.budgetary === 'no' && q.budgetary !== 'No') return false;
+    // Date
     if (applied.close_date_from && q.close_date < applied.close_date_from) return false;
     if (applied.close_date_to && q.close_date > applied.close_date_to) return false;
-    if (applied.status_group) {
-      const group = STATUS_GROUPS[applied.status_group as keyof typeof STATUS_GROUPS];
-      if (group && !group.includes(q.status)) return false;
-    }
+    // Age
+    if (applied.max_age && q.quote_age > parseInt(applied.max_age)) return false;
     return true;
   });
 
@@ -360,15 +378,36 @@ export default function PipelineDetailsPage() {
                 </div>
               )}
             </div>
-            <div className="p-5 space-y-4">
+            <div className="p-5 space-y-5">
+
+              {/* Row 1 — Identificacao (colunas: CPO ID, Part No, Quote Name) */}
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Identificacao</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className={lbl}>CPO ID</label>
+                    <input type="text" placeholder="CPO-1001..." value={filters.cpo_id} onChange={e => setF('cpo_id', e.target.value)} className={inp} />
+                  </div>
+                  <div>
+                    <label className={lbl}>Part No</label>
+                    <input type="text" placeholder="NX-10000..." value={filters.part_no} onChange={e => setF('part_no', e.target.value)} className={inp} />
+                  </div>
+                  <div>
+                    <label className={lbl}>Quote Name</label>
+                    <input type="text" placeholder="QT-024000..." value={filters.quote_name} onChange={e => setF('quote_name', e.target.value)} className={inp} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 2 — Classificacao (colunas: Territory, Vendor, Revenda, End User, BU) */}
               <div>
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Classificacao</p>
-                <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   <div>
-                    <label className={lbl}>Stage</label>
-                    <select value={filters.stage} onChange={e => setF('stage', e.target.value)} className={inp}>
+                    <label className={lbl}>Territory</label>
+                    <select value={filters.territory} onChange={e => setF('territory', e.target.value)} className={inp}>
                       <option value="">Todos</option>
-                      {STAGES_LIST.map(s => <option key={s}>{s}</option>)}
+                      {TERRITORIES_LIST.map(t => <option key={t}>{t}</option>)}
                     </select>
                   </div>
                   <div>
@@ -379,18 +418,15 @@ export default function PipelineDetailsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className={lbl}>Territory</label>
-                    <select value={filters.territory} onChange={e => setF('territory', e.target.value)} className={inp}>
-                      <option value="">Todos</option>
-                      {TERRITORIES_LIST.map(t => <option key={t}>{t}</option>)}
+                    <label className={lbl}>Revenda</label>
+                    <select value={filters.revenda} onChange={e => setF('revenda', e.target.value)} className={inp}>
+                      <option value="">Todas</option>
+                      {REVENDA_LIST.map(r => <option key={r}>{r}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className={lbl}>Team</label>
-                    <select value={filters.team} onChange={e => setF('team', e.target.value)} className={inp}>
-                      <option value="">Todos</option>
-                      {TEAMS_LIST.map(t => <option key={t}>{t}</option>)}
-                    </select>
+                    <label className={lbl}>End User</label>
+                    <input type="text" placeholder="Cliente..." value={filters.end_user} onChange={e => setF('end_user', e.target.value)} className={inp} />
                   </div>
                   <div>
                     <label className={lbl}>BU</label>
@@ -399,39 +435,77 @@ export default function PipelineDetailsPage() {
                       {BU_LIST.map(b => <option key={b}>{b}</option>)}
                     </select>
                   </div>
+                </div>
+              </div>
+
+              {/* Row 3 — Stage, Prob, USD (colunas: Stage, Prob, USD Value) */}
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Stage e Valores</p>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   <div>
-                    <label className={lbl}>Status Grupo</label>
-                    <select value={filters.status_group} onChange={e => setF('status_group', e.target.value)} className={inp}>
+                    <label className={lbl}>Stage</label>
+                    <select value={filters.stage} onChange={e => setF('stage', e.target.value)} className={inp}>
                       <option value="">Todos</option>
-                      {Object.keys(STATUS_GROUPS).map(g => <option key={g}>{g}</option>)}
+                      {STAGES_LIST.map(s => <option key={s}>{s}</option>)}
                     </select>
+                  </div>
+                  <div>
+                    <label className={lbl}>Prob Min %</label>
+                    <input type="number" min="0" max="100" placeholder="0" value={filters.min_prob} onChange={e => setF('min_prob', e.target.value)} className={inp} />
+                  </div>
+                  <div>
+                    <label className={lbl}>Prob Max %</label>
+                    <input type="number" min="0" max="100" placeholder="100" value={filters.max_prob} onChange={e => setF('max_prob', e.target.value)} className={inp} />
+                  </div>
+                  <div>
+                    <label className={lbl}>USD Min</label>
+                    <input type="number" placeholder="50000" value={filters.min_usd} onChange={e => setF('min_usd', e.target.value)} className={inp} />
+                  </div>
+                  <div>
+                    <label className={lbl}>USD Max</label>
+                    <input type="number" placeholder="2500000" value={filters.max_usd} onChange={e => setF('max_usd', e.target.value)} className={inp} />
                   </div>
                 </div>
               </div>
+
+              {/* Row 4 — Budget, Close Date, Age, Status (colunas restantes) */}
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Valores e Probabilidade</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div><label className={lbl}>Min USD</label><input type="number" placeholder="50000" value={filters.min_usd} onChange={e => setF('min_usd', e.target.value)} className={inp} /></div>
-                  <div><label className={lbl}>Max USD</label><input type="number" placeholder="2500000" value={filters.max_usd} onChange={e => setF('max_usd', e.target.value)} className={inp} /></div>
-                  <div><label className={lbl}>Min Prob %</label><input type="number" min="0" max="100" placeholder="0" value={filters.min_prob} onChange={e => setF('min_prob', e.target.value)} className={inp} /></div>
-                  <div><label className={lbl}>Max Prob %</label><input type="number" min="0" max="100" placeholder="100" value={filters.max_prob} onChange={e => setF('max_prob', e.target.value)} className={inp} /></div>
-                </div>
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Data e Tipo</p>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  <div><label className={lbl}>Close Date De</label><input type="date" value={filters.close_date_from} onChange={e => setF('close_date_from', e.target.value)} className={inp} /></div>
-                  <div><label className={lbl}>Close Date Ate</label><input type="date" value={filters.close_date_to} onChange={e => setF('close_date_to', e.target.value)} className={inp} /></div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Data, Idade e Status</p>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   <div>
-                    <label className={lbl}>Budgetary</label>
+                    <label className={lbl}>Budget</label>
                     <select value={filters.budgetary} onChange={e => setF('budgetary', e.target.value)} className={inp}>
                       <option value="">Todos</option>
                       <option value="yes">Yes</option>
                       <option value="no">No</option>
                     </select>
                   </div>
+                  <div>
+                    <label className={lbl}>Close Date De</label>
+                    <input type="date" value={filters.close_date_from} onChange={e => setF('close_date_from', e.target.value)} className={inp} />
+                  </div>
+                  <div>
+                    <label className={lbl}>Close Date Ate</label>
+                    <input type="date" value={filters.close_date_to} onChange={e => setF('close_date_to', e.target.value)} className={inp} />
+                  </div>
+                  <div>
+                    <label className={lbl}>Age Max (dias)</label>
+                    <input type="number" placeholder="60" value={filters.max_age} onChange={e => setF('max_age', e.target.value)} className={inp} />
+                  </div>
+                  <div>
+                    <label className={lbl}>Status</label>
+                    <select value={filters.status} onChange={e => setF('status', e.target.value)} className={inp}>
+                      <option value="">Todos</option>
+                      {Object.entries(STATUS_GROUPS).map(([group, vals]) => (
+                        <optgroup key={group} label={group}>
+                          {vals.map(s => <option key={s} value={s}>{s}</option>)}
+                        </optgroup>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
+
             </div>
             <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-t border-gray-200">
               <button onClick={() => { setFilters({ ...EMPTY_FILTERS }); setApplied({ ...EMPTY_FILTERS }); setCurrentPage(1); }} className="px-4 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">Limpar filtros</button>
