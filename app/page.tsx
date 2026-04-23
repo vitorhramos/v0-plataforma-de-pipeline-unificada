@@ -156,7 +156,7 @@ export default function Home() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {NAV_CARDS.map(({ href, label, desc, icon: Icon, color, textAccent, borderAccent, stats }) => (
             <Link key={href} href={href} className="group">
-              <div className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 ${borderAccent} p-5 h-full flex flex-col gap-4 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5`}>
+              <div className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 ${borderAccent} p-5 h-full flex flex-col gap-4 transition-all duration-200 shadow-md hover:shadow-xl hover:-translate-y-1`}>
                 <div className={`w-10 h-10 ${color} rounded-xl flex items-center justify-center shrink-0`}>
                   <Icon className="w-5 h-5 text-white" />
                 </div>
@@ -188,7 +188,7 @@ export default function Home() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {HIGHLIGHTS.map(({ icon: Icon, label, desc }) => (
-            <div key={label} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 flex gap-4 items-start">
+            <div key={label} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-md p-5 flex gap-4 items-start">
               <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950 flex items-center justify-center shrink-0">
                 <Icon className="w-4 h-4 text-blue-600" />
               </div>
@@ -203,7 +203,7 @@ export default function Home() {
 
       {/* ── CTA strip ── */}
       <section className="max-w-6xl mx-auto w-full px-6 sm:px-10 lg:px-16 mb-14">
-        <div className="bg-gray-950 rounded-2xl px-8 py-7 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+          <div className="bg-gray-950 rounded-2xl px-8 py-7 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 shadow-xl">
           <div>
             <h3 className="text-base font-bold text-white">Pronto para comecar?</h3>
             <p className="text-sm text-gray-400 mt-1">Acesse o Details para explorar os dados com filtros e edicao em lote.</p>
