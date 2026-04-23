@@ -363,26 +363,20 @@ export default function PipelineDetailsPage() {
         {/* Advanced filter panel */}
         {filtersOpen && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-200">
-              <span className="text-xs font-semibold text-gray-600">Filtros Avancados</span>
-              {activeCount > 0 && (
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {Object.entries(applied).filter(([, v]) => v !== '').map(([k, v]) => (
-                    <span key={k} className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-[11px] font-medium">
-                      {v}
-                      <button onClick={() => { const n = { ...applied, [k]: '' }; setApplied(n); setFilters(n); setCurrentPage(1); }}>
-                        <X className="w-2.5 h-2.5 ml-0.5" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="p-5 space-y-5">
 
-              {/* Row 1 — Identificacao (colunas: CPO ID, Part No, Quote Name) */}
-              <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Identificacao</p>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+              <span className="text-xs font-bold text-gray-700">Filtros Avancados</span>
+              <button onClick={() => setFiltersOpen(false)} className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="divide-y divide-gray-100">
+
+              {/* Grupo 1 — Identificacao */}
+              <div className="px-5 py-4">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Identificacao</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
                     <label className={lbl}>CPO ID</label>
@@ -399,27 +393,27 @@ export default function PipelineDetailsPage() {
                 </div>
               </div>
 
-              {/* Row 2 — Classificacao (colunas: Territory, Vendor, Revenda, End User, BU) */}
-              <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Classificacao</p>
+              {/* Grupo 2 — Classificacao */}
+              <div className="px-5 py-4">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Classificacao</p>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                   <div>
                     <label className={lbl}>Territory</label>
-                    <select value={filters.territory} onChange={e => setF('territory', e.target.value)} className={inp}>
+                    <select value={filters.territory} onChange={e => setF('territory', e.target.value)} className={`${inp} bg-gray-50`}>
                       <option value="">Todos</option>
                       {TERRITORIES_LIST.map(t => <option key={t}>{t}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className={lbl}>Vendor</label>
-                    <select value={filters.vendor} onChange={e => setF('vendor', e.target.value)} className={inp}>
+                    <select value={filters.vendor} onChange={e => setF('vendor', e.target.value)} className={`${inp} bg-gray-50`}>
                       <option value="">Todos</option>
                       {VENDORS_LIST.map(v => <option key={v}>{v}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className={lbl}>Revenda</label>
-                    <select value={filters.revenda} onChange={e => setF('revenda', e.target.value)} className={inp}>
+                    <select value={filters.revenda} onChange={e => setF('revenda', e.target.value)} className={`${inp} bg-gray-50`}>
                       <option value="">Todas</option>
                       {REVENDA_LIST.map(r => <option key={r}>{r}</option>)}
                     </select>
@@ -430,7 +424,7 @@ export default function PipelineDetailsPage() {
                   </div>
                   <div>
                     <label className={lbl}>BU</label>
-                    <select value={filters.bu} onChange={e => setF('bu', e.target.value)} className={inp}>
+                    <select value={filters.bu} onChange={e => setF('bu', e.target.value)} className={`${inp} bg-gray-50`}>
                       <option value="">Todos</option>
                       {BU_LIST.map(b => <option key={b}>{b}</option>)}
                     </select>
@@ -438,63 +432,66 @@ export default function PipelineDetailsPage() {
                 </div>
               </div>
 
-              {/* Row 3 — Stage, Prob, USD (colunas: Stage, Prob, USD Value) */}
-              <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Stage e Valores</p>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              {/* Grupo 3 — Stage e Valores com ranges */}
+              <div className="px-5 py-4">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Stage e Valores</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
                     <label className={lbl}>Stage</label>
-                    <select value={filters.stage} onChange={e => setF('stage', e.target.value)} className={inp}>
+                    <select value={filters.stage} onChange={e => setF('stage', e.target.value)} className={`${inp} bg-gray-50`}>
                       <option value="">Todos</option>
                       {STAGES_LIST.map(s => <option key={s}>{s}</option>)}
                     </select>
                   </div>
+                  {/* Prob range */}
                   <div>
-                    <label className={lbl}>Prob Min %</label>
-                    <input type="number" min="0" max="100" placeholder="0" value={filters.min_prob} onChange={e => setF('min_prob', e.target.value)} className={inp} />
+                    <label className={lbl}>Probabilidade (%)</label>
+                    <div className="flex items-center gap-1.5">
+                      <input type="number" min="0" max="100" placeholder="0" value={filters.min_prob} onChange={e => setF('min_prob', e.target.value)} className={`${inp} text-center`} />
+                      <span className="text-gray-400 text-xs font-medium shrink-0">—</span>
+                      <input type="number" min="0" max="100" placeholder="100" value={filters.max_prob} onChange={e => setF('max_prob', e.target.value)} className={`${inp} text-center`} />
+                    </div>
                   </div>
+                  {/* USD range */}
                   <div>
-                    <label className={lbl}>Prob Max %</label>
-                    <input type="number" min="0" max="100" placeholder="100" value={filters.max_prob} onChange={e => setF('max_prob', e.target.value)} className={inp} />
-                  </div>
-                  <div>
-                    <label className={lbl}>USD Min</label>
-                    <input type="number" placeholder="50000" value={filters.min_usd} onChange={e => setF('min_usd', e.target.value)} className={inp} />
-                  </div>
-                  <div>
-                    <label className={lbl}>USD Max</label>
-                    <input type="number" placeholder="2500000" value={filters.max_usd} onChange={e => setF('max_usd', e.target.value)} className={inp} />
+                    <label className={lbl}>USD Value</label>
+                    <div className="flex items-center gap-1.5">
+                      <input type="number" placeholder="Min" value={filters.min_usd} onChange={e => setF('min_usd', e.target.value)} className={`${inp} text-center`} />
+                      <span className="text-gray-400 text-xs font-medium shrink-0">—</span>
+                      <input type="number" placeholder="Max" value={filters.max_usd} onChange={e => setF('max_usd', e.target.value)} className={`${inp} text-center`} />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Row 4 — Budget, Close Date, Age, Status (colunas restantes) */}
-              <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Data, Idade e Status</p>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              {/* Grupo 4 — Data, Idade e Status */}
+              <div className="px-5 py-4">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Data, Idade e Status</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div>
                     <label className={lbl}>Budget</label>
-                    <select value={filters.budgetary} onChange={e => setF('budgetary', e.target.value)} className={inp}>
+                    <select value={filters.budgetary} onChange={e => setF('budgetary', e.target.value)} className={`${inp} bg-gray-50`}>
                       <option value="">Todos</option>
                       <option value="yes">Yes</option>
                       <option value="no">No</option>
                     </select>
                   </div>
-                  <div>
-                    <label className={lbl}>Close Date De</label>
-                    <input type="date" value={filters.close_date_from} onChange={e => setF('close_date_from', e.target.value)} className={inp} />
-                  </div>
-                  <div>
-                    <label className={lbl}>Close Date Ate</label>
-                    <input type="date" value={filters.close_date_to} onChange={e => setF('close_date_to', e.target.value)} className={inp} />
+                  {/* Close Date range */}
+                  <div className="md:col-span-1">
+                    <label className={lbl}>Close Date</label>
+                    <div className="flex items-center gap-1.5">
+                      <input type="date" value={filters.close_date_from} onChange={e => setF('close_date_from', e.target.value)} className={inp} />
+                      <span className="text-gray-400 text-xs font-medium shrink-0">—</span>
+                      <input type="date" value={filters.close_date_to} onChange={e => setF('close_date_to', e.target.value)} className={inp} />
+                    </div>
                   </div>
                   <div>
                     <label className={lbl}>Age Max (dias)</label>
-                    <input type="number" placeholder="60" value={filters.max_age} onChange={e => setF('max_age', e.target.value)} className={inp} />
+                    <input type="number" placeholder="ex: 60" value={filters.max_age} onChange={e => setF('max_age', e.target.value)} className={inp} />
                   </div>
                   <div>
                     <label className={lbl}>Status</label>
-                    <select value={filters.status} onChange={e => setF('status', e.target.value)} className={inp}>
+                    <select value={filters.status} onChange={e => setF('status', e.target.value)} className={`${inp} bg-gray-50`}>
                       <option value="">Todos</option>
                       {Object.entries(STATUS_GROUPS).map(([group, vals]) => (
                         <optgroup key={group} label={group}>
@@ -507,10 +504,46 @@ export default function PipelineDetailsPage() {
               </div>
 
             </div>
-            <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-t border-gray-200">
-              <button onClick={() => { setFilters({ ...EMPTY_FILTERS }); setApplied({ ...EMPTY_FILTERS }); setCurrentPage(1); }} className="px-4 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">Limpar filtros</button>
-              <button onClick={() => { setApplied({ ...filters }); setCurrentPage(1); setFiltersOpen(false); }} className="px-5 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Aplicar</button>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-3 px-5 py-3 bg-gray-50 border-t border-gray-100">
+              <button
+                onClick={() => { setFilters({ ...EMPTY_FILTERS }); setApplied({ ...EMPTY_FILTERS }); setCurrentPage(1); }}
+                className="text-xs font-medium text-gray-500 hover:text-gray-700 transition"
+              >
+                Limpar filtros
+              </button>
+              <button
+                onClick={() => { setApplied({ ...filters }); setCurrentPage(1); setFiltersOpen(false); }}
+                className="px-5 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition"
+              >
+                Aplicar filtros
+              </button>
             </div>
+          </div>
+        )}
+
+        {/* Active filter tags — visíveis fora do painel */}
+        {activeCount > 0 && !filtersOpen && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide shrink-0">Ativos:</span>
+            {Object.entries(applied).filter(([, v]) => v !== '').map(([k, v]) => (
+              <span key={k} className="flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-[11px] font-medium">
+                {v}
+                <button
+                  onClick={() => { const n = { ...applied, [k]: '' }; setApplied(n); setFilters(n); setCurrentPage(1); }}
+                  className="ml-0.5 text-blue-400 hover:text-blue-700"
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </span>
+            ))}
+            <button
+              onClick={() => { setFilters({ ...EMPTY_FILTERS }); setApplied({ ...EMPTY_FILTERS }); setCurrentPage(1); }}
+              className="text-[11px] font-medium text-gray-400 hover:text-gray-600 underline transition"
+            >
+              Limpar todos
+            </button>
           </div>
         )}
 
