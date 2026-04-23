@@ -122,7 +122,7 @@ const EDITABLE_FIELDS: { key: keyof Quote; label: string; type: 'text' | 'select
   { key: 'stage',           label: 'Stage',          type: 'select', options: STAGES_LIST },
   { key: 'vendor',          label: 'Vendor',         type: 'select', options: VENDORS_LIST },
   { key: 'sales_territory', label: 'Territory',      type: 'select', options: TERRITORIES_LIST },
-  { key: 'team',            label: 'Team',           type: 'select', options: TEAMS_LIST },
+  { key: 'team',            label: 'Team',           type: 'text' },
   { key: 'master_customer', label: 'Revenda',        type: 'text' },
   { key: 'end_user',        label: 'End User',       type: 'text' },
   { key: 'bu',              label: 'BU',             type: 'select', options: BU_LIST },
