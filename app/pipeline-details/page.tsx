@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { SlidersHorizontal, X, Pencil, Check, History, Loader2, ChevronUp, ChevronDown } from 'lucide-react';
 import { Breadcrumbs, Tooltip } from '@/components/common/breadcrumbs-tooltips';
@@ -169,6 +169,76 @@ export default function PipelineDetailsPage() {
       setSortKey(key);
       setSortDir('asc');
     }
+  };
+
+  // Column definitions (source of truth)
+  const ALL_COLUMNS: { label: string; key: keyof Quote }[] = [
+    { label: 'CPO ID',     key: 'cpo_id' },
+    { label: 'Part No',    key: 'part_no' },
+    { label: 'Territory',  key: 'sales_territory' },
+    { label: 'Vendor',     key: 'vendor' },
+    { label: 'Revenda',    key: 'master_customer' },
+    { label: 'End User',   key: 'end_user' },
+    { label: 'Quote Name', key: 'quote_name' },
+    { label: 'Stage',      key: 'stage' },
+    { label: 'Prob',       key: 'probability' },
+    { label: 'USD',        key: 'usd_value' },
+    { label: 'Budget',     key: 'budgetary' },
+    { label: 'Close Date', key: 'close_date' },
+    { label: 'Age',        key: 'quote_age' },
+    { label: 'Status',     key: 'status' },
+    { label: 'BU',         key: 'bu' },
+  ];
+
+  const DEFAULT_COL_ORDER = ALL_COLUMNS.map(c => c.key);
+
+  const [colOrder, setColOrder] = useState<(keyof Quote)[]>(() => {
+    try {
+      const saved = localStorage.getItem('pipeline-col-order');
+      if (saved) {
+        const parsed: (keyof Quote)[] = JSON.parse(saved);
+        // Ensure all columns present (new columns added later)
+        const merged = [...parsed.filter(k => DEFAULT_COL_ORDER.includes(k)), ...DEFAULT_COL_ORDER.filter(k => !parsed.includes(k))];
+        return merged;
+      }
+    } catch {}
+    return DEFAULT_COL_ORDER;
+  });
+
+  const [dragOverKey, setDragOverKey] = useState<keyof Quote | null>(null);
+  const dragSrcKey = useRef<keyof Quote | null>(null);
+  const dragStartTime = useRef<number>(0);
+
+  const orderedColumns = colOrder.map(k => ALL_COLUMNS.find(c => c.key === k)!).filter(Boolean);
+
+  const handleDragStart = (key: keyof Quote) => {
+    dragSrcKey.current = key;
+    dragStartTime.current = Date.now();
+  };
+
+  const handleDragOver = (e: React.DragEvent, key: keyof Quote) => {
+    e.preventDefault();
+    if (key !== dragSrcKey.current) setDragOverKey(key);
+  };
+
+  const handleDrop = (targetKey: keyof Quote) => {
+    const src = dragSrcKey.current;
+    if (!src || src === targetKey) { setDragOverKey(null); return; }
+    const next = [...colOrder];
+    const srcIdx = next.indexOf(src);
+    const tgtIdx = next.indexOf(targetKey);
+    next.splice(srcIdx, 1);
+    next.splice(tgtIdx, 0, src);
+    setColOrder(next);
+    localStorage.setItem('pipeline-col-order', JSON.stringify(next));
+    dragSrcKey.current = null;
+    setDragOverKey(null);
+  };
+
+  const handleHeaderClick = (key: keyof Quote) => {
+    // Only sort if not a drag (drag took > 200ms)
+    if (Date.now() - dragStartTime.current < 200) return;
+    handleSort(key);
   };
 
   // Edit modal
@@ -713,27 +783,21 @@ export default function PipelineDetailsPage() {
                   </th>
                   <th className="px-2 py-2.5 w-8"></th>
                   <th className="px-2 py-2.5 w-8"></th>
-                  {([
-                    { label: 'CPO ID', key: 'cpo_id' },
-                    { label: 'Part No', key: 'part_no' },
-                    { label: 'Territory', key: 'sales_territory' },
-                    { label: 'Vendor', key: 'vendor' },
-                    { label: 'Revenda', key: 'master_customer' },
-                    { label: 'End User', key: 'end_user' },
-                    { label: 'Quote Name', key: 'quote_name' },
-                    { label: 'Stage', key: 'stage' },
-                    { label: 'Prob', key: 'probability' },
-                    { label: 'USD', key: 'usd_value' },
-                    { label: 'Budget', key: 'budgetary' },
-                    { label: 'Close Date', key: 'close_date' },
-                    { label: 'Age', key: 'quote_age' },
-                    { label: 'Status', key: 'status' },
-                    { label: 'BU', key: 'bu' },
-                  ] as { label: string; key: keyof Quote }[]).map(col => (
+                  {orderedColumns.map(col => (
                     <th
                       key={col.key}
-                      onClick={() => handleSort(col.key)}
-                      className="px-3 py-2.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition select-none"
+                      draggable
+                      onDragStart={() => handleDragStart(col.key)}
+                      onDragOver={e => handleDragOver(e, col.key)}
+                      onDrop={() => handleDrop(col.key)}
+                      onDragEnd={() => setDragOverKey(null)}
+                      onClick={() => handleHeaderClick(col.key)}
+                      title="Arraste para reordenar · Clique para ordenar"
+                      className={`px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wide whitespace-nowrap cursor-grab active:cursor-grabbing select-none transition-colors ${
+                        dragOverKey === col.key
+                          ? 'bg-blue-100 text-blue-700 border-l-2 border-blue-500'
+                          : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`}
                     >
                       <span className="flex items-center gap-1">
                         {col.label}
@@ -789,29 +853,25 @@ export default function PipelineDetailsPage() {
                         </button>
                       )}
                     </td>
-                    <td className="px-3 py-2.5 font-mono text-blue-600 font-bold whitespace-nowrap">{quote.cpo_id}</td>
-                    <td className="px-3 py-2.5 font-mono text-gray-700 whitespace-nowrap">{quote.part_no}</td>
-                    <td className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.sales_territory}</td>
-                    <td className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.vendor}</td>
-                    <td className="px-3 py-2.5 font-medium text-gray-800 whitespace-nowrap">{quote.master_customer}</td>
-                    <td className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.end_user}</td>
-                    <td className="px-3 py-2.5 font-medium text-gray-800 whitespace-nowrap">{quote.quote_name}</td>
-                    <td className="px-3 py-2.5 whitespace-nowrap">
-                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${STAGE_COLORS[quote.stage] ?? 'bg-gray-100 text-gray-700'}`}>{quote.stage}</span>
-                    </td>
-                    <td className="px-3 py-2.5 text-right font-bold text-gray-800 whitespace-nowrap">{quote.probability}%</td>
-                    <td className="px-3 py-2.5 text-right font-bold text-emerald-700 whitespace-nowrap">${(quote.usd_value / 1000).toFixed(0)}K</td>
-                    <td className="px-3 py-2.5 text-center whitespace-nowrap">
-                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${quote.budgetary === 'Yes' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500'}`}>{quote.budgetary}</span>
-                    </td>
-                    <td className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.close_date}</td>
-                    <td className="px-3 py-2.5 text-center whitespace-nowrap">
-                      <span className={`font-semibold ${quote.quote_age > 30 ? 'text-red-600' : 'text-gray-700'}`}>{quote.quote_age}d</span>
-                    </td>
-                    <td className="px-3 py-2.5 whitespace-nowrap">
-                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${STATUS_COLORS[quote.status] ?? 'bg-gray-100 text-gray-600'}`}>{quote.status}</span>
-                    </td>
-                    <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap text-[11px]">{quote.bu}</td>
+                    {orderedColumns.map(col => {
+                      const k = col.key;
+                      if (k === 'cpo_id')         return <td key={k} className="px-3 py-2.5 font-mono text-blue-600 font-bold whitespace-nowrap">{quote.cpo_id}</td>;
+                      if (k === 'part_no')         return <td key={k} className="px-3 py-2.5 font-mono text-gray-700 whitespace-nowrap">{quote.part_no}</td>;
+                      if (k === 'sales_territory') return <td key={k} className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.sales_territory}</td>;
+                      if (k === 'vendor')          return <td key={k} className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.vendor}</td>;
+                      if (k === 'master_customer') return <td key={k} className="px-3 py-2.5 font-medium text-gray-800 whitespace-nowrap">{quote.master_customer}</td>;
+                      if (k === 'end_user')        return <td key={k} className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.end_user}</td>;
+                      if (k === 'quote_name')      return <td key={k} className="px-3 py-2.5 font-medium text-gray-800 whitespace-nowrap">{quote.quote_name}</td>;
+                      if (k === 'stage')           return <td key={k} className="px-3 py-2.5 whitespace-nowrap"><span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${STAGE_COLORS[quote.stage] ?? 'bg-gray-100 text-gray-700'}`}>{quote.stage}</span></td>;
+                      if (k === 'probability')     return <td key={k} className="px-3 py-2.5 text-right font-bold text-gray-800 whitespace-nowrap">{quote.probability}%</td>;
+                      if (k === 'usd_value')       return <td key={k} className="px-3 py-2.5 text-right font-bold text-emerald-700 whitespace-nowrap">${(quote.usd_value / 1000).toFixed(0)}K</td>;
+                      if (k === 'budgetary')       return <td key={k} className="px-3 py-2.5 text-center whitespace-nowrap"><span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${quote.budgetary === 'Yes' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500'}`}>{quote.budgetary}</span></td>;
+                      if (k === 'close_date')      return <td key={k} className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.close_date}</td>;
+                      if (k === 'quote_age')       return <td key={k} className="px-3 py-2.5 text-center whitespace-nowrap"><span className={`font-semibold ${quote.quote_age > 30 ? 'text-red-600' : 'text-gray-700'}`}>{quote.quote_age}d</span></td>;
+                      if (k === 'status')          return <td key={k} className="px-3 py-2.5 whitespace-nowrap"><span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${STATUS_COLORS[quote.status] ?? 'bg-gray-100 text-gray-600'}`}>{quote.status}</span></td>;
+                      if (k === 'bu')              return <td key={k} className="px-3 py-2.5 text-gray-600 whitespace-nowrap text-[11px]">{quote.bu}</td>;
+                      return null;
+                    })}
                   </tr>
                 ))}
               </tbody>
@@ -861,20 +921,24 @@ export default function PipelineDetailsPage() {
                     <div key={field.key}>
                       <label className={lbl}>{field.label}</label>
                       {field.type === 'select' ? (
-                        <select
-                          value={val}
-                          onChange={e => setEditDraft(d => ({ ...d, [field.key]: e.target.value }))}
-                          className={inp}
-                        >
-                          {field.key === 'status'
-                            ? Object.entries(STATUS_GROUPS).map(([group, vals]) => (
-                                <optgroup key={group} label={group}>
-                                  {vals.map(v => <option key={v} value={v}>{v}</option>)}
-                                </optgroup>
-                              ))
-                            : field.options?.map(o => <option key={o} value={o}>{o}</option>)
-                          }
-                        </select>
+          {colOrder.join() !== DEFAULT_COL_ORDER.join() && (
+            <button
+              onClick={() => { setColOrder(DEFAULT_COL_ORDER); localStorage.removeItem('pipeline-col-order'); }}
+              className="px-3 py-2 text-xs font-medium text-gray-500 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition whitespace-nowrap"
+              title="Restaurar ordem original das colunas"
+            >
+              Resetar colunas
+            </button>
+          )}
+          <select
+            value={pageSize}
+            onChange={(e) => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+          >
+            <option value={25}>25 / pag</option>
+            <option value={50}>50 / pag</option>
+            <option value={100}>100 / pag</option>
+          </select>
                       ) : (
                         <input
                           type={field.type}
