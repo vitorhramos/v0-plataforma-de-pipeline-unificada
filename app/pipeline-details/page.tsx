@@ -252,6 +252,7 @@ export default function PipelineDetailsPage() {
   const [bulkValue, setBulkValue] = useState('');
   const [confirmBulk, setConfirmBulk] = useState(false);
   const [undoStack, setUndoStack] = useState<{ quotes: Quote[]; desc: string }[]>([]);
+  const [savedFeedback, setSavedFeedback] = useState(false);
 
   const { add: addToHistory } = useOperationHistory();
   const toast = useToast();
@@ -363,8 +364,12 @@ export default function PipelineDetailsPage() {
     setQuotes(prev => prev.map(q => q.id === editingQuote.id ? updated : q));
     addToHistory('Edit', `Editado ${editingQuote.cpo_id}`, 'success');
     toast.success(`${editingQuote.cpo_id} atualizado`);
-    setEditingQuote(null);
-    setEditDraft({});
+    setSavedFeedback(true);
+    setTimeout(() => {
+      setSavedFeedback(false);
+      setEditingQuote(null);
+      setEditDraft({});
+    }, 1200);
   };
 
   // ── Bulk edit with confirmation ──
@@ -908,58 +913,178 @@ export default function PipelineDetailsPage() {
       </div>
 
       {/* ── Edit Modal ── */}
-      {editingQuote && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <div>
-                <h2 className="text-sm font-bold text-gray-900">Editar Quote</h2>
-                <p className="text-xs text-gray-500 mt-0.5">{editingQuote.cpo_id} — {editingQuote.quote_name}</p>
-              </div>
-              <button onClick={() => { setEditingQuote(null); setEditDraft({}); }} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition">
-                <X className="w-4 h-4" />
-              </button>
+      {editingQuote && (() => {
+        const getVal = (key: keyof Quote) =>
+          (editDraft as Record<string, unknown>)[key] !== undefined
+            ? String((editDraft as Record<string, unknown>)[key])
+            : String(editingQuote[key] ?? '');
+
+        const Field = ({ field }: { field: typeof EDITABLE_FIELDS[number] }) => {
+          const val = getVal(field.key);
+          const changed = (editDraft as Record<string, unknown>)[field.key] !== undefined &&
+            String((editDraft as Record<string, unknown>)[field.key]) !== String(editingQuote[field.key] ?? '');
+          return (
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+                {field.label}
+                {changed && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" title="Alterado" />}
+              </label>
+              {field.type === 'select' ? (
+                <select
+                  value={val}
+                  onChange={e => setEditDraft(d => ({ ...d, [field.key]: e.target.value }))}
+                  className={`${inp} ${changed ? 'ring-1 ring-amber-400 border-amber-300' : ''}`}
+                >
+                  {field.key === 'status'
+                    ? Object.entries(STATUS_GROUPS).map(([group, vals]) => (
+                        <optgroup key={group} label={group}>
+                          {vals.map(s => <option key={s} value={s}>{s}</option>)}
+                        </optgroup>
+                      ))
+                    : field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)
+                  }
+                </select>
+              ) : (
+                <input
+                  type={field.type}
+                  value={val}
+                  onChange={e => setEditDraft(d => ({ ...d, [field.key]: e.target.value }))}
+                  className={`${inp} ${changed ? 'ring-1 ring-amber-400 border-amber-300' : ''}`}
+                />
+              )}
             </div>
-            <div className="overflow-y-auto p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {EDITABLE_FIELDS.map(field => {
-                  const val = (editDraft as Record<string, unknown>)[field.key] !== undefined
-                    ? String((editDraft as Record<string, unknown>)[field.key])
-                    : String(editingQuote[field.key] ?? '');
-                  return (
-                    <div key={field.key}>
-                      <label className={lbl}>{field.label}</label>
-                      {field.type === 'select' ? (
-                        <select
-                          value={val}
-                          onChange={e => setEditDraft(d => ({ ...d, [field.key]: e.target.value }))}
-                          className={`${inp} bg-gray-50`}
-                        >
-                          {field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                        </select>
-                      ) : (
-                        <input
-                          type={field.type}
-                          value={val}
-                          onChange={e => setEditDraft(d => ({ ...d, [field.key]: e.target.value }))}
-                          className={inp}
-                        />
-                      )}
+          );
+        };
+
+        const changedCount = Object.keys(editDraft).filter(k => {
+          const draftVal = (editDraft as Record<string, unknown>)[k];
+          return draftVal !== undefined && String(draftVal) !== String(editingQuote[k as keyof Quote] ?? '');
+        }).length;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className={`bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col transition-all duration-300 ${savedFeedback ? 'ring-2 ring-emerald-500' : ''}`}>
+
+              {/* Header */}
+              <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-gray-100 dark:border-gray-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                    <Pencil className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">Editar Quote</h2>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs font-mono text-blue-600 font-semibold">{editingQuote.cpo_id}</span>
+                      <span className="text-gray-300">·</span>
+                      <span className="text-xs text-gray-500">{editingQuote.quote_name}</span>
+                      <span className="text-gray-300">·</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${STATUS_COLORS[editingQuote.status] ?? 'bg-gray-100 text-gray-600'}`}>{editingQuote.status}</span>
                     </div>
-                  );
-                })}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {changedCount > 0 && (
+                    <span className="text-[11px] font-medium text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                      {changedCount} {changedCount === 1 ? 'campo alterado' : 'campos alterados'}
+                    </span>
+                  )}
+                  <button onClick={() => { setEditingQuote(null); setEditDraft({}); setSavedFeedback(false); }} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
-              <button onClick={() => { setEditingQuote(null); setEditDraft({}); }} className="px-4 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">Cancelar</button>
-              <button onClick={saveEdit} className="flex items-center gap-1.5 px-5 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">
-                <Check className="w-3.5 h-3.5" />
-                Salvar alteracoes
-              </button>
+
+              {/* Body */}
+              <div className="overflow-y-auto flex-1">
+
+                {/* Grupo 1 — Pipeline */}
+                <div className="px-6 pt-5 pb-4">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Pipeline</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'stage')!} />
+                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'status')!} />
+                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'budgetary')!} />
+                  </div>
+                </div>
+
+                <div className="mx-6 border-t border-gray-100 dark:border-gray-800" />
+
+                {/* Grupo 2 — Valores */}
+                <div className="px-6 pt-4 pb-4">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Valores</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'usd_value')!} />
+                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'probability')!} />
+                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'close_date')!} />
+                  </div>
+                </div>
+
+                <div className="mx-6 border-t border-gray-100 dark:border-gray-800" />
+
+                {/* Grupo 3 — Classificacao */}
+                <div className="px-6 pt-4 pb-4">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Classificacao</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'sales_territory')!} />
+                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'vendor')!} />
+                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'bu')!} />
+                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'master_customer')!} />
+                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'end_user')!} />
+                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'team')!} />
+                  </div>
+                </div>
+
+                <div className="mx-6 border-t border-gray-100 dark:border-gray-800" />
+
+                {/* Grupo 4 — Identificacao */}
+                <div className="px-6 pt-4 pb-5">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Identificacao</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'part_no')!} />
+                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'quote_name')!} />
+                    <div className="col-span-2">
+                      <Field field={EDITABLE_FIELDS.find(f => f.key === 'description')!} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 rounded-b-2xl">
+                <button
+                  onClick={() => { setEditingQuote(null); setEditDraft({}); setSavedFeedback(false); }}
+                  className="px-4 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={saveEdit}
+                  disabled={savedFeedback}
+                  className={`flex items-center gap-2 px-5 py-2 text-xs font-semibold rounded-lg transition-all duration-300 ${
+                    savedFeedback
+                      ? 'bg-emerald-500 text-white scale-105'
+                      : changedCount > 0
+                        ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow-md'
+                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  {savedFeedback ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      Salvo!
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      {changedCount > 0 ? `Salvar ${changedCount} ${changedCount === 1 ? 'alteracao' : 'alteracoes'}` : 'Sem alteracoes'}
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── Confirm Bulk Edit Modal ── */}
       {confirmBulk && (
