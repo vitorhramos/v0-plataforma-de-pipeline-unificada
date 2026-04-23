@@ -1,80 +1,303 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { CheckCircle2 } from 'lucide-react';
 import { Breadcrumbs } from '@/components/common/breadcrumbs-tooltips';
-import { BatchQuoteDetailsForm } from '@/components/common/batch-quote-details';
-import { ConfirmDialog } from '@/components/common/confirm-dialog';
-import { useToast } from '@/components/common/toast';
+import { addQuote } from '@/lib/mock-store';
 
-export default function QuoteDetailsPage() {
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const toast = useToast();
+const VENDORS_LIST = ['Cisco', 'HPE', 'Dell', 'Lenovo'];
+const TERRITORIES_LIST = ['Sao Paulo', 'Rio de Janeiro', 'Minas Gerais'];
+const BU_LIST = ['BU Storage', 'BU Network', 'BU Compute'];
+const STAGES_LIST = ['Pipelined', 'Pricing 25%', 'Up Selling 50%', 'Committed 75%', 'Net Lost'];
+const REVENDA_LIST = ['Revenda A', 'Revenda B', 'Revenda C', 'Revenda D', 'Revenda E'];
+const STATUS_GROUPS = {
+  'Virou Pedido': ['BACKORDER', 'BOSOSPLIT', 'CONVERTOK', 'PARTIALBO', 'SALESORDER', 'TERMSFIX'],
+  'Quote Ativa':  ['QUOTEPO', 'QUOTESHEET', 'READYAF', 'POCHANGE', 'POLINEQC'],
+  'Quote Cancelada': ['CANCELLED'],
+};
 
-  const handleSave = () => {
-    setConfirmOpen(true);
+const EMPTY_FORM = {
+  cpo_id: '',
+  part_no: '',
+  sales_territory: '',
+  team: '',
+  vendor: '',
+  master_customer: '',
+  end_user: '',
+  description: '',
+  quote_name: '',
+  quote_number: '',
+  stage: '',
+  probability: '',
+  usd_value: '',
+  budgetary: '',
+  close_date: '',
+  bu: '',
+  status: '',
+};
+
+type FormState = typeof EMPTY_FORM;
+type Errors = Partial<Record<keyof FormState, string>>;
+
+const REQUIRED: (keyof FormState)[] = ['cpo_id', 'quote_name', 'vendor', 'stage', 'usd_value', 'close_date', 'status'];
+
+function validate(form: FormState): Errors {
+  const errs: Errors = {};
+  for (const k of REQUIRED) {
+    if (!form[k]) errs[k] = 'Campo obrigatorio';
+  }
+  if (form.probability && (Number(form.probability) < 0 || Number(form.probability) > 100)) {
+    errs.probability = '0 a 100';
+  }
+  return errs;
+}
+
+const lbl = 'block text-[11px] font-semibold text-gray-500 mb-1';
+const inp = 'w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition';
+const sel = `${inp} bg-gray-50`;
+const errCls = 'border-red-400 focus:ring-red-400 focus:border-red-400';
+
+export default function NewQuotePage() {
+  const router = useRouter();
+  const [form, setForm] = useState<FormState>({ ...EMPTY_FORM });
+  const [errors, setErrors] = useState<Errors>({});
+  const [saved, setSaved] = useState(false);
+
+  const set = (k: keyof FormState, v: string) => {
+    setForm(p => ({ ...p, [k]: v }));
+    if (errors[k]) setErrors(p => ({ ...p, [k]: '' }));
   };
 
-  const handleConfirm = () => {
-    setConfirmOpen(false);
-    toast.success('Alterações salvas com sucesso!');
+  const handleSubmit = () => {
+    const errs = validate(form);
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return;
+    }
+    addQuote({
+      cpo_id: form.cpo_id,
+      part_no: form.part_no,
+      sales_territory: form.sales_territory,
+      team: form.team,
+      vendor: form.vendor,
+      master_customer: form.master_customer,
+      end_user: form.end_user,
+      description: form.description,
+      quote_name: form.quote_name,
+      quote_number: form.quote_number,
+      stage: form.stage,
+      probability: Number(form.probability) || 0,
+      usd_value: Number(form.usd_value) || 0,
+      budgetary: form.budgetary || 'No',
+      close_date: form.close_date,
+      bu: form.bu,
+      status: form.status,
+    });
+    setSaved(true);
   };
+
+  if (saved) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-10 flex flex-col items-center gap-4 max-w-sm w-full text-center">
+          <CheckCircle2 className="w-12 h-12 text-emerald-500" />
+          <h2 className="text-lg font-bold text-gray-900">Quote criada com sucesso</h2>
+          <p className="text-sm text-gray-500">A nova entrada foi adicionada ao topo da aba Details.</p>
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={() => { setForm({ ...EMPTY_FORM }); setErrors({}); setSaved(false); }}
+              className="px-4 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+            >
+              Criar outra
+            </button>
+            <button
+              onClick={() => router.push('/pipeline-details')}
+              className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition"
+            >
+              Ver em Details
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        <Breadcrumbs items={[{ label: 'Edit' }, { label: 'Quote Details' }]} />
+      <div className="max-w-4xl mx-auto px-6 py-6 space-y-5">
+        <Breadcrumbs items={[{ label: 'New Quote' }]} />
 
-        {/* Header */}
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Quote Details</h1>
-            <p className="text-sm text-gray-500 mt-1">19 campos. Use os badges para identificar campos criticos e somente leitura.</p>
+            <h1 className="text-2xl font-bold text-gray-900">Nova Quote</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Preencha os dados abaixo. Campos marcados com * sao obrigatorios.</p>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/dashboard">
-              <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-                Cancelar
-              </button>
-            </Link>
             <button
-              onClick={handleSave}
-              className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition shadow-sm"
+              onClick={() => { setForm({ ...EMPTY_FORM }); setErrors({}); }}
+              className="px-4 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
             >
-              Salvar Alterações
+              Limpar
+            </button>
+            <button
+              onClick={handleSubmit}
+              className="px-5 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition"
+            >
+              Salvar Quote
             </button>
           </div>
         </div>
 
-        <BatchQuoteDetailsForm />
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm divide-y divide-gray-100">
 
-        {/* Footer actions */}
-        <div className="flex items-center justify-between pt-2 border-t border-gray-200">
-          <p className="text-xs text-gray-400">Ultima atualizacao: hoje</p>
-          <div className="flex items-center gap-2">
-            <Link href="/dashboard">
-              <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-                Cancelar
-              </button>
-            </Link>
-            <button
-              onClick={handleSave}
-              className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition shadow-sm"
-            >
-              Salvar Alterações
-            </button>
+          {/* Identificacao */}
+          <div className="px-6 py-5">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Identificacao</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className={lbl}>CPO ID *</label>
+                <input type="text" placeholder="CPO-1001" value={form.cpo_id} onChange={e => set('cpo_id', e.target.value)} className={`${inp} ${errors.cpo_id ? errCls : ''}`} />
+                {errors.cpo_id && <p className="text-[10px] text-red-500 mt-0.5">{errors.cpo_id}</p>}
+              </div>
+              <div>
+                <label className={lbl}>Part No</label>
+                <input type="text" placeholder="NX-10000" value={form.part_no} onChange={e => set('part_no', e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className={lbl}>Quote Name *</label>
+                <input type="text" placeholder="QT-024000" value={form.quote_name} onChange={e => set('quote_name', e.target.value)} className={`${inp} ${errors.quote_name ? errCls : ''}`} />
+                {errors.quote_name && <p className="text-[10px] text-red-500 mt-0.5">{errors.quote_name}</p>}
+              </div>
+              <div>
+                <label className={lbl}>Quote Number</label>
+                <input type="text" placeholder="QN-1001" value={form.quote_number} onChange={e => set('quote_number', e.target.value)} className={inp} />
+              </div>
+              <div className="md:col-span-2">
+                <label className={lbl}>Descricao</label>
+                <input type="text" placeholder="Descricao da solucao..." value={form.description} onChange={e => set('description', e.target.value)} className={inp} />
+              </div>
+            </div>
           </div>
+
+          {/* Classificacao */}
+          <div className="px-6 py-5">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Classificacao</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div>
+                <label className={lbl}>Vendor *</label>
+                <select value={form.vendor} onChange={e => set('vendor', e.target.value)} className={`${sel} ${errors.vendor ? errCls : ''}`}>
+                  <option value="">Selecione...</option>
+                  {VENDORS_LIST.map(v => <option key={v}>{v}</option>)}
+                </select>
+                {errors.vendor && <p className="text-[10px] text-red-500 mt-0.5">{errors.vendor}</p>}
+              </div>
+              <div>
+                <label className={lbl}>Territory</label>
+                <select value={form.sales_territory} onChange={e => set('sales_territory', e.target.value)} className={sel}>
+                  <option value="">Selecione...</option>
+                  {TERRITORIES_LIST.map(t => <option key={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={lbl}>Revenda</label>
+                <select value={form.master_customer} onChange={e => set('master_customer', e.target.value)} className={sel}>
+                  <option value="">Selecione...</option>
+                  {REVENDA_LIST.map(r => <option key={r}>{r}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={lbl}>End User</label>
+                <input type="text" placeholder="Nome do cliente final..." value={form.end_user} onChange={e => set('end_user', e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className={lbl}>BU</label>
+                <select value={form.bu} onChange={e => set('bu', e.target.value)} className={sel}>
+                  <option value="">Selecione...</option>
+                  {BU_LIST.map(b => <option key={b}>{b}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={lbl}>Team</label>
+                <input type="text" placeholder="Nome do time..." value={form.team} onChange={e => set('team', e.target.value)} className={inp} />
+              </div>
+            </div>
+          </div>
+
+          {/* Stage e Valores */}
+          <div className="px-6 py-5">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Stage e Valores</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <label className={lbl}>Stage *</label>
+                <select value={form.stage} onChange={e => set('stage', e.target.value)} className={`${sel} ${errors.stage ? errCls : ''}`}>
+                  <option value="">Selecione...</option>
+                  {STAGES_LIST.map(s => <option key={s}>{s}</option>)}
+                </select>
+                {errors.stage && <p className="text-[10px] text-red-500 mt-0.5">{errors.stage}</p>}
+              </div>
+              <div>
+                <label className={lbl}>Probabilidade (%)</label>
+                <input type="number" min="0" max="100" placeholder="0" value={form.probability} onChange={e => set('probability', e.target.value)} className={`${inp} ${errors.probability ? errCls : ''}`} />
+                {errors.probability && <p className="text-[10px] text-red-500 mt-0.5">{errors.probability}</p>}
+              </div>
+              <div>
+                <label className={lbl}>USD Value *</label>
+                <input type="number" placeholder="100000" value={form.usd_value} onChange={e => set('usd_value', e.target.value)} className={`${inp} ${errors.usd_value ? errCls : ''}`} />
+                {errors.usd_value && <p className="text-[10px] text-red-500 mt-0.5">{errors.usd_value}</p>}
+              </div>
+              <div>
+                <label className={lbl}>Budget</label>
+                <select value={form.budgetary} onChange={e => set('budgetary', e.target.value)} className={sel}>
+                  <option value="">Selecione...</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Data e Status */}
+          <div className="px-6 py-5">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Data e Status</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div>
+                <label className={lbl}>Close Date *</label>
+                <input type="date" value={form.close_date} onChange={e => set('close_date', e.target.value)} className={`${inp} ${errors.close_date ? errCls : ''}`} />
+                {errors.close_date && <p className="text-[10px] text-red-500 mt-0.5">{errors.close_date}</p>}
+              </div>
+              <div>
+                <label className={lbl}>Status *</label>
+                <select value={form.status} onChange={e => set('status', e.target.value)} className={`${sel} ${errors.status ? errCls : ''}`}>
+                  <option value="">Selecione...</option>
+                  {Object.entries(STATUS_GROUPS).map(([group, vals]) => (
+                    <optgroup key={group} label={group}>
+                      {vals.map(s => <option key={s} value={s}>{s}</option>)}
+                    </optgroup>
+                  ))}
+                </select>
+                {errors.status && <p className="text-[10px] text-red-500 mt-0.5">{errors.status}</p>}
+              </div>
+            </div>
+          </div>
+
         </div>
 
-        <ConfirmDialog
-          open={confirmOpen}
-          title="Confirmar Alterações"
-          description="Voce tem certeza que deseja salvar essas alterações?"
-          confirmText="Salvar"
-          cancelText="Cancelar"
-          onConfirm={handleConfirm}
-          onCancel={() => setConfirmOpen(false)}
-        />
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2 pb-6">
+          <button
+            onClick={() => { setForm({ ...EMPTY_FORM }); setErrors({}); }}
+            className="px-4 py-2 text-xs font-medium text-gray-600 hover:text-gray-800 transition"
+          >
+            Limpar campos
+          </button>
+          <button
+            onClick={handleSubmit}
+            className="px-6 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition"
+          >
+            Salvar Quote
+          </button>
+        </div>
       </div>
     </div>
   );
