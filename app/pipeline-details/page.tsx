@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { SlidersHorizontal, X, Pencil, Check, History } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { SlidersHorizontal, X, Pencil, Check, History, Loader2, ChevronUp, ChevronDown } from 'lucide-react';
 import { Breadcrumbs, Tooltip } from '@/components/common/breadcrumbs-tooltips';
 import { useOperationHistory } from '@/components/common/operation-history';
 import { useToast } from '@/components/common/toast';
@@ -114,15 +115,61 @@ const EDITABLE_FIELDS: { key: keyof Quote; label: string; type: 'text' | 'select
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function PipelineDetailsPage() {
-  const [quotes, setQuotes] = useState<Quote[]>(() => getQuotes());
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [loading, setLoading] = useState(true);
   const [versions, setVersions] = useState<Record<number, VersionEntry[]>>({});
+
+  // Parse URL params into filters on mount
+  const getFiltersFromUrl = useCallback(() => {
+    const f = { ...EMPTY_FILTERS };
+    (Object.keys(EMPTY_FILTERS) as (keyof typeof EMPTY_FILTERS)[]).forEach(key => {
+      const val = searchParams.get(key);
+      if (val) f[key] = val;
+    });
+    return f;
+  }, [searchParams]);
+
+  // Simulate initial loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setQuotes(getQuotes());
+      setLoading(false);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Sync filters to URL
+  const syncFiltersToUrl = useCallback((newApplied: typeof EMPTY_FILTERS) => {
+    const params = new URLSearchParams();
+    (Object.entries(newApplied) as [keyof typeof EMPTY_FILTERS, string][]).forEach(([key, val]) => {
+      if (val) params.set(key, val);
+    });
+    const qs = params.toString();
+    router.replace(qs ? `?${qs}` : '/pipeline-details', { scroll: false });
+  }, [router]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [searchTerm, setSearchTerm] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [filters, setFilters] = useState({ ...EMPTY_FILTERS });
-  const [applied, setApplied] = useState({ ...EMPTY_FILTERS });
+  const [filters, setFilters] = useState(() => getFiltersFromUrl());
+  const [applied, setApplied] = useState(() => getFiltersFromUrl());
+
+  // Sorting
+  const [sortKey, setSortKey] = useState<keyof Quote | ''>('');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (key: keyof Quote) => {
+    if (sortKey === key) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
 
   // Edit modal
   const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
@@ -133,6 +180,8 @@ export default function PipelineDetailsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkField, setBulkField] = useState<keyof Quote | ''>('');
   const [bulkValue, setBulkValue] = useState('');
+  const [confirmBulk, setConfirmBulk] = useState(false);
+  const [undoStack, setUndoStack] = useState<{ quotes: Quote[]; desc: string }[]>([]);
 
   const { add: addToHistory } = useOperationHistory();
   const toast = useToast();
@@ -176,8 +225,24 @@ export default function PipelineDetailsPage() {
     return true;
   });
 
-  const paginatedQuotes = filteredQuotes.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-  const totalPages = Math.ceil(filteredQuotes.length / pageSize);
+  // Apply sorting
+  const sortedQuotes = sortKey
+    ? [...filteredQuotes].sort((a, b) => {
+        const aVal = a[sortKey];
+        const bVal = b[sortKey];
+        if (typeof aVal === 'number' && typeof bVal === 'number') {
+          return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
+        }
+        const aStr = String(aVal).toLowerCase();
+        const bStr = String(bVal).toLowerCase();
+        if (aStr < bStr) return sortDir === 'asc' ? -1 : 1;
+        if (aStr > bStr) return sortDir === 'asc' ? 1 : -1;
+        return 0;
+      })
+    : filteredQuotes;
+
+  const paginatedQuotes = sortedQuotes.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const totalPages = Math.ceil(sortedQuotes.length / pageSize);
 
   const totalUsd = filteredQuotes.reduce((s, q) => s + q.usd_value, 0);
   const budgetaryCount = filteredQuotes.filter(q => q.budgetary === 'Yes').length;
@@ -185,9 +250,22 @@ export default function PipelineDetailsPage() {
     ? Math.round(filteredQuotes.reduce((s, q) => s + q.probability, 0) / filteredQuotes.length)
     : 0;
 
-  const handleExport = (format: string) => {
-    addToHistory('Export', `Exportado ${filteredQuotes.length} registros em ${format}`, 'success');
-    toast.success(`Exportados ${filteredQuotes.length} registros em ${format}`);
+  const handleExport = (format: 'CSV' | 'Excel') => {
+    const headers = ['CPO ID', 'Part No', 'Territory', 'Vendor', 'Revenda', 'End User', 'Quote Name', 'Stage', 'Prob %', 'USD Value', 'Budget', 'Close Date', 'Age', 'Status', 'BU'];
+    const rows = sortedQuotes.map(q => [
+      q.cpo_id, q.part_no, q.sales_territory, q.vendor, q.master_customer, q.end_user,
+      q.quote_name, q.stage, q.probability, q.usd_value, q.budgetary, q.close_date, q.quote_age, q.status, q.bu
+    ]);
+    const csvContent = [headers.join(','), ...rows.map(r => r.map(cell => `"${cell}"`).join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `pipeline-details-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    addToHistory('Export', `Exportado ${sortedQuotes.length} registros em ${format}`, 'success');
+    toast.success(`Exportados ${sortedQuotes.length} registros em ${format}`);
   };
 
   // ── Record a version entry ──
@@ -219,10 +297,12 @@ export default function PipelineDetailsPage() {
     setEditDraft({});
   };
 
-  // ── Bulk edit ──
+  // ── Bulk edit with confirmation ──
   const applyBulkEdit = () => {
     if (!bulkField || bulkValue === '') return;
     const targetIds = selectedIds.size > 0 ? selectedIds : new Set(filteredQuotes.map(q => q.id));
+    // Save current state for undo
+    setUndoStack(prev => [...prev.slice(-9), { quotes: [...quotes], desc: `Edicao em lote: ${bulkField}` }]);
     setQuotes(prev => prev.map(q => {
       if (!targetIds.has(q.id)) return q;
       const oldVal = String(q[bulkField] ?? '');
@@ -239,6 +319,16 @@ export default function PipelineDetailsPage() {
     setBulkField('');
     setBulkValue('');
     setSelectedIds(new Set());
+    setConfirmBulk(false);
+  };
+
+  const handleUndo = () => {
+    if (undoStack.length === 0) return;
+    const last = undoStack[undoStack.length - 1];
+    setQuotes(last.quotes);
+    setUndoStack(prev => prev.slice(0, -1));
+    toast.success('Acao desfeita');
+    addToHistory('Undo', last.desc, 'success');
   };
 
   // ── Selection helpers ──
@@ -258,8 +348,34 @@ export default function PipelineDetailsPage() {
 
   const bulkFieldConfig = EDITABLE_FIELDS.find(f => f.key === bulkField);
 
+  // Loading skeleton
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="w-full px-4 sm:px-6 py-6 space-y-4">
+          <div className="h-5 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          <div className="h-8 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[1,2,3,4].map(i => (
+              <div key={i} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-5">
+                <div className="h-3 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2" />
+                <div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              </div>
+            ))}
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+            <div className="flex items-center justify-center gap-3 py-16">
+              <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+              <span className="text-sm text-gray-500 dark:text-gray-400">Carregando dados...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       {/* Use full width, no max-w constraint so table has room */}
       <div className="w-full px-4 sm:px-6 py-6 space-y-4">
         <Breadcrumbs items={[{ label: 'Pipeline' }, { label: 'Details' }]} />
@@ -336,11 +452,15 @@ export default function PipelineDetailsPage() {
           </select>
         </div>
 
-        {/* Advanced filter panel */}
-        {filtersOpen && (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-
-            {/* Header */}
+        {/* Advanced filter panel with animation */}
+        <div
+          className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden transition-all duration-300 ease-out ${
+            filtersOpen ? 'opacity-100 max-h-[800px]' : 'opacity-0 max-h-0 border-0'
+          }`}
+        >
+          {filtersOpen && (
+            <>
+              {/* Header */}
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
               <span className="text-xs font-bold text-gray-700">Filtros Avancados</span>
               <button onClick={() => setFiltersOpen(false)} className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition">
@@ -484,20 +604,21 @@ export default function PipelineDetailsPage() {
             {/* Footer */}
             <div className="flex items-center justify-end gap-3 px-5 py-3 bg-gray-50 border-t border-gray-100">
               <button
-                onClick={() => { setFilters({ ...EMPTY_FILTERS }); setApplied({ ...EMPTY_FILTERS }); setCurrentPage(1); }}
+                onClick={() => { setFilters({ ...EMPTY_FILTERS }); setApplied({ ...EMPTY_FILTERS }); syncFiltersToUrl(EMPTY_FILTERS); setCurrentPage(1); }}
                 className="text-xs font-medium text-gray-500 hover:text-gray-700 transition"
               >
                 Limpar filtros
               </button>
               <button
-                onClick={() => { setApplied({ ...filters }); setCurrentPage(1); setFiltersOpen(false); }}
+                onClick={() => { setApplied({ ...filters }); syncFiltersToUrl(filters); setCurrentPage(1); setFiltersOpen(false); }}
                 className="px-5 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition"
               >
                 Aplicar filtros
               </button>
             </div>
-          </div>
-        )}
+          </>
+          )}
+        </div>
 
         {/* Active filter tags — visíveis fora do painel */}
         {activeCount > 0 && !filtersOpen && (
@@ -562,9 +683,14 @@ export default function PipelineDetailsPage() {
               />
             )}
             {bulkField && bulkValue && (
-              <button onClick={applyBulkEdit} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition">
+              <button onClick={() => setConfirmBulk(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition">
                 <Check className="w-3.5 h-3.5" />
                 Aplicar
+              </button>
+            )}
+            {undoStack.length > 0 && (
+              <button onClick={handleUndo} className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-800 text-xs font-semibold rounded-lg hover:bg-amber-200 transition">
+                Desfazer
               </button>
             )}
           </div>
@@ -587,17 +713,61 @@ export default function PipelineDetailsPage() {
                   </th>
                   <th className="px-2 py-2.5 w-8"></th>
                   <th className="px-2 py-2.5 w-8"></th>
-                  {['CPO ID','Part No','Territory','Vendor','Revenda','End User','Quote Name','Stage','Prob','USD','Budget','Close Date','Age','Status','BU'].map(h => (
-                    <th key={h} className="px-3 py-2.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  {([
+                    { label: 'CPO ID', key: 'cpo_id' },
+                    { label: 'Part No', key: 'part_no' },
+                    { label: 'Territory', key: 'sales_territory' },
+                    { label: 'Vendor', key: 'vendor' },
+                    { label: 'Revenda', key: 'master_customer' },
+                    { label: 'End User', key: 'end_user' },
+                    { label: 'Quote Name', key: 'quote_name' },
+                    { label: 'Stage', key: 'stage' },
+                    { label: 'Prob', key: 'probability' },
+                    { label: 'USD', key: 'usd_value' },
+                    { label: 'Budget', key: 'budgetary' },
+                    { label: 'Close Date', key: 'close_date' },
+                    { label: 'Age', key: 'quote_age' },
+                    { label: 'Status', key: 'status' },
+                    { label: 'BU', key: 'bu' },
+                  ] as { label: string; key: keyof Quote }[]).map(col => (
+                    <th
+                      key={col.key}
+                      onClick={() => handleSort(col.key)}
+                      className="px-3 py-2.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition select-none"
+                    >
+                      <span className="flex items-center gap-1">
+                        {col.label}
+                        {sortKey === col.key && (
+                          sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+                        )}
+                      </span>
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {paginatedQuotes.length === 0 ? (
                   <tr>
-                    <td colSpan={18} className="py-16 text-center">
-                      <p className="text-sm font-medium text-gray-400">Nenhum resultado encontrado</p>
-                      <p className="text-xs text-gray-400 mt-1">Tente outro termo de busca ou ajuste os filtros</p>
+                    <td colSpan={18} className="py-20 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                          <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">Nenhum resultado encontrado</p>
+                          <p className="text-xs text-gray-400 mt-1">Tente outro termo de busca ou ajuste os filtros</p>
+                        </div>
+                        {activeCount > 0 && (
+                          <button
+                            onClick={() => { setFilters({ ...EMPTY_FILTERS }); setApplied({ ...EMPTY_FILTERS }); setSearchTerm(''); setCurrentPage(1); }}
+                            className="mt-2 px-4 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
+                          >
+                            Limpar todos os filtros
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ) : paginatedQuotes.map((quote, idx) => (
@@ -723,6 +893,32 @@ export default function PipelineDetailsPage() {
               <button onClick={saveEdit} className="flex items-center gap-1.5 px-5 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">
                 <Check className="w-3.5 h-3.5" />
                 Salvar alteracoes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirm Bulk Edit Modal ── */}
+      {confirmBulk && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="px-6 py-5 border-b border-gray-200">
+              <h2 className="text-base font-bold text-gray-900">Confirmar edicao em lote</h2>
+            </div>
+            <div className="px-6 py-5">
+              <p className="text-sm text-gray-600">
+                Voce esta prestes a alterar o campo <strong className="text-gray-900">{EDITABLE_FIELDS.find(f => f.key === bulkField)?.label}</strong> para <strong className="text-gray-900">{bulkValue}</strong> em{' '}
+                <strong className="text-blue-600">{selectedIds.size > 0 ? selectedIds.size : filteredQuotes.length}</strong> registros.
+              </p>
+              <p className="text-sm text-gray-500 mt-2">Esta acao pode ser desfeita.</p>
+            </div>
+            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
+              <button onClick={() => setConfirmBulk(false)} className="px-4 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                Cancelar
+              </button>
+              <button onClick={applyBulkEdit} className="px-5 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">
+                Confirmar alteracao
               </button>
             </div>
           </div>

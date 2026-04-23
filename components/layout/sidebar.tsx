@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronLeft, BarChart3, ArrowRightLeft, ListFilter, PlusCircle, Cog } from 'lucide-react';
+import { ChevronLeft, BarChart3, ArrowRightLeft, ListFilter, PlusCircle, Cog, Moon, Sun } from 'lucide-react';
 
 const NAV_GROUPS = [
   {
@@ -25,7 +25,23 @@ const NAV_GROUPS = [
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => {
+    const saved = localStorage.getItem('darkMode');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = saved ? saved === 'true' : prefersDark;
+    setDarkMode(isDark);
+    document.documentElement.classList.toggle('dark', isDark);
+  }, []);
+
+  const toggleDarkMode = () => {
+    const newVal = !darkMode;
+    setDarkMode(newVal);
+    localStorage.setItem('darkMode', String(newVal));
+    document.documentElement.classList.toggle('dark', newVal);
+  };
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href);
 
@@ -113,7 +129,19 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-gray-800/60 p-3">
+      <div className="border-t border-gray-800/60 p-3 space-y-2">
+        {/* Dark mode toggle */}
+        <button
+          onClick={toggleDarkMode}
+          className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm transition ${
+            collapsed ? 'justify-center' : ''
+          } text-gray-400 hover:bg-gray-800 hover:text-gray-200`}
+          title={darkMode ? 'Modo claro' : 'Modo escuro'}
+        >
+          {darkMode ? <Sun className="w-4 h-4 shrink-0" /> : <Moon className="w-4 h-4 shrink-0" />}
+          {!collapsed && <span>{darkMode ? 'Modo Claro' : 'Modo Escuro'}</span>}
+        </button>
+
         {collapsed ? (
           <button
             onClick={() => setCollapsed(false)}
