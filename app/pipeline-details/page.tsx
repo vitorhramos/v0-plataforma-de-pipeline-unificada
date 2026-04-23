@@ -515,11 +515,20 @@ export default function PipelineDetailsPage() {
               <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold ${filtersOpen ? 'bg-white text-blue-600' : 'bg-blue-600 text-white'}`}>{activeCount}</span>
             )}
           </button>
-          <select value={pageSize} onChange={e => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }} className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
-            <option value={25}>25 / pag</option>
-            <option value={50}>50 / pag</option>
-            <option value={100}>100 / pag</option>
-          </select>
+  {colOrder.join() !== DEFAULT_COL_ORDER.join() && (
+    <button
+      onClick={() => { setColOrder(DEFAULT_COL_ORDER); localStorage.removeItem('pipeline-col-order'); }}
+      className="px-3 py-2 text-xs font-medium text-gray-500 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition whitespace-nowrap"
+      title="Restaurar ordem original das colunas"
+    >
+      Resetar colunas
+    </button>
+  )}
+  <select value={pageSize} onChange={e => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }} className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+    <option value={25}>25 / pag</option>
+    <option value={50}>50 / pag</option>
+    <option value={100}>100 / pag</option>
+  </select>
         </div>
 
         {/* Advanced filter panel with animation */}
@@ -921,24 +930,13 @@ export default function PipelineDetailsPage() {
                     <div key={field.key}>
                       <label className={lbl}>{field.label}</label>
                       {field.type === 'select' ? (
-          {colOrder.join() !== DEFAULT_COL_ORDER.join() && (
-            <button
-              onClick={() => { setColOrder(DEFAULT_COL_ORDER); localStorage.removeItem('pipeline-col-order'); }}
-              className="px-3 py-2 text-xs font-medium text-gray-500 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition whitespace-nowrap"
-              title="Restaurar ordem original das colunas"
-            >
-              Resetar colunas
-            </button>
-          )}
-          <select
-            value={pageSize}
-            onChange={(e) => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-          >
-            <option value={25}>25 / pag</option>
-            <option value={50}>50 / pag</option>
-            <option value={100}>100 / pag</option>
-          </select>
+                        <select
+                          value={val}
+                          onChange={e => setEditDraft(d => ({ ...d, [field.key]: e.target.value }))}
+                          className={`${inp} bg-gray-50`}
+                        >
+                          {field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
                       ) : (
                         <input
                           type={field.type}
