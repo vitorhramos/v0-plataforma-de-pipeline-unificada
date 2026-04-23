@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { SlidersHorizontal, X } from 'lucide-react';
 import { Breadcrumbs, Tooltip } from '@/components/common/breadcrumbs-tooltips';
 import { useOperationHistory } from '@/components/common/operation-history';
 import { useToast } from '@/components/common/toast';
@@ -38,6 +39,18 @@ const mockQuotes = Array.from({ length: 85 }, (_, i) => ({
   status: ['S', 'N', 'U'][i % 3],
 }));
 
+const VENDORS_LIST = ['Cisco', 'HPE', 'Dell', 'Lenovo'];
+const TERRITORIES_LIST = ['Sao Paulo', 'Rio de Janeiro', 'Minas Gerais'];
+const TEAMS_LIST = ['Team Alpha', 'Team Beta', 'Team Gamma'];
+const BU_LIST = ['BU Storage', 'BU Network', 'BU Compute'];
+const STAGES_LIST = ['Pipelined', 'Pricing 25%', 'Up Selling 50%', 'Committed 75%', 'Net Lost'];
+
+const EMPTY_FILTERS = {
+  stage: '', vendor: '', territory: '', team: '', bu: '',
+  min_usd: '', max_usd: '', min_prob: '', max_prob: '',
+  budgetary: '', close_date_from: '', close_date_to: '',
+};
+
 const STATUS_INFO: Record<string, { color: string; description: string }> = {
   S: { color: 'bg-emerald-100 text-emerald-800', description: 'Agendado para processamento' },
   N: { color: 'bg-gray-100 text-gray-600', description: 'Nao iniciado' },
@@ -56,14 +69,36 @@ export default function PipelineDetailsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filters, setFilters] = useState({ ...EMPTY_FILTERS });
+  const [applied, setApplied] = useState({ ...EMPTY_FILTERS });
   const { add: addToHistory } = useOperationHistory();
   const toast = useToast();
 
-  const filteredQuotes = mockQuotes.filter(q =>
-    q.quote_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    q.cpo_id.includes(searchTerm) ||
-    q.part_no.includes(searchTerm)
-  );
+  const setF = (key: string, val: string) => setFilters(p => ({ ...p, [key]: val }));
+
+  const activeCount = Object.values(applied).filter(v => v !== '').length;
+
+  const filteredQuotes = mockQuotes.filter(q => {
+    // text search
+    const term = searchTerm.toLowerCase();
+    if (term && !q.quote_name.toLowerCase().includes(term) && !q.cpo_id.includes(searchTerm) && !q.part_no.includes(searchTerm)) return false;
+    // advanced filters
+    if (applied.stage && q.stage !== applied.stage) return false;
+    if (applied.vendor && q.vendor !== applied.vendor) return false;
+    if (applied.territory && q.sales_territory !== applied.territory) return false;
+    if (applied.team && q.team !== applied.team) return false;
+    if (applied.bu && q.bu !== applied.bu) return false;
+    if (applied.min_usd && q.usd_value < parseInt(applied.min_usd)) return false;
+    if (applied.max_usd && q.usd_value > parseInt(applied.max_usd)) return false;
+    if (applied.min_prob && q.probability < parseInt(applied.min_prob)) return false;
+    if (applied.max_prob && q.probability > parseInt(applied.max_prob)) return false;
+    if (applied.budgetary === 'yes' && q.budgetary !== 'Yes') return false;
+    if (applied.budgetary === 'no' && q.budgetary !== 'No') return false;
+    if (applied.close_date_from && q.close_date < applied.close_date_from) return false;
+    if (applied.close_date_to && q.close_date > applied.close_date_to) return false;
+    return true;
+  });
 
   const paginatedQuotes = filteredQuotes.slice(
     (currentPage - 1) * pageSize,
@@ -135,7 +170,7 @@ export default function PipelineDetailsPage() {
         </div>
 
         {/* Toolbar */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -148,14 +183,30 @@ export default function PipelineDetailsPage() {
               className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
             />
             {searchTerm && (
-              <button
-                onClick={() => { setSearchTerm(''); setCurrentPage(1); }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                &times;
+              <button onClick={() => { setSearchTerm(''); setCurrentPage(1); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
+
+          {/* Filter toggle */}
+          <button
+            onClick={() => setFiltersOpen(o => !o)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition ${
+              filtersOpen || activeCount > 0
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            Filtros
+            {activeCount > 0 && (
+              <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold ${filtersOpen ? 'bg-white text-blue-600' : 'bg-blue-600 text-white'}`}>
+                {activeCount}
+              </span>
+            )}
+          </button>
+
           <select
             value={pageSize}
             onChange={(e) => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }}
@@ -166,6 +217,136 @@ export default function PipelineDetailsPage() {
             <option value={100}>100 / pag</option>
           </select>
         </div>
+
+        {/* Advanced filter panel */}
+        {filtersOpen && (() => {
+          const inp = 'w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition';
+          const lbl = 'block text-[11px] font-semibold text-gray-500 mb-1';
+          return (
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-200">
+                <span className="text-xs font-semibold text-gray-600">Filtros Avancados</span>
+                {activeCount > 0 && (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {Object.entries(applied).filter(([, v]) => v !== '').map(([k, v]) => (
+                      <span key={k} className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-[11px] font-medium">
+                        {v}
+                        <button onClick={() => { const n = { ...applied, [k]: '' }; setApplied(n); setFilters(n); setCurrentPage(1); }}>
+                          <X className="w-2.5 h-2.5 ml-0.5" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-5 space-y-4">
+                {/* Row 1 */}
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Classificacao</p>
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div>
+                      <label className={lbl}>Stage</label>
+                      <select value={filters.stage} onChange={e => setF('stage', e.target.value)} className={inp}>
+                        <option value="">Todos</option>
+                        {STAGES_LIST.map(s => <option key={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={lbl}>Vendor</label>
+                      <select value={filters.vendor} onChange={e => setF('vendor', e.target.value)} className={inp}>
+                        <option value="">Todos</option>
+                        {VENDORS_LIST.map(v => <option key={v}>{v}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={lbl}>Territory</label>
+                      <select value={filters.territory} onChange={e => setF('territory', e.target.value)} className={inp}>
+                        <option value="">Todos</option>
+                        {TERRITORIES_LIST.map(t => <option key={t}>{t}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={lbl}>Team</label>
+                      <select value={filters.team} onChange={e => setF('team', e.target.value)} className={inp}>
+                        <option value="">Todos</option>
+                        {TEAMS_LIST.map(t => <option key={t}>{t}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={lbl}>BU</label>
+                      <select value={filters.bu} onChange={e => setF('bu', e.target.value)} className={inp}>
+                        <option value="">Todos</option>
+                        {BU_LIST.map(b => <option key={b}>{b}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Row 2 */}
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Valores e Probabilidade</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                      <label className={lbl}>Min USD</label>
+                      <input type="number" placeholder="50000" value={filters.min_usd} onChange={e => setF('min_usd', e.target.value)} className={inp} />
+                    </div>
+                    <div>
+                      <label className={lbl}>Max USD</label>
+                      <input type="number" placeholder="2500000" value={filters.max_usd} onChange={e => setF('max_usd', e.target.value)} className={inp} />
+                    </div>
+                    <div>
+                      <label className={lbl}>Min Prob %</label>
+                      <input type="number" min="0" max="100" placeholder="0" value={filters.min_prob} onChange={e => setF('min_prob', e.target.value)} className={inp} />
+                    </div>
+                    <div>
+                      <label className={lbl}>Max Prob %</label>
+                      <input type="number" min="0" max="100" placeholder="100" value={filters.max_prob} onChange={e => setF('max_prob', e.target.value)} className={inp} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Row 3 */}
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Data e Tipo</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className={lbl}>Close Date De</label>
+                      <input type="date" value={filters.close_date_from} onChange={e => setF('close_date_from', e.target.value)} className={inp} />
+                    </div>
+                    <div>
+                      <label className={lbl}>Close Date Ate</label>
+                      <input type="date" value={filters.close_date_to} onChange={e => setF('close_date_to', e.target.value)} className={inp} />
+                    </div>
+                    <div>
+                      <label className={lbl}>Budgetary</label>
+                      <select value={filters.budgetary} onChange={e => setF('budgetary', e.target.value)} className={inp}>
+                        <option value="">Todos</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-t border-gray-200">
+                <button
+                  onClick={() => { setFilters({ ...EMPTY_FILTERS }); setApplied({ ...EMPTY_FILTERS }); setCurrentPage(1); }}
+                  className="px-4 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                >
+                  Limpar filtros
+                </button>
+                <button
+                  onClick={() => { setApplied({ ...filters }); setCurrentPage(1); setFiltersOpen(false); }}
+                  className="px-5 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition"
+                >
+                  Aplicar
+                </button>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Count */}
         <p className="text-xs text-gray-500">

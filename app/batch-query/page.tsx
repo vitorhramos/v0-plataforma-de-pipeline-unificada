@@ -1,7 +1,10 @@
-'use client';
+import { redirect } from 'next/navigation';
 
-import Link from 'next/link';
-import { useState } from 'react';
+export default function BatchQueryPage() {
+  redirect('/pipeline-details');
+}
+
+// legacy — kept for redirect only
 
 const USD_VALUES = [702000, 241000, 451000, 2348000, 1614000, 2301000, 890000, 340000, 1200000, 560000];
 const VENDORS = ['Cisco', 'HPE', 'Dell', 'Lenovo'];

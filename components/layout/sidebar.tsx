@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronLeft, BarChart3, ArrowRightLeft, ListFilter, Search, Edit, Cog } from 'lucide-react';
+import { ChevronLeft, BarChart3, ArrowRightLeft, ListFilter, Edit, Cog } from 'lucide-react';
 
 const NAV_GROUPS = [
   {
@@ -12,7 +12,6 @@ const NAV_GROUPS = [
       { href: '/dashboard', label: 'Dashboard', icon: BarChart3 },
       { href: '/pipeline-manager', label: 'Manager', icon: ArrowRightLeft },
       { href: '/pipeline-details', label: 'Details', icon: ListFilter },
-      { href: '/batch-query', label: 'Query', icon: Search },
     ],
   },
   {
