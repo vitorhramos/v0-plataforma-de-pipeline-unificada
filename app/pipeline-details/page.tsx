@@ -77,6 +77,9 @@ export default function PipelineDetailsPage() {
 
   const setF = (key: string, val: string) => setFilters(p => ({ ...p, [key]: val }));
 
+  const inp = 'w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition';
+  const lbl = 'block text-[11px] font-semibold text-gray-500 mb-1';
+
   const activeCount = Object.values(applied).filter(v => v !== '').length;
 
   const filteredQuotes = mockQuotes.filter(q => {
@@ -219,10 +222,7 @@ export default function PipelineDetailsPage() {
         </div>
 
         {/* Advanced filter panel */}
-        {filtersOpen && (() => {
-          const inp = 'w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition';
-          const lbl = 'block text-[11px] font-semibold text-gray-500 mb-1';
-          return (
+        {filtersOpen && (
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-200">
                 <span className="text-xs font-semibold text-gray-600">Filtros Avancados</span>
@@ -345,8 +345,7 @@ export default function PipelineDetailsPage() {
                 </button>
               </div>
             </div>
-          );
-        })()}
+        )}
 
         {/* Count */}
         <p className="text-xs text-gray-500">
