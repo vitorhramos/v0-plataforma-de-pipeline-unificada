@@ -2,11 +2,13 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { SlidersHorizontal, X, Pencil, Check, History, Loader2, ChevronUp, ChevronDown } from 'lucide-react';
+import { SlidersHorizontal, X, Pencil, Check, History, Loader2, ChevronUp, ChevronDown, HelpCircle } from 'lucide-react';
 import { Breadcrumbs, Tooltip } from '@/components/common/breadcrumbs-tooltips';
 import { useOperationHistory } from '@/components/common/operation-history';
 import { useToast } from '@/components/common/toast';
+import { TourOverlay } from '@/components/common/tour-overlay';
 import { getQuotes } from '@/lib/mock-store';
+import { useTour } from '@/hooks/useTour';
 
 
 
@@ -254,6 +256,24 @@ export default function PipelineDetailsPage() {
   const [undoStack, setUndoStack] = useState<{ quotes: Quote[]; desc: string }[]>([]);
   const [savedFeedback, setSavedFeedback] = useState(false);
 
+  // Tour steps definition
+  const TOUR_STEPS = [
+    { id: 'search', selector: '[data-tour="search"]', title: 'Busca Rápida', description: 'Digite CPO ID, Part No ou Quote Name para filtrar instantaneamente na tabela.', position: 'bottom' as const },
+    { id: 'filters', selector: '[data-tour="filters-btn"]', title: 'Filtros Avançados', description: 'Clique aqui para abrir o painel com 15 filtros organizados em 4 grupos temáticos. Os filtros são persistidos na URL e podem ser compartilhados.', position: 'bottom' as const },
+    { id: 'tags', selector: '[data-tour="filter-tags"]', title: 'Filtros Ativos', description: 'Veja todos os filtros aplicados aqui. Remova um filtro clicando no X, ou clique "Limpar todos" para resetar.', position: 'bottom' as const },
+    { id: 'sort', selector: '[data-tour="table-header"]', title: 'Ordenação de Colunas', description: 'Clique em qualquer header de coluna para ordenar. O ícone de seta mostra a direção (asc/desc).', position: 'bottom' as const },
+    { id: 'drag', selector: '[data-tour="table-header"]', title: 'Reordenar Colunas', description: 'Arraste qualquer header para mover a coluna para outra posição. A ordem é salva automaticamente em localStorage.', position: 'bottom' as const },
+    { id: 'edit', selector: '[data-tour="edit-pencil"]', title: 'Edição Individual', description: 'Clique no ícone de lápis para abrir o modal de edição. Os campos alterados ganham borda laranja e um ponto indicador.', position: 'left' as const },
+    { id: 'history', selector: '[data-tour="history-icon"]', title: 'Histórico de Versões', description: 'Clique no ícone de relógio para ver todas as alterações feitas naquele quote, com data e hora de cada mudança.', position: 'left' as const },
+    { id: 'bulk', selector: '[data-tour="bulk-field"]', title: 'Edição em Lote', description: 'Selecione um campo e um valor para aplicar a mesma alteração em múltiplos registros de uma vez. Requer confirmação.', position: 'top' as const },
+    { id: 'undo', selector: '[data-tour="undo-btn"]', title: 'Desfazer Ações', description: 'Após uma edição em lote, clique aqui para desfazer a última ação e restaurar o estado anterior.', position: 'bottom' as const },
+    { id: 'export', selector: '[data-tour="export-btn"]', title: 'Exportar CSV', description: 'Exporte os dados filtrados e ordenados em um arquivo CSV. Baixa automaticamente no seu computador.', position: 'bottom' as const },
+    { id: 'reset-cols', selector: '[data-tour="reset-cols"]', title: 'Resetar Colunas', description: 'Se você reordenou as colunas, clique aqui para restaurar a ordem original.', position: 'bottom' as const },
+    { id: 'pagination', selector: '[data-tour="pagination"]', title: 'Paginação', description: 'Controle quantos registros aparecem por página (25, 50 ou 100). Navegue entre páginas com os botões.', position: 'top' as const },
+  ];
+
+  const tour = useTour(TOUR_STEPS);
+
   const { add: addToHistory } = useOperationHistory();
   const toast = useToast();
 
@@ -453,7 +473,17 @@ export default function PipelineDetailsPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       {/* Use full width, no max-w constraint so table has room */}
       <div className="w-full px-4 sm:px-6 py-6 space-y-4">
-        <Breadcrumbs items={[{ label: 'Pipeline' }, { label: 'Details' }]} />
+        <div className="flex items-center justify-between">
+          <Breadcrumbs items={[{ label: 'Pipeline' }, { label: 'Details' }]} />
+          <button
+            onClick={tour.startTour}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+            title="Iniciar tour interativo das funcionalidades"
+          >
+            <HelpCircle className="w-3.5 h-3.5" />
+            Tour
+          </button>
+        </div>
 
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
@@ -461,7 +491,7 @@ export default function PipelineDetailsPage() {
             <h1 className="text-2xl font-bold text-gray-900">Pipeline Details</h1>
             <p className="text-sm text-gray-500 mt-0.5">Busca em tempo real, edicao individual e em lote.</p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0" data-tour="export-btn">
             <Tooltip content="Exportar em CSV">
               <button onClick={() => handleExport('CSV')} className="px-3 py-1.5 text-xs font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">CSV</button>
             </Tooltip>
@@ -502,6 +532,7 @@ export default function PipelineDetailsPage() {
               placeholder="Buscar por Quote Name, CPO ID ou Part Number..."
               value={searchTerm}
               onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              data-tour="search"
               className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
             />
             {searchTerm && (
@@ -511,8 +542,9 @@ export default function PipelineDetailsPage() {
             )}
           </div>
           <button
-            onClick={() => setFiltersOpen(o => !o)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition ${filtersOpen || activeCount > 0 ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+            onClick={() => setFiltersOpen(!filtersOpen)}
+            data-tour="filters-btn"
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition ${filtersOpen ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
           >
             <SlidersHorizontal className="w-4 h-4" />
             Filtros
@@ -523,13 +555,14 @@ export default function PipelineDetailsPage() {
   {colOrder.join() !== DEFAULT_COL_ORDER.join() && (
     <button
       onClick={() => { setColOrder(DEFAULT_COL_ORDER); localStorage.removeItem('pipeline-col-order'); }}
+      data-tour="reset-cols"
       className="px-3 py-2 text-xs font-medium text-gray-500 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition whitespace-nowrap"
       title="Restaurar ordem original das colunas"
     >
       Resetar colunas
     </button>
   )}
-  <select value={pageSize} onChange={e => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }} className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+  <select value={pageSize} onChange={e => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }} data-tour="pagination" className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
     <option value={25}>25 / pag</option>
     <option value={50}>50 / pag</option>
     <option value={100}>100 / pag</option>
@@ -706,7 +739,7 @@ export default function PipelineDetailsPage() {
 
         {/* Active filter tags — visíveis fora do painel */}
         {activeCount > 0 && !filtersOpen && (
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap" data-tour="filter-tags">
             <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide shrink-0">Ativos:</span>
             {Object.entries(applied).filter(([, v]) => v !== '').map(([k, v]) => (
               <span key={k} className="flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-[11px] font-medium">
@@ -740,7 +773,7 @@ export default function PipelineDetailsPage() {
             )}
           </div>
           <div className="flex items-center gap-2 flex-1 flex-wrap">
-            <select value={bulkField} onChange={e => { setBulkField(e.target.value as keyof Quote | ''); setBulkValue(''); }} className="px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition min-w-[140px]">
+            <select value={bulkField} onChange={e => { setBulkField(e.target.value as keyof Quote | ''); setBulkValue(''); }} data-tour="bulk-field" className="px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition min-w-[140px]">
               <option value="">Selecionar campo...</option>
               {EDITABLE_FIELDS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
             </select>
@@ -773,7 +806,7 @@ export default function PipelineDetailsPage() {
               </button>
             )}
             {undoStack.length > 0 && (
-              <button onClick={handleUndo} className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-800 text-xs font-semibold rounded-lg hover:bg-amber-200 transition">
+              <button onClick={handleUndo} data-tour="undo-btn" className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-800 text-xs font-semibold rounded-lg hover:bg-amber-200 transition">
                 Desfazer
               </button>
             )}
@@ -797,7 +830,7 @@ export default function PipelineDetailsPage() {
                   </th>
                   <th className="px-2 py-2.5 w-8"></th>
                   <th className="px-2 py-2.5 w-8"></th>
-                  {orderedColumns.map(col => (
+                  {orderedColumns.map((col, idx) => (
                     <th
                       key={col.key}
                       draggable
@@ -807,6 +840,7 @@ export default function PipelineDetailsPage() {
                       onDragEnd={() => setDragOverKey(null)}
                       onClick={() => handleHeaderClick(col.key)}
                       title="Arraste para reordenar · Clique para ordenar"
+                      data-tour={idx === 0 ? 'table-header' : undefined}
                       className={`px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wide whitespace-nowrap cursor-grab active:cursor-grabbing select-none transition-colors ${
                         dragOverKey === col.key
                           ? 'bg-blue-100 text-blue-700 border-l-2 border-blue-500'
@@ -855,14 +889,14 @@ export default function PipelineDetailsPage() {
                     </td>
                     {/* Edit button */}
                     <td className="px-1 py-2.5">
-                      <button onClick={() => { setEditingQuote(quote); setEditDraft({}); }} className="p-1 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition" title="Editar">
+                      <button onClick={() => { setEditingQuote(quote); setEditDraft({}); }} data-tour="edit-pencil" className="p-1 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition" title="Editar">
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
                     </td>
                     {/* History button */}
                     <td className="px-1 py-2.5">
                       {(versions[quote.id]?.length ?? 0) > 0 && (
-                        <button onClick={() => setHistoryQuote(quote)} className="p-1 rounded text-amber-500 hover:text-amber-700 hover:bg-amber-50 transition" title="Historico de versoes">
+                        <button onClick={() => setHistoryQuote(quote)} data-tour="history-icon" className="p-1 rounded text-amber-500 hover:text-amber-700 hover:bg-amber-50 transition" title="Historico de versoes">
                           <History className="w-3.5 h-3.5" />
                         </button>
                       )}
@@ -1111,6 +1145,17 @@ export default function PipelineDetailsPage() {
           </div>
         </div>
       )}
+
+      {/* ── Tour Overlay ── */}
+      <TourOverlay
+        isActive={tour.isTourActive}
+        currentStep={tour.currentStep}
+        steps={TOUR_STEPS}
+        onNext={tour.nextStep}
+        onPrev={tour.prevStep}
+        onClose={tour.closeTour}
+        totalSteps={tour.totalSteps}
+      />
 
       {/* ── History Modal ── */}
       {historyQuote && (
