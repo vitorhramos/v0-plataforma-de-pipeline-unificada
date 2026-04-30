@@ -7,6 +7,9 @@ import { Card } from '@/components/ui/card';
 import { Breadcrumbs, Tooltip as CustomTooltip } from '@/components/common/breadcrumbs-tooltips';
 import { AdditionalCharts } from '@/components/common/additional-charts';
 import { useKeyboardShortcuts } from '@/components/common/keyboard-shortcuts';
+import { HelpCircle } from 'lucide-react';
+import { useTour } from '@/hooks/useTour';
+import { TourOverlay } from '@/components/common/tour-overlay';
 
 // KPI accent colors per index
 const KPI_COLORS = [
@@ -74,9 +77,19 @@ const mockData = {
   ],
 };
 
+const DASHBOARD_TOUR_STEPS = [
+  { id: 'kpis', selector: '[data-tour="kpi-grid"]', title: 'KPIs Executivos', description: 'Cards com os principais indicadores do pipeline. Passe o mouse em cada card para ver o detalhamento. As cores das bordas diferenciam cada estagio.', position: 'bottom' as const },
+  { id: 'filters', selector: '[data-tour="dash-filters-btn"]', title: 'Filtros Rapidos', description: 'Filtre os dados por Stage, Territory, Vendor e BU. Os graficos e KPIs atualizam em tempo real. Atalho: Ctrl+F.', position: 'bottom' as const },
+  { id: 'bar-chart', selector: '[data-tour="bar-chart"]', title: 'Grafico de Barras por Stage', description: 'Visualize o valor total ($) e a quantidade de quotes agrupados por estagio do pipeline.', position: 'top' as const },
+  { id: 'line-chart', selector: '[data-tour="line-chart"]', title: 'Evolucao Mensal', description: 'Acompanhe a evolucao do pipeline mes a mes com a tendencia de crescimento.', position: 'top' as const },
+  { id: 'pie-chart', selector: '[data-tour="pie-chart"]', title: 'Distribuicao por Vendor', description: 'Proporcao de participacao de cada fabricante no pipeline total.', position: 'top' as const },
+  { id: 'additional', selector: '[data-tour="additional-charts"]', title: 'Graficos Adicionais', description: 'Analises complementares por territorio, BU e evolucao historica de win rate.', position: 'top' as const },
+];
+
 export default function DashboardPage() {
   const [expandFilters, setExpandFilters] = useState(false);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const tour = useTour(DASHBOARD_TOUR_STEPS);
 
   useKeyboardShortcuts({
     export: () => alert('Exportando dados...'),
@@ -98,14 +111,23 @@ export default function DashboardPage() {
               para abrir filtros.
             </p>
           </div>
-          <button
-            onClick={() => setExpandFilters(!expandFilters)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition ${
-              expandFilters
-                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-            }`}
-          >
+          <div className="flex items-center gap-2">
+            <button
+              onClick={tour.startTour}
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-100 transition font-medium text-sm shadow-sm"
+            >
+              <HelpCircle className="w-4 h-4" />
+              Iniciar Tour
+            </button>
+            <button
+              onClick={() => setExpandFilters(!expandFilters)}
+              data-tour="dash-filters-btn"
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition ${
+                expandFilters
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              }`}
+            >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
             </svg>
@@ -115,11 +137,12 @@ export default function DashboardPage() {
                 {activeFilters.length}
               </span>
             )}
-          </button>
+            </button>
+          </div>
         </div>
 
         {/* KPI grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        <div data-tour="kpi-grid" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
           {mockData.kpis.map((kpi, idx) => (
             <CustomTooltip key={idx} content={`${kpi.value} quotes — ${kpi.trend} vs. mes anterior`}>
               <div className={`bg-white rounded-xl border-l-4 ${KPI_COLORS[idx]} border border-gray-200 px-4 py-3 hover:shadow-md transition cursor-help group`}>
@@ -246,7 +269,7 @@ export default function DashboardPage() {
         <div>
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Graficos Analiticos</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div data-tour="bar-chart" className="bg-white rounded-xl border border-gray-200 p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-gray-900">Stage Distribution</h3>
                 <span className="text-xs text-gray-400 font-medium">USD</span>
@@ -296,7 +319,7 @@ export default function DashboardPage() {
               </ResponsiveContainer>
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div data-tour="line-chart" className="bg-white rounded-xl border border-gray-200 p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-gray-900">Tendencia Mensal</h3>
                 <span className="text-xs text-emerald-600 font-semibold">+18.8%</span>
@@ -314,8 +337,20 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <AdditionalCharts />
+        <div data-tour="additional-charts">
+          <AdditionalCharts />
+        </div>
       </div>
+
+      <TourOverlay
+        isActive={tour.isTourActive}
+        currentStep={tour.currentStep}
+        steps={DASHBOARD_TOUR_STEPS}
+        onNext={tour.nextStep}
+        onPrev={tour.prevStep}
+        onClose={tour.closeTour}
+        totalSteps={tour.totalSteps}
+      />
     </div>
   );
 }

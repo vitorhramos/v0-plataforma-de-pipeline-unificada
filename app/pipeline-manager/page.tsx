@@ -4,6 +4,9 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Breadcrumbs } from '@/components/common/breadcrumbs-tooltips';
+import { HelpCircle } from 'lucide-react';
+import { useTour } from '@/hooks/useTour';
+import { TourOverlay } from '@/components/common/tour-overlay';
 
 const PART_PREFIXES = ['NX', 'HP', 'DL', 'CP', 'LN', 'ST', 'VX', 'AX'];
 const USD_VALUES = [702000, 241000, 451000, 2348000, 1614000, 2301000, 890000, 340000, 1200000, 560000];
@@ -69,8 +72,17 @@ const mockData = {
   ],
 };
 
+const MANAGER_TOUR_STEPS = [
+  { id: 'summary', selector: '[data-tour="summary-cards"]', title: 'Resumo Executivo', description: 'Cards com os tres principais KPIs: pipeline total, valor committed e probabilidade media.', position: 'bottom' as const },
+  { id: 'view-toggle', selector: '[data-tour="view-toggle"]', title: 'Alternar entre Graficos e Tabela', description: 'Alterne entre a visao grafica para analise visual e a visao tabular para inspecionar cada quote.', position: 'bottom' as const },
+  { id: 'charts', selector: '[data-tour="manager-charts"]', title: 'Graficos Comparativos', description: 'Pipeline por Revenda, Vendor, distribuicao de Stage e tendencia mensal com multiplas linhas por estagio.', position: 'top' as const },
+  { id: 'table', selector: '[data-tour="manager-table"]', title: 'Tabela de Quotes', description: 'Visao tabular com paginacao. Cada linha tem badge de stage colorido e indicador de status.', position: 'top' as const },
+  { id: 'pagination', selector: '[data-tour="manager-pagination"]', title: 'Paginacao', description: 'Navegue entre as paginas de quotes com os controles de pagina.', position: 'top' as const },
+];
+
 export default function PipelineManagerPage() {
   const [view, setView] = useState<'charts' | 'table'>('charts');
+  const tour = useTour(MANAGER_TOUR_STEPS);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 25;
   const totalPages = Math.ceil(mockQuotes.length / pageSize);
@@ -91,8 +103,16 @@ export default function PipelineManagerPage() {
             <h1 className="text-2xl font-bold text-gray-900">Pipeline Manager</h1>
             <p className="text-sm text-gray-500 mt-0.5">Graficos e tabela de 85 quotes ativos.</p>
           </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={tour.startTour}
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-100 transition font-medium text-sm shadow-sm"
+            >
+              <HelpCircle className="w-4 h-4" />
+              Iniciar Tour
+            </button>
           {/* View toggle */}
-          <div className="flex items-center bg-gray-100 rounded-lg p-1 gap-1">
+          <div data-tour="view-toggle" className="flex items-center bg-gray-100 rounded-lg p-1 gap-1">
             <button
               onClick={() => setView('charts')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition ${
@@ -112,10 +132,12 @@ export default function PipelineManagerPage() {
               Tabela
             </button>
           </div>
+          </div>
+          </div>
         </div>
 
         {/* Summary cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div data-tour="summary-cards" className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-blue-500 px-4 py-3">
             <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Quotes</p>
             <p className="text-xl font-bold text-gray-900 mt-1">{mockQuotes.length}</p>
@@ -267,7 +289,15 @@ export default function PipelineManagerPage() {
             </div>
           </div>
         )}
-      </div>
+      <TourOverlay
+        isActive={tour.isTourActive}
+        currentStep={tour.currentStep}
+        steps={MANAGER_TOUR_STEPS}
+        onNext={tour.nextStep}
+        onPrev={tour.prevStep}
+        onClose={tour.closeTour}
+        totalSteps={tour.totalSteps}
+      />
     </div>
   );
 }

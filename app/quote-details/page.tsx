@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, HelpCircle } from 'lucide-react';
 import { Breadcrumbs } from '@/components/common/breadcrumbs-tooltips';
 import { addQuote } from '@/lib/mock-store';
+import { useTour } from '@/hooks/useTour';
+import { TourOverlay } from '@/components/common/tour-overlay';
 
 const VENDORS_LIST = ['Cisco', 'HPE', 'Dell', 'Lenovo'];
 const TERRITORIES_LIST = ['Sao Paulo', 'Rio de Janeiro', 'Minas Gerais'];
@@ -58,11 +60,20 @@ const inp = 'w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs text
 const sel = `${inp} bg-gray-50`;
 const errCls = 'border-red-400 focus:ring-red-400 focus:border-red-400';
 
+const NEW_QUOTE_TOUR_STEPS = [
+  { id: 'pipeline-group', selector: '[data-tour="group-pipeline"]', title: 'Grupo Pipeline', description: 'Stage e Status sao os campos mais importantes. Stage define o estagio comercial, Status define a situacao operacional do quote.', position: 'bottom' as const },
+  { id: 'values-group', selector: '[data-tour="group-values"]', title: 'Grupo Valores', description: 'USD Value e obrigatorio. Probability e um numero de 0 a 100. Budget indica se o cliente tem orcamento aprovado.', position: 'bottom' as const },
+  { id: 'classification-group', selector: '[data-tour="group-classification"]', title: 'Grupo Classificacao', description: 'Territory, Vendor, Revenda e End User identificam os envolvidos no negocio. BU indica a Business Unit responsavel.', position: 'bottom' as const },
+  { id: 'required', selector: '[data-tour="submit-area"]', title: 'Campos Obrigatorios', description: 'Campos com * sao obrigatorios. Se algum estiver vazio ao salvar, o campo fica vermelho com mensagem de erro.', position: 'top' as const },
+  { id: 'submit', selector: '[data-tour="submit-area"]', title: 'Salvar e Sincronizar', description: 'Ao salvar, a quote e adicionada ao mock store e aparece automaticamente na aba Details sem precisar recarregar a pagina.', position: 'top' as const },
+];
+
 export default function NewQuotePage() {
   const router = useRouter();
   const [form, setForm] = useState<FormState>({ ...EMPTY_FORM });
   const [errors, setErrors] = useState<Errors>({});
   const [saved, setSaved] = useState(false);
+  const tour = useTour(NEW_QUOTE_TOUR_STEPS);
 
   const set = (k: keyof FormState, v: string) => {
     setForm(p => ({ ...p, [k]: v }));
@@ -133,26 +144,20 @@ export default function NewQuotePage() {
             <h1 className="text-2xl font-bold text-gray-900">Nova Quote</h1>
             <p className="text-sm text-gray-500 mt-0.5">Preencha os dados abaixo. Campos marcados com * sao obrigatorios.</p>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => { setForm({ ...EMPTY_FORM }); setErrors({}); }}
-              className="px-4 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-            >
-              Limpar
-            </button>
-            <button
-              onClick={handleSubmit}
-              className="px-5 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition"
-            >
-              Salvar Quote
-            </button>
-          </div>
+          <button
+            onClick={tour.startTour}
+            className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-100 transition font-medium text-sm shadow-sm shrink-0"
+          >
+            <HelpCircle className="w-4 h-4" />
+            Iniciar Tour
+          </button>
         </div>
+
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm divide-y divide-gray-100">
 
           {/* Identificacao */}
-          <div className="px-6 py-5">
+          <div data-tour="group-pipeline" className="px-6 py-5">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Identificacao</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
@@ -181,7 +186,7 @@ export default function NewQuotePage() {
           </div>
 
           {/* Classificacao */}
-          <div className="px-6 py-5">
+          <div data-tour="group-classification" className="px-6 py-5">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Classificacao</p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div>
@@ -258,7 +263,7 @@ export default function NewQuotePage() {
           </div>
 
           {/* Data e Status */}
-          <div className="px-6 py-5">
+          <div data-tour="group-values" className="px-6 py-5">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Data e Status</p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div>
@@ -284,7 +289,7 @@ export default function NewQuotePage() {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 pb-6">
+        <div data-tour="submit-area" className="flex items-center justify-end gap-2 pb-6">
           <button
             onClick={() => { setForm({ ...EMPTY_FORM }); setErrors({}); }}
             className="px-4 py-2 text-xs font-medium text-gray-600 hover:text-gray-800 transition"
@@ -299,6 +304,16 @@ export default function NewQuotePage() {
           </button>
         </div>
       </div>
+
+      <TourOverlay
+        isActive={tour.isTourActive}
+        currentStep={tour.currentStep}
+        steps={NEW_QUOTE_TOUR_STEPS}
+        onNext={tour.nextStep}
+        onPrev={tour.prevStep}
+        onClose={tour.closeTour}
+        totalSteps={tour.totalSteps}
+      />
     </div>
   );
 }
