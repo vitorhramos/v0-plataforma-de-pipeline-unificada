@@ -34,9 +34,9 @@ export function TourOverlay({
   const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
   const tooltipRef = useRef<HTMLDivElement>(null);
   const step = steps[currentStep];
-  const PAD = 8;
-  const GAP = 16;
-  const TOOLTIP_W = 320;
+  const PAD = 10;
+  const GAP = 20;
+  const TOOLTIP_W = 340;
 
   useEffect(() => {
     if (!isActive || !step) return;
@@ -92,58 +92,62 @@ export function TourOverlay({
 
   return (
     <>
-      {/* Dark overlay using 4 rects around the highlighted element — no clip-path needed */}
+      {/* Dark overlay using 4 rects around the highlighted element */}
       {targetRect ? (
         <>
           {/* Top */}
           <div
-            className="fixed z-40 bg-black/70 pointer-events-auto"
-            style={{ top: 0, left: 0, right: 0, height: Math.max(0, targetRect.top - PAD) }}
+            className="fixed z-40 pointer-events-auto"
+            style={{ top: 0, left: 0, right: 0, height: Math.max(0, targetRect.top - PAD), background: 'rgba(0,0,0,0.82)' }}
             onClick={onClose}
           />
           {/* Bottom */}
           <div
-            className="fixed z-40 bg-black/70 pointer-events-auto"
-            style={{ top: targetRect.top + targetRect.height + PAD, left: 0, right: 0, bottom: 0 }}
+            className="fixed z-40 pointer-events-auto"
+            style={{ top: targetRect.top + targetRect.height + PAD, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.82)' }}
             onClick={onClose}
           />
           {/* Left */}
           <div
-            className="fixed z-40 bg-black/70 pointer-events-auto"
+            className="fixed z-40 pointer-events-auto"
             style={{
               top: targetRect.top - PAD,
               left: 0,
               width: Math.max(0, targetRect.left - PAD),
               height: targetRect.height + PAD * 2,
+              background: 'rgba(0,0,0,0.82)',
             }}
             onClick={onClose}
           />
           {/* Right */}
           <div
-            className="fixed z-40 bg-black/70 pointer-events-auto"
+            className="fixed z-40 pointer-events-auto"
             style={{
               top: targetRect.top - PAD,
               left: targetRect.left + targetRect.width + PAD,
               right: 0,
               height: targetRect.height + PAD * 2,
+              background: 'rgba(0,0,0,0.82)',
             }}
             onClick={onClose}
           />
-          {/* Highlight ring around element */}
+          {/* Spotlight cutout — bright border ring around target */}
           <div
-            className="fixed z-40 rounded-xl pointer-events-none"
+            className="fixed z-41 pointer-events-none rounded-lg"
             style={{
               top: targetRect.top - PAD,
               left: targetRect.left - PAD,
               width: targetRect.width + PAD * 2,
               height: targetRect.height + PAD * 2,
-              boxShadow: '0 0 0 3px #3b82f6, 0 0 0 6px rgba(59,130,246,0.3)',
-              transition: 'all 0.3s ease',
+              outline: '3px solid #3b82f6',
+              outlineOffset: '2px',
+              boxShadow: '0 0 0 3px rgba(59,130,246,0.5), inset 0 0 0 1px rgba(59,130,246,0.2)',
+              transition: 'all 0.25s ease',
             }}
           />
         </>
       ) : (
-        <div className="fixed inset-0 z-40 bg-black/70 pointer-events-auto" onClick={onClose} />
+        <div className="fixed inset-0 z-40 pointer-events-auto" style={{ background: 'rgba(0,0,0,0.82)' }} onClick={onClose} />
       )}
 
       {/* Tooltip card */}

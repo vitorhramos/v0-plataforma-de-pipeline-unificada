@@ -263,6 +263,7 @@ export default function PipelineDetailsPage() {
     { id: 'tags', selector: '[data-tour="filter-tags"]', title: 'Filtros Ativos', description: 'Veja todos os filtros aplicados aqui. Remova um filtro clicando no X, ou clique "Limpar todos" para resetar.', position: 'bottom' as const },
     { id: 'sort', selector: '[data-tour="table-header"]', title: 'Ordenação de Colunas', description: 'Clique em qualquer header de coluna para ordenar. O ícone de seta mostra a direção (asc/desc).', position: 'bottom' as const },
     { id: 'drag', selector: '[data-tour="table-header"]', title: 'Reordenar Colunas', description: 'Arraste qualquer header para mover a coluna para outra posição. A ordem é salva automaticamente em localStorage.', position: 'bottom' as const },
+    { id: 'checkbox', selector: '[data-tour="row-checkbox"]', title: 'Seleção de Linhas', description: 'Marque uma ou mais caixinhas para selecionar quotes individuais. A edição em lote aplica somente nas linhas marcadas. Sem nenhuma seleção, aplica em todos os registros filtrados.', position: 'right' as const },
     { id: 'edit', selector: '[data-tour="edit-pencil"]', title: 'Edição Individual', description: 'Clique no ícone de lápis para abrir o modal de edição. Os campos alterados ganham borda laranja e um ponto indicador.', position: 'left' as const },
     { id: 'history', selector: '[data-tour="history-icon"]', title: 'Histórico de Versões', description: 'Clique no ícone de relógio para ver todas as alterações feitas naquele quote, com data e hora de cada mudança.', position: 'left' as const },
     { id: 'bulk', selector: '[data-tour="bulk-field"]', title: 'Edição em Lote', description: 'Selecione um campo e um valor para aplicar a mesma alteração em múltiplos registros de uma vez. Requer confirmação.', position: 'top' as const },
@@ -856,7 +857,7 @@ export default function PipelineDetailsPage() {
                 ) : paginatedQuotes.map((quote, idx) => (
                   <tr key={quote.id} className={`hover:bg-blue-50 transition-colors text-gray-900 ${selectedIds.has(quote.id) ? 'bg-blue-50' : idx % 2 === 1 ? 'bg-gray-50/50' : 'bg-white'}`}>
                     <td className="px-3 py-2.5">
-                      <input type="checkbox" checked={selectedIds.has(quote.id)} onChange={() => toggleSelect(quote.id)} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                      <input type="checkbox" checked={selectedIds.has(quote.id)} onChange={() => toggleSelect(quote.id)} {...(idx === 0 ? { 'data-tour': 'row-checkbox' } : {})} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
                     </td>
                     {/* Edit button */}
                     <td className="px-1 py-2.5">
