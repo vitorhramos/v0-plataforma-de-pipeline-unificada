@@ -473,53 +473,24 @@ export default function PipelineDetailsPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       {/* Use full width, no max-w constraint so table has room */}
       <div className="w-full px-4 sm:px-6 py-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <Breadcrumbs items={[{ label: 'Pipeline' }, { label: 'Details' }]} />
+        {/* Header */}
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Pipeline Details</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Busca em tempo real, edicao individual e em lote.</p>
+          </div>
           <button
             onClick={tour.startTour}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-            title="Iniciar tour interativo das funcionalidades"
+            className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition whitespace-nowrap font-medium text-sm shadow-sm"
+            title="Clique para ver um tour interativo de todas as funcionalidades"
           >
-            <HelpCircle className="w-3.5 h-3.5" />
-            Tour
+            <HelpCircle className="w-4 h-4" />
+            Iniciar Tour
           </button>
         </div>
 
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Pipeline Details</h1>
-            <p className="text-sm text-gray-500 mt-0.5">Busca em tempo real, edicao individual e em lote.</p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0" data-tour="export-btn">
-            <Tooltip content="Exportar em CSV">
-              <button onClick={() => handleExport('CSV')} className="px-3 py-1.5 text-xs font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">CSV</button>
-            </Tooltip>
-            <Tooltip content="Exportar em Excel">
-              <button onClick={() => handleExport('Excel')} className="px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition shadow-sm">Excel</button>
-            </Tooltip>
-          </div>
-        </div>
-
-        {/* Summary cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-blue-500 px-4 py-3">
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Registros</p>
-            <p className="text-xl font-bold text-gray-900 mt-1">{filteredQuotes.length}</p>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 px-4 py-3">
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Total USD</p>
-            <p className="text-xl font-bold text-gray-900 mt-1">${(totalUsd / 1000000).toFixed(1)}M</p>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-violet-500 px-4 py-3">
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Prob Media</p>
-            <p className="text-xl font-bold text-gray-900 mt-1">{avgProb}%</p>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-amber-500 px-4 py-3">
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Budgetary</p>
-            <p className="text-xl font-bold text-gray-900 mt-1">{budgetaryCount}</p>
-          </div>
-        </div>
+        {/* Breadcrumbs */}
+        <Breadcrumbs items={[{ label: 'Pipeline' }, { label: 'Details' }]} />
 
         {/* Toolbar */}
         <div className="flex items-center gap-2 flex-wrap">
