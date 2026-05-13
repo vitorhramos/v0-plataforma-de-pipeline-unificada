@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { SlidersHorizontal, X, Pencil, Check, History, Loader2, ChevronUp, ChevronDown, HelpCircle, AlertTriangle, TrendingUp, DollarSign } from 'lucide-react';
+import { SlidersHorizontal, X, Pencil, Check, History, Loader2, ChevronUp, ChevronDown, HelpCircle } from 'lucide-react';
 import { Breadcrumbs, Tooltip } from '@/components/common/breadcrumbs-tooltips';
 import { useOperationHistory } from '@/components/common/operation-history';
 import { useToast } from '@/components/common/toast';
@@ -535,91 +535,75 @@ export default function PipelineDetailsPage() {
         {/* Breadcrumbs */}
         <Breadcrumbs items={[{ label: 'Pipeline' }, { label: 'Details' }]} />
 
-        {/* KPI Filter Cards */}
+        {/* KPI Filter Cards — estilo referencia dashboard: borda esquerda colorida, label + valor */}
         <div className="grid grid-cols-3 gap-3" data-tour="kpi-cards">
           {/* Card 1 — Previsao expirada > 15 dias */}
           <button
             onClick={() => handleCardFilter('expired')}
-            className={`group text-left rounded-xl border px-4 py-3 transition-all duration-150 shadow-sm hover:shadow-md ${
+            className={`text-left rounded-lg border bg-white px-4 py-3.5 transition-all duration-150 border-l-4 ${
               activeCard === 'expired'
-                ? 'bg-red-50 border-red-300 ring-1 ring-red-400'
-                : 'bg-white border-gray-200 hover:border-red-200 hover:bg-red-50/40'
+                ? 'border-l-red-500 border-gray-200 shadow-md ring-1 ring-red-200'
+                : 'border-l-red-400 border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300'
             }`}
           >
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide leading-none">Previsao Expirada</p>
-              <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${activeCard === 'expired' ? 'bg-red-200' : 'bg-red-100 group-hover:bg-red-200'} transition`}>
-                <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
-              </span>
-            </div>
-            <p className="text-2xl font-bold text-gray-900 leading-none">{expiredCount}</p>
-            <p className="text-[11px] text-gray-400 mt-1.5 leading-none">acima de 15 dias</p>
-            {activeCard === 'expired' && (
-              <span className="inline-block mt-2 text-[10px] font-semibold text-red-600 bg-red-100 px-1.5 py-0.5 rounded">filtro ativo</span>
-            )}
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2 leading-none">Previsao Expirada</p>
+            <p className="text-[1.6rem] font-bold text-gray-900 leading-none">{expiredCount}</p>
+            <p className="text-[11px] text-gray-400 mt-1.5 leading-none flex items-center gap-1">
+              acima de 15 dias
+              {activeCard === 'expired' && <span className="ml-1 text-red-500 font-semibold">— filtro ativo</span>}
+            </p>
           </button>
 
           {/* Card 2 — Alta probabilidade (>= 75%) */}
           <button
             onClick={() => handleCardFilter('highprob')}
-            className={`group text-left rounded-xl border px-4 py-3 transition-all duration-150 shadow-sm hover:shadow-md ${
+            className={`text-left rounded-lg border bg-white px-4 py-3.5 transition-all duration-150 border-l-4 ${
               activeCard === 'highprob'
-                ? 'bg-emerald-50 border-emerald-300 ring-1 ring-emerald-400'
-                : 'bg-white border-gray-200 hover:border-emerald-200 hover:bg-emerald-50/40'
+                ? 'border-l-emerald-500 border-gray-200 shadow-md ring-1 ring-emerald-200'
+                : 'border-l-emerald-400 border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300'
             }`}
           >
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide leading-none">Alta Probabilidade</p>
-              <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${activeCard === 'highprob' ? 'bg-emerald-200' : 'bg-emerald-100 group-hover:bg-emerald-200'} transition`}>
-                <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-              </span>
-            </div>
-            <p className="text-2xl font-bold text-gray-900 leading-none">{maxProbCount}</p>
-            <p className="text-[11px] text-gray-400 mt-1.5 leading-none">com prob. acima de 75%</p>
-            {activeCard === 'highprob' && (
-              <span className="inline-block mt-2 text-[10px] font-semibold text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded">filtro ativo</span>
-            )}
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2 leading-none">Alta Probabilidade</p>
+            <p className="text-[1.6rem] font-bold text-gray-900 leading-none">{maxProbCount}</p>
+            <p className="text-[11px] text-gray-400 mt-1.5 leading-none flex items-center gap-1">
+              com prob. acima de 75%
+              {activeCard === 'highprob' && <span className="ml-1 text-emerald-600 font-semibold">— filtro ativo</span>}
+            </p>
           </button>
 
-          {/* Card 3 — Valor total (nao clicavel, apenas informativo) */}
-          <div className="text-left rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide leading-none">Pipeline Total</p>
-              <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-blue-100">
-                <DollarSign className="w-3.5 h-3.5 text-blue-600" />
-              </span>
-            </div>
-            <p className="text-2xl font-bold text-gray-900 leading-none">
+          {/* Card 3 — Pipeline Total (informativo) */}
+          <div className="text-left rounded-lg border border-l-4 border-blue-400 border-gray-200 bg-white px-4 py-3.5 shadow-sm">
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2 leading-none">Pipeline Total</p>
+            <p className="text-[1.6rem] font-bold text-gray-900 leading-none">
               ${totalPipelineUsd >= 1_000_000
-                ? `${(totalPipelineUsd / 1_000_000).toFixed(0)}M`
+                ? `${(totalPipelineUsd / 1_000_000).toFixed(1)}M`
                 : `${(totalPipelineUsd / 1_000).toFixed(0)}K`}
             </p>
             <p className="text-[11px] text-gray-400 mt-1.5 leading-none">soma de todas as quotes</p>
           </div>
         </div>
 
-        {/* Toolbar — busca + filtros + controles na mesma linha */}
-        <div className="flex items-center gap-2">
-          {/* Campo de busca ocupa todo o espaco disponivel */}
-          <div className="relative flex-1">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Buscar por Quote Name, CPO ID ou Part Number..."
-              value={searchTerm}
-              onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              data-tour="search"
-              className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-            />
-            {searchTerm && (
-              <button onClick={() => { setSearchTerm(''); setCurrentPage(1); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-          {/* Filtros — agora ao lado da busca, sem empurrar para fora */}
+        {/* Toolbar linha 1 — busca ocupa largura total */}
+        <div className="relative" data-tour="search">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Buscar por Quote Name, CPO ID ou Part Number..."
+            value={searchTerm}
+            onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+            className="w-full pl-9 pr-9 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+          />
+          {searchTerm && (
+            <button onClick={() => { setSearchTerm(''); setCurrentPage(1); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* Toolbar linha 2 — filtros + controles secundarios */}
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setFiltersOpen(!filtersOpen)}
             data-tour="filters-btn"
@@ -631,7 +615,6 @@ export default function PipelineDetailsPage() {
               <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold ${filtersOpen ? 'bg-white text-blue-600' : 'bg-blue-600 text-white'}`}>{activeCount}</span>
             )}
           </button>
-          {/* Resetar colunas */}
           {colOrder.join() !== DEFAULT_COL_ORDER.join() && (
             <button
               onClick={() => { setColOrder(DEFAULT_COL_ORDER); localStorage.removeItem('pipeline-col-order'); }}
@@ -642,7 +625,7 @@ export default function PipelineDetailsPage() {
               Resetar colunas
             </button>
           )}
-          {/* Page size */}
+          <div className="flex-1" />
           <select value={pageSize} onChange={e => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }} data-tour="pagination" className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
             <option value={25}>25 / pag</option>
             <option value={50}>50 / pag</option>
