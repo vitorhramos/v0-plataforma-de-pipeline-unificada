@@ -535,79 +535,86 @@ export default function PipelineDetailsPage() {
         {/* Breadcrumbs */}
         <Breadcrumbs items={[{ label: 'Pipeline' }, { label: 'Details' }]} />
 
-        {/* KPI Filter Cards — estilo referencia dashboard: borda esquerda colorida, label + valor */}
+        {/* KPI Filter Cards — compactos, layout horizontal */}
         <div className="grid grid-cols-3 gap-3" data-tour="kpi-cards">
           {/* Card 1 — Previsao expirada > 15 dias */}
           <button
             onClick={() => handleCardFilter('expired')}
-            className={`text-left rounded-lg border bg-white px-4 py-3.5 transition-all duration-150 border-l-4 ${
+            className={`text-left rounded-lg border bg-white px-4 py-2.5 transition-all duration-150 border-l-4 flex items-center justify-between gap-3 ${
               activeCard === 'expired'
                 ? 'border-l-red-500 border-gray-200 shadow-md ring-1 ring-red-200'
                 : 'border-l-red-400 border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300'
             }`}
           >
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2 leading-none">Previsao Expirada</p>
-            <p className="text-[1.6rem] font-bold text-gray-900 leading-none">{expiredCount}</p>
-            <p className="text-[11px] text-gray-400 mt-1.5 leading-none flex items-center gap-1">
-              acima de 15 dias
-              {activeCard === 'expired' && <span className="ml-1 text-red-500 font-semibold">— filtro ativo</span>}
-            </p>
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest leading-none">Previsao Expirada</p>
+              <p className="text-[11px] text-gray-400 mt-0.5 leading-none">acima de 15 dias</p>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {activeCard === 'expired' && <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" title="Filtro ativo" />}
+              <p className="text-xl font-bold text-gray-900 leading-none">{expiredCount}</p>
+            </div>
           </button>
 
           {/* Card 2 — Alta probabilidade (>= 75%) */}
           <button
             onClick={() => handleCardFilter('highprob')}
-            className={`text-left rounded-lg border bg-white px-4 py-3.5 transition-all duration-150 border-l-4 ${
+            className={`text-left rounded-lg border bg-white px-4 py-2.5 transition-all duration-150 border-l-4 flex items-center justify-between gap-3 ${
               activeCard === 'highprob'
                 ? 'border-l-emerald-500 border-gray-200 shadow-md ring-1 ring-emerald-200'
                 : 'border-l-emerald-400 border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300'
             }`}
           >
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2 leading-none">Alta Probabilidade</p>
-            <p className="text-[1.6rem] font-bold text-gray-900 leading-none">{maxProbCount}</p>
-            <p className="text-[11px] text-gray-400 mt-1.5 leading-none flex items-center gap-1">
-              com prob. acima de 75%
-              {activeCard === 'highprob' && <span className="ml-1 text-emerald-600 font-semibold">— filtro ativo</span>}
-            </p>
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest leading-none">Alta Probabilidade</p>
+              <p className="text-[11px] text-gray-400 mt-0.5 leading-none">prob. acima de 75%</p>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {activeCard === 'highprob' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" title="Filtro ativo" />}
+              <p className="text-xl font-bold text-gray-900 leading-none">{maxProbCount}</p>
+            </div>
           </button>
 
           {/* Card 3 — Pipeline Total (informativo) */}
-          <div className="text-left rounded-lg border border-l-4 border-blue-400 border-gray-200 bg-white px-4 py-3.5 shadow-sm">
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2 leading-none">Pipeline Total</p>
-            <p className="text-[1.6rem] font-bold text-gray-900 leading-none">
+          <div className="text-left rounded-lg border border-l-4 border-blue-400 border-gray-200 bg-white px-4 py-2.5 shadow-sm flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest leading-none">Pipeline Total</p>
+              <p className="text-[11px] text-gray-400 mt-0.5 leading-none">soma de todas as quotes</p>
+            </div>
+            <p className="text-xl font-bold text-gray-900 leading-none shrink-0">
               ${totalPipelineUsd >= 1_000_000
                 ? `${(totalPipelineUsd / 1_000_000).toFixed(1)}M`
                 : `${(totalPipelineUsd / 1_000).toFixed(0)}K`}
             </p>
-            <p className="text-[11px] text-gray-400 mt-1.5 leading-none">soma de todas as quotes</p>
           </div>
         </div>
 
-        {/* Toolbar linha 1 — busca ocupa largura total */}
-        <div className="relative" data-tour="search">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <input
-            type="text"
-            placeholder="Buscar por Quote Name, CPO ID ou Part Number..."
-            value={searchTerm}
-            onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-            className="w-full pl-9 pr-9 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-          />
-          {searchTerm && (
-            <button onClick={() => { setSearchTerm(''); setCurrentPage(1); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
+        {/* Toolbar — busca (limitada) + filtros + tags + page size, tudo em uma linha */}
+        <div className="flex items-center gap-2" data-tour="search">
+          {/* Busca com largura maxima para nao ocupar a linha toda */}
+          <div className="relative w-80 shrink-0">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Buscar por CPO ID, Part No, Quote..."
+              value={searchTerm}
+              onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              className="w-full pl-9 pr-8 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+            />
+            {searchTerm && (
+              <button onClick={() => { setSearchTerm(''); setCurrentPage(1); }} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
 
-        {/* Toolbar linha 2 — filtros + controles secundarios */}
-        <div className="flex items-center gap-2 flex-wrap">
+          {/* Botao Filtros */}
           <button
             onClick={() => setFiltersOpen(!filtersOpen)}
             data-tour="filters-btn"
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition whitespace-nowrap ${filtersOpen ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition whitespace-nowrap shrink-0 ${filtersOpen ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
           >
             <SlidersHorizontal className="w-4 h-4" />
             Filtros
@@ -615,18 +622,43 @@ export default function PipelineDetailsPage() {
               <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold ${filtersOpen ? 'bg-white text-blue-600' : 'bg-blue-600 text-white'}`}>{activeCount}</span>
             )}
           </button>
+
+          {/* Tags de filtros ativos — inline, aparecem so quando ha filtro */}
+          {activeCount > 0 && !filtersOpen && (
+            <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0" data-tour="filter-tags">
+              {Object.entries(applied).filter(([, v]) => v !== '').map(([k, v]) => (
+                <span key={k} className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-[11px] font-medium whitespace-nowrap">
+                  {v}
+                  <button
+                    onClick={() => { const n = { ...applied, [k]: '' }; setApplied(n); setFilters(n); setCurrentPage(1); }}
+                    className="text-blue-400 hover:text-blue-700"
+                  >
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                </span>
+              ))}
+              <button
+                onClick={() => { setFilters({ ...EMPTY_FILTERS }); setApplied({ ...EMPTY_FILTERS }); setActiveCard(null); setCurrentPage(1); }}
+                className="text-[11px] font-medium text-gray-400 hover:text-gray-600 underline transition whitespace-nowrap"
+              >
+                Limpar todos
+              </button>
+            </div>
+          )}
+
+          {/* Espacador + controles direita */}
+          {(activeCount === 0 || filtersOpen) && <div className="flex-1" />}
           {colOrder.join() !== DEFAULT_COL_ORDER.join() && (
             <button
               onClick={() => { setColOrder(DEFAULT_COL_ORDER); localStorage.removeItem('pipeline-col-order'); }}
               data-tour="reset-cols"
-              className="px-3 py-2 text-xs font-medium text-gray-500 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition whitespace-nowrap"
+              className="px-3 py-2 text-xs font-medium text-gray-500 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition whitespace-nowrap shrink-0"
               title="Restaurar ordem original das colunas"
             >
               Resetar colunas
             </button>
           )}
-          <div className="flex-1" />
-          <select value={pageSize} onChange={e => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }} data-tour="pagination" className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+          <select value={pageSize} onChange={e => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }} data-tour="pagination" className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition shrink-0">
             <option value={25}>25 / pag</option>
             <option value={50}>50 / pag</option>
             <option value={100}>100 / pag</option>
@@ -801,32 +833,9 @@ export default function PipelineDetailsPage() {
           )}
         </div>
 
-        {/* Active filter tags — visíveis fora do painel */}
-        {activeCount > 0 && !filtersOpen && (
-          <div className="flex items-center gap-2 flex-wrap" data-tour="filter-tags">
-            <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide shrink-0">Ativos:</span>
-            {Object.entries(applied).filter(([, v]) => v !== '').map(([k, v]) => (
-              <span key={k} className="flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-[11px] font-medium">
-                {v}
-                <button
-                  onClick={() => { const n = { ...applied, [k]: '' }; setApplied(n); setFilters(n); setCurrentPage(1); }}
-                  className="ml-0.5 text-blue-400 hover:text-blue-700"
-                >
-                  <X className="w-2.5 h-2.5" />
-                </button>
-              </span>
-            ))}
-            <button
-              onClick={() => { setFilters({ ...EMPTY_FILTERS }); setApplied({ ...EMPTY_FILTERS }); setCurrentPage(1); }}
-              className="text-[11px] font-medium text-gray-400 hover:text-gray-600 underline transition"
-            >
-              Limpar todos
-            </button>
-          </div>
-        )}
-
-        {/* Bulk edit bar */}
-        <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex flex-wrap items-center gap-3">
+        {/* Bulk edit bar — condicional: aparece quando ha selecao ou campo escolhido */}
+        {(selectedIds.size > 0 || bulkField !== '') && (
+        <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex flex-wrap items-center gap-3" data-tour="bulk-field">
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Edicao em Lote</span>
             {selectedIds.size > 0 && (
@@ -837,7 +846,7 @@ export default function PipelineDetailsPage() {
             )}
           </div>
           <div className="flex items-center gap-2 flex-1 flex-wrap">
-            <select value={bulkField} onChange={e => { setBulkField(e.target.value as keyof Quote | ''); setBulkValue(''); }} data-tour="bulk-field" className="px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition min-w-[140px]">
+            <select value={bulkField} onChange={e => { setBulkField(e.target.value as keyof Quote | ''); setBulkValue(''); }} className="px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition min-w-[140px]">
               <option value="">Selecionar campo...</option>
               {EDITABLE_FIELDS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
             </select>
@@ -876,6 +885,7 @@ export default function PipelineDetailsPage() {
             )}
           </div>
         </div>
+        )}
 
         {/* Count */}
         <p className="text-xs text-gray-500">
