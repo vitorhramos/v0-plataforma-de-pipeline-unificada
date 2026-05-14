@@ -535,57 +535,51 @@ export default function PipelineDetailsPage() {
         {/* Breadcrumbs */}
         <Breadcrumbs items={[{ label: 'Pipeline' }, { label: 'Details' }]} />
 
-        {/* KPI Filter Cards — compactos, layout horizontal */}
+        {/* KPI Filter Cards — label + numero agrupados a esquerda */}
         <div className="grid grid-cols-3 gap-3" data-tour="kpi-cards">
           {/* Card 1 — Previsao expirada > 15 dias */}
           <button
             onClick={() => handleCardFilter('expired')}
-            className={`text-left rounded-lg border bg-white px-4 py-2.5 transition-all duration-150 border-l-4 flex items-center justify-between gap-3 ${
+            className={`text-left rounded-lg border bg-white px-4 py-3 transition-all duration-150 border-l-4 ${
               activeCard === 'expired'
                 ? 'border-l-red-500 border-gray-200 shadow-md ring-1 ring-red-200'
                 : 'border-l-red-400 border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300'
             }`}
           >
-            <div>
+            <div className="flex items-center gap-1.5 mb-1">
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest leading-none">Previsao Expirada</p>
-              <p className="text-[11px] text-gray-400 mt-0.5 leading-none">acima de 15 dias</p>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
               {activeCard === 'expired' && <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" title="Filtro ativo" />}
-              <p className="text-xl font-bold text-gray-900 leading-none">{expiredCount}</p>
             </div>
+            <p className="text-xl font-bold text-gray-900 leading-none">{expiredCount}</p>
+            <p className="text-[10px] text-gray-400 mt-1 leading-none">acima de 15 dias</p>
           </button>
 
           {/* Card 2 — Alta probabilidade (>= 75%) */}
           <button
             onClick={() => handleCardFilter('highprob')}
-            className={`text-left rounded-lg border bg-white px-4 py-2.5 transition-all duration-150 border-l-4 flex items-center justify-between gap-3 ${
+            className={`text-left rounded-lg border bg-white px-4 py-3 transition-all duration-150 border-l-4 ${
               activeCard === 'highprob'
                 ? 'border-l-emerald-500 border-gray-200 shadow-md ring-1 ring-emerald-200'
                 : 'border-l-emerald-400 border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300'
             }`}
           >
-            <div>
+            <div className="flex items-center gap-1.5 mb-1">
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest leading-none">Alta Probabilidade</p>
-              <p className="text-[11px] text-gray-400 mt-0.5 leading-none">prob. acima de 75%</p>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
               {activeCard === 'highprob' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" title="Filtro ativo" />}
-              <p className="text-xl font-bold text-gray-900 leading-none">{maxProbCount}</p>
             </div>
+            <p className="text-xl font-bold text-gray-900 leading-none">{maxProbCount}</p>
+            <p className="text-[10px] text-gray-400 mt-1 leading-none">prob. acima de 75%</p>
           </button>
 
           {/* Card 3 — Pipeline Total (informativo) */}
-          <div className="text-left rounded-lg border border-l-4 border-blue-400 border-gray-200 bg-white px-4 py-2.5 shadow-sm flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest leading-none">Pipeline Total</p>
-              <p className="text-[11px] text-gray-400 mt-0.5 leading-none">soma de todas as quotes</p>
-            </div>
-            <p className="text-xl font-bold text-gray-900 leading-none shrink-0">
+          <div className="text-left rounded-lg border border-l-4 border-blue-400 border-gray-200 bg-white px-4 py-3 shadow-sm">
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest leading-none mb-1">Pipeline Total</p>
+            <p className="text-xl font-bold text-gray-900 leading-none">
               ${totalPipelineUsd >= 1_000_000
                 ? `${(totalPipelineUsd / 1_000_000).toFixed(1)}M`
                 : `${(totalPipelineUsd / 1_000).toFixed(0)}K`}
             </p>
+            <p className="text-[10px] text-gray-400 mt-1 leading-none">soma de todas as quotes</p>
           </div>
         </div>
 
