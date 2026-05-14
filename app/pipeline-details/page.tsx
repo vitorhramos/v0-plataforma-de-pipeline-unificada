@@ -640,8 +640,59 @@ export default function PipelineDetailsPage() {
             </div>
           )}
 
-          {/* Espacador + controles direita */}
-          {(activeCount === 0 || filtersOpen) && <div className="flex-1" />}
+          {/* Separador visual */}
+          <div className="w-px h-5 bg-gray-200 shrink-0" />
+
+          {/* Edicao em lote — inline na toolbar, sempre visivel */}
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest shrink-0 whitespace-nowrap">Lote</span>
+          {selectedIds.size > 0 && (
+            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[11px] font-bold shrink-0 whitespace-nowrap">{selectedIds.size} sel.</span>
+          )}
+          <select
+            value={bulkField}
+            onChange={e => { setBulkField(e.target.value as keyof Quote | ''); setBulkValue(''); }}
+            data-tour="bulk-field"
+            className="px-2 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition shrink-0"
+          >
+            <option value="">Campo...</option>
+            {EDITABLE_FIELDS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
+          </select>
+          {bulkField && bulkFieldConfig?.type === 'select' && (
+            <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="px-2 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition shrink-0">
+              <option value="">Valor...</option>
+              {bulkFieldConfig.key === 'status'
+                ? Object.entries(STATUS_GROUPS).map(([group, vals]) => (
+                    <optgroup key={group} label={group}>
+                      {vals.map(v => <option key={v} value={v}>{v}</option>)}
+                    </optgroup>
+                  ))
+                : bulkFieldConfig.options?.map(o => <option key={o} value={o}>{o}</option>)
+              }
+            </select>
+          )}
+          {bulkField && (bulkFieldConfig?.type === 'text' || bulkFieldConfig?.type === 'number' || bulkFieldConfig?.type === 'date') && (
+            <input
+              type={bulkFieldConfig.type}
+              placeholder="Valor..."
+              value={bulkValue}
+              onChange={e => setBulkValue(e.target.value)}
+              className="px-2 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-36 shrink-0"
+            />
+          )}
+          {bulkField && bulkValue && (
+            <button onClick={() => setConfirmBulk(true)} className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition shrink-0">
+              <Check className="w-3 h-3" />
+              Aplicar
+            </button>
+          )}
+          {undoStack.length > 0 && (
+            <button onClick={handleUndo} data-tour="undo-btn" className="px-2.5 py-1.5 bg-amber-100 text-amber-800 text-xs font-semibold rounded-lg hover:bg-amber-200 transition shrink-0">
+              Desfazer
+            </button>
+          )}
+
+          {/* Espacador + page size */}
+          <div className="flex-1" />
           {colOrder.join() !== DEFAULT_COL_ORDER.join() && (
             <button
               onClick={() => { setColOrder(DEFAULT_COL_ORDER); localStorage.removeItem('pipeline-col-order'); }}
@@ -827,59 +878,7 @@ export default function PipelineDetailsPage() {
           )}
         </div>
 
-        {/* Bulk edit bar — condicional: aparece quando ha selecao ou campo escolhido */}
-        {(selectedIds.size > 0 || bulkField !== '') && (
-        <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex flex-wrap items-center gap-3" data-tour="bulk-field">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Edicao em Lote</span>
-            {selectedIds.size > 0 && (
-              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[11px] font-bold">{selectedIds.size} selecionados</span>
-            )}
-            {selectedIds.size === 0 && (
-              <span className="text-[11px] text-gray-400">(aplica em todos os {filteredQuotes.length} filtrados se nenhum selecionado)</span>
-            )}
-          </div>
-          <div className="flex items-center gap-2 flex-1 flex-wrap">
-            <select value={bulkField} onChange={e => { setBulkField(e.target.value as keyof Quote | ''); setBulkValue(''); }} className="px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition min-w-[140px]">
-              <option value="">Selecionar campo...</option>
-              {EDITABLE_FIELDS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
-            </select>
-            {bulkField && bulkFieldConfig?.type === 'select' && (
-              <select value={bulkValue} onChange={e => setBulkValue(e.target.value)} className="px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition min-w-[160px]">
-                <option value="">Selecionar valor...</option>
-                {bulkFieldConfig.key === 'status'
-                  ? Object.entries(STATUS_GROUPS).map(([group, vals]) => (
-                      <optgroup key={group} label={group}>
-                        {vals.map(v => <option key={v} value={v}>{v}</option>)}
-                      </optgroup>
-                    ))
-                  : bulkFieldConfig.options?.map(o => <option key={o} value={o}>{o}</option>)
-                }
-              </select>
-            )}
-            {bulkField && (bulkFieldConfig?.type === 'text' || bulkFieldConfig?.type === 'number' || bulkFieldConfig?.type === 'date') && (
-              <input
-                type={bulkFieldConfig.type}
-                placeholder={`Novo valor para ${bulkFieldConfig.label}...`}
-                value={bulkValue}
-                onChange={e => setBulkValue(e.target.value)}
-                className="px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition min-w-[200px]"
-              />
-            )}
-            {bulkField && bulkValue && (
-              <button onClick={() => setConfirmBulk(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition">
-                <Check className="w-3.5 h-3.5" />
-                Aplicar
-              </button>
-            )}
-            {undoStack.length > 0 && (
-              <button onClick={handleUndo} data-tour="undo-btn" className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-800 text-xs font-semibold rounded-lg hover:bg-amber-200 transition">
-                Desfazer
-              </button>
-            )}
-          </div>
-        </div>
-        )}
+
 
         {/* Count */}
         <p className="text-xs text-gray-500">
