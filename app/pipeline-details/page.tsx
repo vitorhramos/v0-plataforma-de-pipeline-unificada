@@ -522,12 +522,13 @@ export default function PipelineDetailsPage() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Pipeline Details</h1>
             <p className="text-sm text-gray-500 mt-0.5">Busca em tempo real, edicao individual e em lote.</p>
           </div>
+          {/* Item 4 — botao Tour com borda e bg mais ancorados */}
           <button
             onClick={tour.startTour}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition whitespace-nowrap font-medium text-sm shadow-sm"
+            className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition whitespace-nowrap font-medium text-sm shadow-sm"
             title="Clique para ver um tour interativo de todas as funcionalidades"
           >
-            <HelpCircle className="w-4 h-4" />
+            <HelpCircle className="w-4 h-4 text-blue-500" />
             Iniciar Tour
           </button>
         </div>
@@ -535,12 +536,12 @@ export default function PipelineDetailsPage() {
         {/* Breadcrumbs */}
         <Breadcrumbs items={[{ label: 'Pipeline' }, { label: 'Details' }]} />
 
-        {/* KPI Filter Cards — label + numero agrupados a esquerda */}
+        {/* KPI Filter Cards — item 3: min-h para altura uniforme */}
         <div className="grid grid-cols-3 gap-3" data-tour="kpi-cards">
           {/* Card 1 — Previsao expirada > 15 dias */}
           <button
             onClick={() => handleCardFilter('expired')}
-            className={`text-left rounded-lg border bg-white px-4 py-3 transition-all duration-150 border-l-4 ${
+            className={`text-left rounded-lg border bg-white px-4 py-3 transition-all duration-150 border-l-4 min-h-[72px] flex flex-col justify-center ${
               activeCard === 'expired'
                 ? 'border-l-red-500 border-gray-200 shadow-md ring-1 ring-red-200'
                 : 'border-l-red-400 border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300'
@@ -557,7 +558,7 @@ export default function PipelineDetailsPage() {
           {/* Card 2 — Alta probabilidade (>= 75%) */}
           <button
             onClick={() => handleCardFilter('highprob')}
-            className={`text-left rounded-lg border bg-white px-4 py-3 transition-all duration-150 border-l-4 ${
+            className={`text-left rounded-lg border bg-white px-4 py-3 transition-all duration-150 border-l-4 min-h-[72px] flex flex-col justify-center ${
               activeCard === 'highprob'
                 ? 'border-l-emerald-500 border-gray-200 shadow-md ring-1 ring-emerald-200'
                 : 'border-l-emerald-400 border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300'
@@ -572,7 +573,7 @@ export default function PipelineDetailsPage() {
           </button>
 
           {/* Card 3 — Pipeline Total (informativo) */}
-          <div className="text-left rounded-lg border border-l-4 border-blue-400 border-gray-200 bg-white px-4 py-3 shadow-sm">
+          <div className="text-left rounded-lg border border-l-4 border-blue-400 border-gray-200 bg-white px-4 py-3 shadow-sm min-h-[72px] flex flex-col justify-center">
             <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest leading-none mb-1">Pipeline Total</p>
             <p className="text-xl font-bold text-gray-900 leading-none">
               ${totalPipelineUsd >= 1_000_000
@@ -640,21 +641,23 @@ export default function PipelineDetailsPage() {
             </div>
           )}
 
-          {/* Separador visual */}
-          <div className="w-px h-5 bg-gray-200 shrink-0" />
+          {/* Item 1 — separador mais visivel entre grupos */}
+          <div className="w-px h-6 bg-gray-300 shrink-0 mx-1" />
 
-          {/* Edicao em lote — inline na toolbar, sempre visivel */}
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest shrink-0 whitespace-nowrap">Lote</span>
-          {selectedIds.size > 0 && (
-            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[11px] font-bold shrink-0 whitespace-nowrap">{selectedIds.size} sel.</span>
-          )}
+          {/* Item 1 — grupo de edicao em lote com fundo sutil para demarcar area */}
+          <div className="flex items-center gap-2 px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-lg shrink-0">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest whitespace-nowrap">Editar em lote</span>
+            {selectedIds.size > 0 && (
+              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[11px] font-bold whitespace-nowrap">{selectedIds.size} sel.</span>
+            )}
+          {/* Item 2 — placeholder mais descritivo */}
           <select
             value={bulkField}
             onChange={e => { setBulkField(e.target.value as keyof Quote | ''); setBulkValue(''); }}
             data-tour="bulk-field"
-            className="px-2 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition shrink-0"
+            className="px-2 py-1 border border-gray-300 rounded-md text-xs text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
           >
-            <option value="">Campo...</option>
+            <option value="">Editar campo...</option>
             {EDITABLE_FIELDS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
           </select>
           {bulkField && bulkFieldConfig?.type === 'select' && (
@@ -673,23 +676,24 @@ export default function PipelineDetailsPage() {
           {bulkField && (bulkFieldConfig?.type === 'text' || bulkFieldConfig?.type === 'number' || bulkFieldConfig?.type === 'date') && (
             <input
               type={bulkFieldConfig.type}
-              placeholder="Valor..."
+              placeholder="Novo valor..."
               value={bulkValue}
               onChange={e => setBulkValue(e.target.value)}
-              className="px-2 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-36 shrink-0"
+              className="px-2 py-1 border border-gray-300 rounded-md text-xs text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition w-32"
             />
           )}
           {bulkField && bulkValue && (
-            <button onClick={() => setConfirmBulk(true)} className="flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition shrink-0">
+            <button onClick={() => setConfirmBulk(true)} className="flex items-center gap-1 px-2 py-1 bg-blue-600 text-white text-xs font-semibold rounded-md hover:bg-blue-700 transition">
               <Check className="w-3 h-3" />
               Aplicar
             </button>
           )}
           {undoStack.length > 0 && (
-            <button onClick={handleUndo} data-tour="undo-btn" className="px-2.5 py-1.5 bg-amber-100 text-amber-800 text-xs font-semibold rounded-lg hover:bg-amber-200 transition shrink-0">
+            <button onClick={handleUndo} data-tour="undo-btn" className="px-2 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-md hover:bg-amber-200 transition">
               Desfazer
             </button>
           )}
+          </div>{/* fim grupo lote */}
 
           {/* Espacador + page size */}
           <div className="flex-1" />
