@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { SlidersHorizontal, X, Pencil, Check, History, Loader2, ChevronUp, ChevronDown, HelpCircle } from 'lucide-react';
+import { SlidersHorizontal, X, Pencil, Check, History, Loader2, ChevronUp, ChevronDown, HelpCircle, List, LayoutGrid, Columns3 } from 'lucide-react';
 import { Breadcrumbs, Tooltip } from '@/components/common/breadcrumbs-tooltips';
 import { useOperationHistory } from '@/components/common/operation-history';
 import { useToast } from '@/components/common/toast';
@@ -81,6 +81,14 @@ const STAGE_COLORS: Record<string, string> = {
   'Net Lost':       'bg-red-100 text-red-700',
 };
 
+const STAGE_BORDER: Record<string, string> = {
+  'Pipelined':      'border-l-blue-400',
+  'Pricing 25%':    'border-l-violet-400',
+  'Up Selling 50%': 'border-l-amber-400',
+  'Committed 75%':  'border-l-emerald-400',
+  'Net Lost':       'border-l-red-400',
+};
+
 const EMPTY_FILTERS = {
   // Identification
   cpo_id: '', part_no: '', quote_name: '',
@@ -153,6 +161,7 @@ export default function PipelineDetailsPage() {
     router.replace(qs ? `?${qs}` : '/pipeline-details', { scroll: false });
   }, [router]);
 
+  const [viewMode, setViewMode] = useState<'list' | 'cards' | 'kanban'>('list');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [searchTerm, setSearchTerm] = useState('');
@@ -522,15 +531,40 @@ export default function PipelineDetailsPage() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Pipeline Details</h1>
             <p className="text-sm text-gray-500 mt-0.5">Busca em tempo real, edicao individual e em lote.</p>
           </div>
-          {/* Item 4 — botao Tour com borda e bg mais ancorados */}
-          <button
-            onClick={tour.startTour}
-            className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition whitespace-nowrap font-medium text-sm shadow-sm"
-            title="Clique para ver um tour interativo de todas as funcionalidades"
-          >
-            <HelpCircle className="w-4 h-4 text-blue-500" />
-            Iniciar Tour
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Toggle de visualizacao */}
+            <div className="flex items-center bg-white border border-gray-200 rounded-lg p-0.5 shadow-sm">
+              {([
+                { mode: 'list',   icon: List,        title: 'Lista' },
+                { mode: 'cards',  icon: LayoutGrid,  title: 'Cards' },
+                { mode: 'kanban', icon: Columns3,     title: 'Kanban' },
+              ] as const).map(({ mode, icon: Icon, title }) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  title={title}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    viewMode === mode
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{title}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Item 4 — botao Tour com borda e bg mais ancorados */}
+            <button
+              onClick={tour.startTour}
+              className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition whitespace-nowrap font-medium text-sm shadow-sm"
+              title="Clique para ver um tour interativo de todas as funcionalidades"
+            >
+              <HelpCircle className="w-4 h-4 text-blue-500" />
+              Iniciar Tour
+            </button>
+          </div>
         </div>
 
         {/* Breadcrumbs */}
@@ -890,7 +924,122 @@ export default function PipelineDetailsPage() {
           {selectedIds.size > 0 && <span className="ml-3 text-blue-600 font-semibold">{selectedIds.size} selecionados para edicao em lote</span>}
         </p>
 
-        {/* Table — full width with horizontal scroll */}
+        {/* ── View: Cards ─────────────────────────────────────────────────────── */}
+        {viewMode === 'cards' && (
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+            {filteredQuotes.length === 0 ? (
+              <div className="col-span-full py-20 text-center text-sm text-gray-400">Nenhum resultado encontrado.</div>
+            ) : filteredQuotes.map(quote => (
+              <div
+                key={quote.id}
+                className={`bg-white rounded-xl border border-l-4 shadow-sm hover:shadow-md transition-all cursor-pointer group ${
+                  STAGE_BORDER[quote.stage] ?? 'border-l-gray-300'
+                } border-gray-200`}
+                onClick={() => { setEditingQuote(quote); setEditDraft({}); }}
+              >
+                <div className="p-3.5">
+                  {/* Header do card */}
+                  <div className="flex items-start justify-between gap-2 mb-2.5">
+                    <div>
+                      <p className="text-[11px] font-mono font-bold text-blue-600 leading-none">{quote.cpo_id}</p>
+                      <p className="text-[12px] font-semibold text-gray-800 mt-0.5 leading-tight line-clamp-1">{quote.quote_name}</p>
+                    </div>
+                    <span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${STATUS_COLORS[quote.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                      {quote.status}
+                    </span>
+                  </div>
+
+                  {/* Stage badge */}
+                  <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold mb-2.5 ${STAGE_COLORS[quote.stage] ?? 'bg-gray-100 text-gray-700'}`}>
+                    {quote.stage}
+                  </span>
+
+                  {/* Dados principais */}
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
+                    <div>
+                      <p className="text-gray-400 leading-none">Valor</p>
+                      <p className="font-bold text-emerald-700 leading-none mt-0.5">${(quote.usd_value / 1000).toFixed(0)}K</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 leading-none">Prob.</p>
+                      <p className="font-bold text-gray-800 leading-none mt-0.5">{quote.probability}%</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 leading-none">Vendor</p>
+                      <p className="font-medium text-gray-700 leading-none mt-0.5 truncate">{quote.vendor}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 leading-none">Revenda</p>
+                      <p className="font-medium text-gray-700 leading-none mt-0.5 truncate">{quote.master_customer}</p>
+                    </div>
+                  </div>
+
+                  {/* Footer */}
+                  <div className="mt-2.5 pt-2 border-t border-gray-100 flex items-center justify-between">
+                    <p className="text-[10px] text-gray-400 truncate">{quote.end_user}</p>
+                    <p className="text-[10px] text-gray-400 shrink-0 ml-2">{quote.close_date}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── View: Kanban ─────────────────────────────────────────────────────── */}
+        {viewMode === 'kanban' && (() => {
+          const kanbanGroups = STAGES_LIST.map(stage => ({
+            stage,
+            quotes: filteredQuotes.filter(q => q.stage === stage),
+            total: filteredQuotes.filter(q => q.stage === stage).reduce((s, q) => s + q.usd_value, 0),
+          }));
+          return (
+            <div className="flex gap-3 overflow-x-auto pb-4" style={{ minHeight: '60vh' }}>
+              {kanbanGroups.map(({ stage, quotes: colQuotes, total }) => (
+                <div key={stage} className="flex flex-col shrink-0 w-64 bg-gray-100/80 rounded-xl border border-gray-200">
+                  {/* Header da coluna */}
+                  <div className="px-3 py-2.5 border-b border-gray-200 bg-white rounded-t-xl">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${STAGE_COLORS[stage] ?? 'bg-gray-100 text-gray-700'}`}>{stage}</span>
+                      <span className="text-[11px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">{colQuotes.length}</span>
+                    </div>
+                    <p className="text-[11px] font-bold text-emerald-700 mt-1">${(total / 1_000_000).toFixed(1)}M</p>
+                  </div>
+
+                  {/* Cards da coluna */}
+                  <div className="flex flex-col gap-2 p-2 overflow-y-auto flex-1">
+                    {colQuotes.length === 0 && (
+                      <div className="py-8 text-center text-[11px] text-gray-400">Nenhuma quote</div>
+                    )}
+                    {colQuotes.map(quote => (
+                      <div
+                        key={quote.id}
+                        onClick={() => { setEditingQuote(quote); setEditDraft({}); }}
+                        className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm hover:shadow-md hover:border-blue-200 transition cursor-pointer"
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <p className="text-[11px] font-mono font-bold text-blue-600 leading-none">{quote.cpo_id}</p>
+                          <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${STATUS_COLORS[quote.status] ?? 'bg-gray-100 text-gray-600'}`}>{quote.status}</span>
+                        </div>
+                        <p className="text-[11px] font-semibold text-gray-800 leading-tight mb-2 line-clamp-2">{quote.quote_name}</p>
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-bold text-emerald-700">${(quote.usd_value / 1000).toFixed(0)}K</span>
+                          <span className="font-semibold text-gray-600">{quote.probability}%</span>
+                        </div>
+                        <div className="mt-1.5 pt-1.5 border-t border-gray-100 text-[10px] text-gray-400 flex items-center justify-between gap-1">
+                          <span className="truncate">{quote.vendor} · {quote.master_customer}</span>
+                          <span className="shrink-0">{quote.close_date.slice(5)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+
+        {/* ── View: List (tabela original) ─────────────────────────────────────── */}
+        {viewMode === 'list' && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-xs" style={{ minWidth: '1600px' }}>
@@ -1015,6 +1164,7 @@ export default function PipelineDetailsPage() {
             </div>
           )}
         </div>
+        )}{/* fim viewMode === list */}
       </div>
 
       {/* ── Edit Modal ── */}
