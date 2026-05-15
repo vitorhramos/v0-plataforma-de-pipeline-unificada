@@ -985,36 +985,75 @@ export default function PipelineDetailsPage() {
           </div>
         )}
 
-        {/* ── View: Kanban ─────────────────────────────────────────────────────── */}
+        {/* ── View: Kanban ─────────��───────────────────────────────────────────── */}
         {viewMode === 'kanban' && (() => {
           const kanbanGroups = STAGES_LIST.map(stage => ({
             stage,
             quotes: filteredQuotes.filter(q => q.stage === stage),
             total: filteredQuotes.filter(q => q.stage === stage).reduce((s, q) => s + q.usd_value, 0),
           }));
+
+          const handleDragStart = (e: React.DragEvent, quoteId: string) => {
+            e.dataTransfer.setData('quoteId', quoteId);
+            e.dataTransfer.effectAllowed = 'move';
+          };
+
+          const handleDragOver = (e: React.DragEvent) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+          };
+
+          const handleDrop = (e: React.DragEvent, targetStage: string) => {
+            e.preventDefault();
+            const quoteId = e.dataTransfer.getData('quoteId');
+            if (!quoteId) return;
+            setQuotes(prev => prev.map(q =>
+              q.id === quoteId ? { ...q, stage: targetStage as Quote['stage'] } : q
+            ));
+          };
+
+          const STAGE_HEADER_BORDER: Record<string, string> = {
+            'Pipelined':      'border-t-blue-500',
+            'Pricing 25%':    'border-t-violet-500',
+            'Up Selling 50%': 'border-t-amber-500',
+            'Committed 75%':  'border-t-emerald-500',
+            'Net Lost':       'border-t-red-500',
+          };
+
           return (
             <div className="flex gap-3 overflow-x-auto pb-4" style={{ minHeight: '60vh' }}>
               {kanbanGroups.map(({ stage, quotes: colQuotes, total }) => (
-                <div key={stage} className="flex flex-col shrink-0 w-64 bg-gray-100/80 rounded-xl border border-gray-200">
-                  {/* Header da coluna */}
-                  <div className="px-3 py-2.5 border-b border-gray-200 bg-white rounded-t-xl">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${STAGE_COLORS[stage] ?? 'bg-gray-100 text-gray-700'}`}>{stage}</span>
-                      <span className="text-[11px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">{colQuotes.length}</span>
+                <div
+                  key={stage}
+                  className="flex flex-col shrink-0 w-64 bg-gray-50 rounded-xl border border-gray-200"
+                  onDragOver={handleDragOver}
+                  onDrop={e => handleDrop(e, stage)}
+                >
+                  {/* Header da coluna — hierarquia melhorada */}
+                  <div className={`px-3 pt-3 pb-2.5 border-b border-gray-200 bg-white rounded-t-xl border-t-4 ${STAGE_HEADER_BORDER[stage] ?? 'border-t-gray-300'}`}>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <p className="text-sm font-bold text-gray-800 leading-tight">{stage}</p>
+                      <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full leading-none">{colQuotes.length}</span>
                     </div>
-                    <p className="text-[11px] font-bold text-emerald-700 mt-1">${(total / 1_000_000).toFixed(1)}M</p>
+                    <p className="text-xs font-semibold text-emerald-700">
+                      ${total >= 1_000_000 ? `${(total / 1_000_000).toFixed(1)}M` : `${(total / 1_000).toFixed(0)}K`}
+                    </p>
                   </div>
 
                   {/* Cards da coluna */}
-                  <div className="flex flex-col gap-2 p-2 overflow-y-auto flex-1">
+                  <div className="flex flex-col gap-2 p-2 overflow-y-auto flex-1 min-h-[120px]">
                     {colQuotes.length === 0 && (
-                      <div className="py-8 text-center text-[11px] text-gray-400">Nenhuma quote</div>
+                      <div className="py-10 text-center text-[11px] text-gray-400 border-2 border-dashed border-gray-200 rounded-lg m-1">
+                        Solte aqui
+                      </div>
                     )}
                     {colQuotes.map(quote => (
                       <div
                         key={quote.id}
+                        draggable
+                        onDragStart={e => handleDragStart(e, quote.id)}
                         onClick={() => { setEditingQuote(quote); setEditDraft({}); }}
-                        className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm hover:shadow-md hover:border-blue-200 transition cursor-pointer"
+                        className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm hover:shadow-md hover:border-blue-200 transition cursor-grab active:cursor-grabbing active:opacity-60 active:scale-[0.98]"
                       >
                         <div className="flex items-center justify-between gap-2 mb-1.5">
                           <p className="text-[11px] font-mono font-bold text-blue-600 leading-none">{quote.cpo_id}</p>
@@ -1038,7 +1077,7 @@ export default function PipelineDetailsPage() {
           );
         })()}
 
-        {/* ── View: List (tabela original) ─────────────────────────────────────── */}
+        {/* ─��� View: List (tabela original) ─────────────────────────────────────── */}
         {viewMode === 'list' && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
