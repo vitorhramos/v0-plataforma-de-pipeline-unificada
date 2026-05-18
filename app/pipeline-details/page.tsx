@@ -434,14 +434,22 @@ export default function PipelineDetailsPage() {
       })
     : filteredQuotes;
 
-  // Non-primary scenario quotes are hidden from the main list — they appear
-  // only as inline expand rows under their group's primary quote.
+  // Non-primary scenario quotes are hidden from the main list by default —
+  // they appear only as inline expand rows under their group's primary quote.
+  // EXCEPTION: when a search term or any filter is active, subordinate quotes
+  // that match the criteria surface as standalone rows so they are never lost.
   const nonPrimaryIds = new Set(
     scenarioGroups.flatMap(g =>
       g.scenarios.filter(s => !s.isPrimary).map(s => s.quoteId)
     )
   );
-  const visibleQuotes = sortedQuotes.filter(q => !nonPrimaryIds.has(q.id));
+  const hasActiveSearch = Boolean(searchTerm.trim()) || Object.values(applied).some(v => Boolean(v));
+  const visibleQuotes = sortedQuotes.filter(q =>
+    // Always show primaries and ungrouped quotes
+    !nonPrimaryIds.has(q.id) ||
+    // Show subordinates only when they explicitly matched an active search/filter
+    (hasActiveSearch && nonPrimaryIds.has(q.id))
+  );
 
   const paginatedQuotes = visibleQuotes.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const totalPages = Math.ceil(visibleQuotes.length / pageSize);
@@ -1032,7 +1040,12 @@ export default function PipelineDetailsPage() {
         {/* Count */}
         <p className="text-xs text-gray-500">
           Mostrando <span className="font-semibold text-gray-700">{visibleQuotes.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, visibleQuotes.length)}</span> de <span className="font-semibold text-gray-700">{visibleQuotes.length}</span> registros
-          {nonPrimaryIds.size > 0 && <span className="ml-2 text-[11px] text-violet-600">({nonPrimaryIds.size} subordinadas ocultas)</span>}
+          {nonPrimaryIds.size > 0 && !hasActiveSearch && (
+            <span className="ml-2 text-[11px] text-violet-600">({nonPrimaryIds.size} subordinadas ocultas)</span>
+          )}
+          {nonPrimaryIds.size > 0 && hasActiveSearch && (
+            <span className="ml-2 text-[11px] text-violet-600">(subordinadas incluidas na busca)</span>
+          )}
           {selectedIds.size > 0 && <span className="ml-3 text-blue-600 font-semibold">{selectedIds.size} selecionados para edicao em lote</span>}
         </p>
 
@@ -1285,8 +1298,19 @@ export default function PipelineDetailsPage() {
                         .filter(x => x.altQuote != null)
                     : [];
 
+                  // A subordinate quote surfaced by an active search/filter
+                  const isStandaloneSubordinate = nonPrimaryIds.has(quote.id);
+
                   const mainRow = (
-                    <tr key={`row-${quote.id}`} className={`hover:bg-blue-50 transition-colors text-gray-900 ${selectedIds.has(quote.id) ? 'bg-blue-50' : idx % 2 === 1 ? 'bg-gray-50/50' : 'bg-white'}`}>
+                    <tr key={`row-${quote.id}`} className={`transition-colors text-gray-900 ${
+                      isStandaloneSubordinate
+                        ? 'bg-violet-50/60 hover:bg-violet-100/60 border-l-2 border-l-violet-400'
+                        : selectedIds.has(quote.id)
+                          ? 'bg-blue-50 hover:bg-blue-50'
+                          : idx % 2 === 1
+                            ? 'bg-gray-50/50 hover:bg-blue-50'
+                            : 'bg-white hover:bg-blue-50'
+                    }`}>
                       <td className="px-3 py-2.5">
                         <input type="checkbox" checked={selectedIds.has(quote.id)} onChange={() => toggleSelect(quote.id)} {...(idx === 0 ? { 'data-tour': 'row-checkbox' } : {})} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
                       </td>
@@ -1334,6 +1358,12 @@ export default function PipelineDetailsPage() {
                               {scenarioMeta && (
                                 <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-semibold border ${LIKELIHOOD_COLORS[scenarioMeta.likelihood]}`}>
                                   {LIKELIHOOD_LABELS[scenarioMeta.likelihood].split(' ')[0]}
+                                </span>
+                              )}
+                              {/* When surfaced as standalone by search: show group name so user knows it belongs to a group */}
+                              {isStandaloneSubordinate && group && (
+                                <span className="text-[9px] text-violet-500 italic truncate max-w-[110px]" title={`Grupo: ${group.name}`}>
+                                  {group.name}
                                 </span>
                               )}
                             </div>
