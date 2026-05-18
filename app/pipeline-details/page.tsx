@@ -190,6 +190,8 @@ export default function PipelineDetailsPage() {
       })),
     });
     setEditingGroupId(null);
+    setScenarioSavedFeedback(false);
+    setConfirmScenarioSave(false);
     setScenarioModalOpen(true);
   };
 
@@ -198,6 +200,8 @@ export default function PipelineDetailsPage() {
     if (!group) return;
     setScenarioDraft({ groupName: group.name, scenarios: group.scenarios });
     setEditingGroupId(groupId);
+    setScenarioSavedFeedback(false);
+    setConfirmScenarioSave(false);
     setScenarioModalOpen(true);
   };
 
@@ -238,8 +242,10 @@ export default function PipelineDetailsPage() {
       finalScenarios.forEach(s => storeUpdateQuote(s.quoteId, { scenarioGroupId: newGroup.id }));
     }
     refreshGroups();
-    setScenarioModalOpen(false);
+    setConfirmScenarioSave(false);
+    setScenarioSavedFeedback(true);
     setSelectedIds(new Set());
+    // Keep modal open — user sees the feedback and closes manually
   };
 
   const handleDeleteScenarioGroup = (groupId: string) => {
@@ -355,6 +361,26 @@ export default function PipelineDetailsPage() {
   const [confirmBulk, setConfirmBulk] = useState(false);
   const [undoStack, setUndoStack] = useState<{ quotes: Quote[]; desc: string }[]>([]);
   const [savedFeedback, setSavedFeedback] = useState(false);
+  // Inline save-confirmation state for edit modal and scenario modal
+  const [confirmEditSave, setConfirmEditSave] = useState(false);
+  const [confirmScenarioSave, setConfirmScenarioSave] = useState(false);
+  const [scenarioSavedFeedback, setScenarioSavedFeedback] = useState(false);
+
+  // ── Esc closes the topmost open modal ────────────────────────────────────
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      // Priority: confirmation dialogs first, then modals from top to bottom
+      if (confirmEditSave) { setConfirmEditSave(false); return; }
+      if (confirmScenarioSave) { setConfirmScenarioSave(false); return; }
+      if (confirmBulk) { setConfirmBulk(false); return; }
+      if (scenarioModalOpen) { setScenarioModalOpen(false); return; }
+      if (historyQuote) { setHistoryQuote(null); return; }
+      if (editingQuote) { setEditingQuote(null); setEditDraft({}); setSavedFeedback(false); setConfirmEditSave(false); return; }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [confirmEditSave, confirmScenarioSave, confirmBulk, scenarioModalOpen, historyQuote, editingQuote]);
 
   // Tour steps definition
   const TOUR_STEPS = [
@@ -535,7 +561,6 @@ export default function PipelineDetailsPage() {
   const saveEdit = () => {
     if (!editingQuote) return;
     const updated = { ...editingQuote, ...editDraft };
-    // Record versions for changed fields
     (Object.keys(editDraft) as (keyof Quote)[]).forEach(key => {
       const oldVal = String(editingQuote[key] ?? '');
       const newVal = String((editDraft as Record<string, unknown>)[key] ?? '');
@@ -544,12 +569,16 @@ export default function PipelineDetailsPage() {
     setQuotes(prev => prev.map(q => q.id === editingQuote.id ? updated : q));
     addToHistory('Edit', `Editado ${editingQuote.cpo_id}`, 'success');
     toast.success(`${editingQuote.cpo_id} atualizado`);
+    setConfirmEditSave(false);
     setSavedFeedback(true);
-    setTimeout(() => {
-      setSavedFeedback(false);
-      setEditingQuote(null);
-      setEditDraft({});
-    }, 1200);
+    // Keep modal open so user sees the feedback — they close with Esc or Fechar
+  };
+
+  const closeEditModal = () => {
+    setEditingQuote(null);
+    setEditDraft({});
+    setSavedFeedback(false);
+    setConfirmEditSave(false);
   };
 
   // ── Bulk edit with confirmation ──
@@ -1608,36 +1637,62 @@ export default function PipelineDetailsPage() {
               </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 rounded-b-2xl">
-                <button
-                  onClick={() => { setEditingQuote(null); setEditDraft({}); setSavedFeedback(false); }}
-                  className="px-4 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 transition"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={saveEdit}
-                  disabled={savedFeedback}
-                  className={`flex items-center gap-2 px-5 py-2 text-xs font-semibold rounded-lg transition-all duration-300 ${
-                    savedFeedback
-                      ? 'bg-emerald-500 text-white scale-105'
-                      : changedCount > 0
-                        ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow-md'
-                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  }`}
-                >
-                  {savedFeedback ? (
-                    <>
-                      <Check className="w-3.5 h-3.5" />
-                      Salvo!
-                    </>
-                  ) : (
-                    <>
+              <div className="border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 rounded-b-2xl overflow-hidden">
+                {/* Saved feedback banner */}
+                {savedFeedback && (
+                  <div className="flex items-center gap-2 px-6 py-2.5 bg-emerald-50 border-b border-emerald-200">
+                    <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span className="text-xs font-semibold text-emerald-700">
+                      Alteracoes salvas com sucesso — {changedCount === 0 ? 'nenhum campo pendente' : 'feche o modal ou continue editando'}
+                    </span>
+                  </div>
+                )}
+                {/* Confirm row — appears when user clicks Salvar */}
+                {confirmEditSave && !savedFeedback && (
+                  <div className="flex items-center justify-between gap-3 px-6 py-3 bg-amber-50 border-b border-amber-200">
+                    <span className="text-xs text-amber-800 font-medium">
+                      Confirmar alteracao de <strong>{changedCount} {changedCount === 1 ? 'campo' : 'campos'}</strong> em <strong>{editingQuote.cpo_id}</strong>?
+                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => setConfirmEditSave(false)}
+                        className="px-3 py-1.5 text-xs font-medium text-amber-700 bg-white border border-amber-300 rounded-lg hover:bg-amber-50 transition"
+                      >
+                        Voltar
+                      </button>
+                      <button
+                        onClick={saveEdit}
+                        className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        Confirmar
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {/* Default action row */}
+                <div className="flex items-center justify-between px-6 py-4">
+                  <button
+                    onClick={closeEditModal}
+                    className="px-4 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 transition"
+                  >
+                    {savedFeedback ? 'Fechar' : 'Cancelar'}
+                  </button>
+                  {!savedFeedback && (
+                    <button
+                      onClick={() => { if (changedCount > 0) setConfirmEditSave(true); }}
+                      disabled={changedCount === 0 || confirmEditSave}
+                      className={`flex items-center gap-2 px-5 py-2 text-xs font-semibold rounded-lg transition-all ${
+                        changedCount > 0 && !confirmEditSave
+                          ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
+                          : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
                       <Check className="w-3.5 h-3.5" />
                       {changedCount > 0 ? `Salvar ${changedCount} ${changedCount === 1 ? 'alteracao' : 'alteracoes'}` : 'Sem alteracoes'}
-                    </>
+                    </button>
                   )}
-                </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1646,7 +1701,7 @@ export default function PipelineDetailsPage() {
 
       {/* ── Confirm Bulk Edit Modal ── */}
       {confirmBulk && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={e => { if (e.target === e.currentTarget) setConfirmBulk(false); }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
             <div className="px-6 py-5 border-b border-gray-200">
               <h2 className="text-base font-bold text-gray-900">Confirmar edicao em lote</h2>
@@ -1927,28 +1982,74 @@ export default function PipelineDetailsPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/80">
-              <div>
-                {editingGroupId && (
+            <div className="border-t border-gray-100 bg-gray-50/80 rounded-b-2xl overflow-hidden">
+              {/* Saved feedback banner */}
+              {scenarioSavedFeedback && (
+                <div className="flex items-center gap-2 px-6 py-2.5 bg-emerald-50 border-b border-emerald-200">
+                  <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span className="text-xs font-semibold text-emerald-700">
+                    {editingGroupId ? 'Grupo atualizado com sucesso' : 'Grupo criado com sucesso'} — feche o modal ou continue editando
+                  </span>
+                </div>
+              )}
+              {/* Confirm row */}
+              {confirmScenarioSave && !scenarioSavedFeedback && (
+                <div className="flex items-center justify-between gap-3 px-6 py-3 bg-amber-50 border-b border-amber-200">
+                  <span className="text-xs text-amber-800 font-medium">
+                    {editingGroupId
+                      ? <>Confirmar alteracoes no grupo <strong>{scenarioDraft.groupName}</strong>?</>
+                      : <>Criar grupo <strong>{scenarioDraft.groupName}</strong> com <strong>{scenarioDraft.scenarios.length}</strong> cenarios?</>
+                    }
+                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => setConfirmScenarioSave(false)}
+                      className="px-3 py-1.5 text-xs font-medium text-amber-700 bg-white border border-amber-300 rounded-lg hover:bg-amber-50 transition"
+                    >
+                      Voltar
+                    </button>
+                    <button
+                      onClick={handleSaveScenarioGroup}
+                      className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-violet-600 rounded-lg hover:bg-violet-700 transition"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      Confirmar
+                    </button>
+                  </div>
+                </div>
+              )}
+              {/* Default action row */}
+              <div className="flex items-center justify-between px-6 py-4">
+                <div>
+                  {editingGroupId && !scenarioSavedFeedback && (
+                    <button
+                      onClick={() => { handleDeleteScenarioGroup(editingGroupId); setScenarioModalOpen(false); }}
+                      className="px-4 py-2 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition"
+                    >
+                      Desfazer Agrupamento
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={() => { handleDeleteScenarioGroup(editingGroupId); setScenarioModalOpen(false); }}
-                    className="px-4 py-2 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition"
+                    onClick={() => { setScenarioModalOpen(false); setScenarioSavedFeedback(false); setConfirmScenarioSave(false); }}
+                    className="px-4 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
                   >
-                    Desfazer Agrupamento
+                    {scenarioSavedFeedback ? 'Fechar' : 'Cancelar'}
                   </button>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setScenarioModalOpen(false)} className="px-4 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSaveScenarioGroup}
-                  disabled={!scenarioDraft.groupName.trim() || scenarioDraft.scenarios.length < 2}
-                  className="px-5 py-2 text-xs font-semibold text-white bg-violet-600 rounded-lg hover:bg-violet-700 transition shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {editingGroupId ? 'Salvar Alteracoes' : 'Criar Grupo'}
-                </button>
+                  {!scenarioSavedFeedback && (
+                    <button
+                      onClick={() => {
+                        if (scenarioDraft.groupName.trim() && scenarioDraft.scenarios.length >= 2)
+                          setConfirmScenarioSave(true);
+                      }}
+                      disabled={!scenarioDraft.groupName.trim() || scenarioDraft.scenarios.length < 2 || confirmScenarioSave}
+                      className="px-5 py-2 text-xs font-semibold text-white bg-violet-600 rounded-lg hover:bg-violet-700 transition shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {editingGroupId ? 'Salvar Alteracoes' : 'Criar Grupo'}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
