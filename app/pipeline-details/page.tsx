@@ -206,13 +206,34 @@ export default function PipelineDetailsPage() {
     if (!groupName.trim() || scenarios.length < 2) return;
     const hasPrimary = scenarios.some(s => s.isPrimary);
     const finalScenarios = hasPrimary ? scenarios : scenarios.map((s, i) => ({ ...s, isPrimary: i === 0 }));
+    const newIds = new Set(finalScenarios.map(s => s.quoteId));
 
     if (editingGroupId) {
+      // Determine which quotes were removed from the group
+      const oldGroup = scenarioGroups.find(g => g.id === editingGroupId);
+      const removedIds = (oldGroup?.scenarios ?? [])
+        .map(s => s.quoteId)
+        .filter(id => !newIds.has(id));
+
       updateScenarioGroup(editingGroupId, { name: groupName.trim(), scenarios: finalScenarios });
+
+      // Clear scenarioGroupId for removed quotes
+      if (removedIds.length > 0) {
+        setQuotes(prev => prev.map(q => removedIds.includes(q.id) ? { ...q, scenarioGroupId: undefined } : q));
+        removedIds.forEach(id => storeUpdateQuote(id, { scenarioGroupId: undefined }));
+      }
+      // Set scenarioGroupId for newly added quotes
+      const addedIds = finalScenarios
+        .map(s => s.quoteId)
+        .filter(id => !(oldGroup?.scenarios ?? []).some(s => s.quoteId === id));
+      if (addedIds.length > 0) {
+        setQuotes(prev => prev.map(q => addedIds.includes(q.id) ? { ...q, scenarioGroupId: editingGroupId } : q));
+        addedIds.forEach(id => storeUpdateQuote(id, { scenarioGroupId: editingGroupId }));
+      }
     } else {
       const newGroup = addScenarioGroup({ name: groupName.trim(), scenarios: finalScenarios });
       setQuotes(prev => prev.map(q =>
-        finalScenarios.some(s => s.quoteId === q.id) ? { ...q, scenarioGroupId: newGroup.id } : q
+        newIds.has(q.id) ? { ...q, scenarioGroupId: newGroup.id } : q
       ));
       finalScenarios.forEach(s => storeUpdateQuote(s.quoteId, { scenarioGroupId: newGroup.id }));
     }
@@ -413,8 +434,17 @@ export default function PipelineDetailsPage() {
       })
     : filteredQuotes;
 
-  const paginatedQuotes = sortedQuotes.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-  const totalPages = Math.ceil(sortedQuotes.length / pageSize);
+  // Non-primary scenario quotes are hidden from the main list — they appear
+  // only as inline expand rows under their group's primary quote.
+  const nonPrimaryIds = new Set(
+    scenarioGroups.flatMap(g =>
+      g.scenarios.filter(s => !s.isPrimary).map(s => s.quoteId)
+    )
+  );
+  const visibleQuotes = sortedQuotes.filter(q => !nonPrimaryIds.has(q.id));
+
+  const paginatedQuotes = visibleQuotes.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const totalPages = Math.ceil(visibleQuotes.length / pageSize);
 
   const totalUsd = filteredQuotes.reduce((s, q) => s + q.usd_value, 0);
   const budgetaryCount = filteredQuotes.filter(q => q.budgetary === 'Yes').length;
@@ -1001,7 +1031,8 @@ export default function PipelineDetailsPage() {
 
         {/* Count */}
         <p className="text-xs text-gray-500">
-          Mostrando <span className="font-semibold text-gray-700">{filteredQuotes.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filteredQuotes.length)}</span> de <span className="font-semibold text-gray-700">{filteredQuotes.length}</span> registros
+          Mostrando <span className="font-semibold text-gray-700">{visibleQuotes.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, visibleQuotes.length)}</span> de <span className="font-semibold text-gray-700">{visibleQuotes.length}</span> registros
+          {nonPrimaryIds.size > 0 && <span className="ml-2 text-[11px] text-violet-600">({nonPrimaryIds.size} subordinadas ocultas)</span>}
           {selectedIds.size > 0 && <span className="ml-3 text-blue-600 font-semibold">{selectedIds.size} selecionados para edicao em lote</span>}
         </p>
 
@@ -1329,9 +1360,15 @@ export default function PipelineDetailsPage() {
 
                   // Alternate scenario rows (expanded inline)
                   const altRows = (group && isPrimaryOfGroup && isGroupExpanded)
-                    ? alternateScenarios.map(({ meta, altQuote }) => altQuote ? (
-                        <tr key={`alt-${altQuote.id}`} className="bg-violet-50/60 border-l-2 border-l-violet-400 text-gray-700 text-[11px]">
-                          <td className="px-3 py-2" />
+                    ? alternateScenarios.map(({ meta, altQuote }, altIdx) => altQuote ? (
+                        <tr key={`alt-${altQuote.id}`} className="text-[11px] bg-violet-50/40">
+                          {/* Indent cell with vertical connector line */}
+                          <td className="py-2 w-0 relative">
+                            <div className="absolute left-5 top-0 bottom-0 w-px bg-violet-300" />
+                            {altIdx === alternateScenarios.length - 1 && (
+                              <div className="absolute left-5 top-0 h-1/2 w-px bg-violet-300" />
+                            )}
+                          </td>
                           <td className="px-1 py-2">
                             <button onClick={() => { setEditingQuote(altQuote); setEditDraft({}); }} className="p-1 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition">
                               <Pencil className="w-3 h-3" />
@@ -1342,26 +1379,32 @@ export default function PipelineDetailsPage() {
                             const k = col.key;
                             if (k === 'cpo_id') return (
                               <td key={k} className="px-3 py-2 whitespace-nowrap">
-                                <div className="flex items-center gap-1.5 pl-4">
-                                  <span className="font-mono text-blue-500 font-semibold">{altQuote.cpo_id}</span>
-                                  <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-semibold border ${LIKELIHOOD_COLORS[meta.likelihood]}`}>{LIKELIHOOD_LABELS[meta.likelihood]}</span>
-                                  {meta.label && <span className="text-gray-400 italic truncate max-w-[100px]">{meta.label}</span>}
+                                <div className="flex items-center gap-1.5 pl-5">
+                                  {/* tree branch indicator */}
+                                  <span className="text-violet-300 font-mono text-[10px] shrink-0">└</span>
+                                  <span className="font-mono text-blue-400 font-semibold">{altQuote.cpo_id}</span>
+                                  <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-semibold border ${LIKELIHOOD_COLORS[meta.likelihood]}`}>
+                                    {LIKELIHOOD_LABELS[meta.likelihood]}
+                                  </span>
+                                  {meta.label && (
+                                    <span className="text-gray-400 italic truncate max-w-[120px]">{meta.label}</span>
+                                  )}
                                 </div>
                               </td>
                             );
-                            if (k === 'part_no')         return <td key={k} className="px-3 py-2 font-mono text-gray-500 whitespace-nowrap">{altQuote.part_no}</td>;
-                            if (k === 'sales_territory') return <td key={k} className="px-3 py-2 text-gray-500 whitespace-nowrap">{altQuote.sales_territory}</td>;
-                            if (k === 'vendor')          return <td key={k} className="px-3 py-2 text-gray-500 whitespace-nowrap">{altQuote.vendor}</td>;
-                            if (k === 'master_customer') return <td key={k} className="px-3 py-2 text-gray-500 whitespace-nowrap">{altQuote.master_customer}</td>;
-                            if (k === 'end_user')        return <td key={k} className="px-3 py-2 text-gray-500 whitespace-nowrap">{altQuote.end_user}</td>;
-                            if (k === 'quote_name')      return <td key={k} className="px-3 py-2 text-gray-500 whitespace-nowrap">{altQuote.quote_name}</td>;
-                            if (k === 'stage')           return <td key={k} className="px-3 py-2 whitespace-nowrap"><span className={`px-1.5 py-0.5 rounded-full text-[10px] ${STAGE_COLORS[altQuote.stage] ?? 'bg-gray-100 text-gray-600'}`}>{altQuote.stage}</span></td>;
-                            if (k === 'probability')     return <td key={k} className="px-3 py-2 text-right text-gray-500 whitespace-nowrap">{altQuote.probability}%</td>;
-                            if (k === 'usd_value')       return <td key={k} className="px-3 py-2 text-right text-emerald-600 font-semibold whitespace-nowrap">${(altQuote.usd_value / 1000).toFixed(0)}K</td>;
-                            if (k === 'budgetary')       return <td key={k} className="px-3 py-2 text-center text-gray-500 whitespace-nowrap">{altQuote.budgetary}</td>;
-                            if (k === 'close_date')      return <td key={k} className="px-3 py-2 text-gray-500 whitespace-nowrap">{altQuote.close_date}</td>;
-                            if (k === 'quote_age')       return <td key={k} className="px-3 py-2 text-center text-gray-500 whitespace-nowrap">{altQuote.quote_age}d</td>;
-                            if (k === 'status')          return <td key={k} className="px-3 py-2 whitespace-nowrap"><span className={`px-1.5 py-0.5 rounded-full text-[10px] ${STATUS_COLORS[altQuote.status] ?? 'bg-gray-100 text-gray-600'}`}>{altQuote.status}</span></td>;
+                            if (k === 'part_no')         return <td key={k} className="px-3 py-2 font-mono text-gray-400 whitespace-nowrap">{altQuote.part_no}</td>;
+                            if (k === 'sales_territory') return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap">{altQuote.sales_territory}</td>;
+                            if (k === 'vendor')          return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap">{altQuote.vendor}</td>;
+                            if (k === 'master_customer') return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap">{altQuote.master_customer}</td>;
+                            if (k === 'end_user')        return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap">{altQuote.end_user}</td>;
+                            if (k === 'quote_name')      return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap">{altQuote.quote_name}</td>;
+                            if (k === 'stage')           return <td key={k} className="px-3 py-2 whitespace-nowrap"><span className={`px-1.5 py-0.5 rounded-full text-[10px] opacity-70 ${STAGE_COLORS[altQuote.stage] ?? 'bg-gray-100 text-gray-600'}`}>{altQuote.stage}</span></td>;
+                            if (k === 'probability')     return <td key={k} className="px-3 py-2 text-right text-gray-400 whitespace-nowrap">{altQuote.probability}%</td>;
+                            if (k === 'usd_value')       return <td key={k} className="px-3 py-2 text-right text-emerald-500 font-semibold whitespace-nowrap">${(altQuote.usd_value / 1000).toFixed(0)}K</td>;
+                            if (k === 'budgetary')       return <td key={k} className="px-3 py-2 text-center text-gray-400 whitespace-nowrap">{altQuote.budgetary}</td>;
+                            if (k === 'close_date')      return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap">{altQuote.close_date}</td>;
+                            if (k === 'quote_age')       return <td key={k} className="px-3 py-2 text-center text-gray-400 whitespace-nowrap">{altQuote.quote_age}d</td>;
+                            if (k === 'status')          return <td key={k} className="px-3 py-2 whitespace-nowrap"><span className={`px-1.5 py-0.5 rounded-full text-[10px] opacity-70 ${STATUS_COLORS[altQuote.status] ?? 'bg-gray-100 text-gray-600'}`}>{altQuote.status}</span></td>;
                             if (k === 'bu')              return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap">{altQuote.bu}</td>;
                             return null;
                           })}
@@ -1688,15 +1731,16 @@ export default function PipelineDetailsPage() {
               {/* Per-scenario editors */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">Cenários ({scenarioDraft.scenarios.length})</label>
+                  <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">Cenarios ({scenarioDraft.scenarios.length})</label>
                   <p className="text-[11px] text-gray-400">Marque um como Principal para o pipeline</p>
                 </div>
                 <div className="space-y-4">
                   {scenarioDraft.scenarios.map((s, i) => {
                     const q = quotes.find(qq => qq.id === s.quoteId);
+                    const canRemove = scenarioDraft.scenarios.length > 2;
                     return (
                       <div key={s.quoteId} className={`rounded-xl border p-4 space-y-3 transition ${s.isPrimary ? 'border-violet-300 bg-violet-50/50' : 'border-gray-200 bg-gray-50/50'}`}>
-                        {/* Quote info + Primary toggle */}
+                        {/* Quote info + actions row */}
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -1708,24 +1752,42 @@ export default function PipelineDetailsPage() {
                               <span className="text-[10px] text-emerald-700 font-semibold">${((q?.usd_value ?? 0) / 1000).toFixed(0)}K</span>
                             </div>
                           </div>
-                          <button
-                            onClick={() => setScenarioDraft(d => ({
-                              ...d,
-                              scenarios: d.scenarios.map((sc, j) => ({ ...sc, isPrimary: j === i })),
-                            }))}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition whitespace-nowrap shrink-0 ${
-                              s.isPrimary
-                                ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
-                                : 'bg-white text-gray-500 border-gray-300 hover:border-violet-400 hover:text-violet-600'
-                            }`}
-                          >
-                            <Star className={`w-3 h-3 ${s.isPrimary ? 'fill-current' : ''}`} />
-                            {s.isPrimary ? 'Principal' : 'Definir como principal'}
-                          </button>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {/* Remove from group button — only if 3+ members and not primary */}
+                            {canRemove && !s.isPrimary && (
+                              <button
+                                onClick={() => setScenarioDraft(d => ({
+                                  ...d,
+                                  scenarios: d.scenarios.filter((_, j) => j !== i),
+                                }))}
+                                className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 border border-transparent hover:border-red-200 transition"
+                                title="Remover do grupo"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            {canRemove && s.isPrimary && (
+                              <span className="w-[30px]" /> /* placeholder to keep layout aligned */
+                            )}
+                            <button
+                              onClick={() => setScenarioDraft(d => ({
+                                ...d,
+                                scenarios: d.scenarios.map((sc, j) => ({ ...sc, isPrimary: j === i })),
+                              }))}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition whitespace-nowrap ${
+                                s.isPrimary
+                                  ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
+                                  : 'bg-white text-gray-500 border-gray-300 hover:border-violet-400 hover:text-violet-600'
+                              }`}
+                            >
+                              <Star className={`w-3 h-3 ${s.isPrimary ? 'fill-current' : ''}`} />
+                              {s.isPrimary ? 'Principal' : 'Definir como principal'}
+                            </button>
+                          </div>
                         </div>
                         {/* Label */}
                         <div>
-                          <label className="block text-[11px] font-semibold text-gray-500 mb-1">Label do Cenário</label>
+                          <label className="block text-[11px] font-semibold text-gray-500 mb-1">Label do Cenario</label>
                           <input
                             type="text"
                             value={s.label}
@@ -1733,7 +1795,7 @@ export default function PipelineDetailsPage() {
                               ...d,
                               scenarios: d.scenarios.map((sc, j) => j === i ? { ...sc, label: e.target.value } : sc),
                             }))}
-                            placeholder={`Cenário ${String.fromCharCode(65 + i)} — descrição curta`}
+                            placeholder={`Cenario ${String.fromCharCode(65 + i)} — descricao curta`}
                             className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-violet-400"
                           />
                         </div>
@@ -1772,6 +1834,57 @@ export default function PipelineDetailsPage() {
                     );
                   })}
                 </div>
+
+                {/* ── Add quote to group ── */}
+                {(() => {
+                  const currentIds = new Set(scenarioDraft.scenarios.map(s => s.quoteId));
+                  const freeQuotes = quotes.filter(q => !q.scenarioGroupId && !currentIds.has(q.id));
+                  if (freeQuotes.length === 0) return null;
+                  return (
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">Adicionar Quote ao Grupo</label>
+                      <div className="flex gap-2">
+                        <select
+                          id="add-quote-select"
+                          defaultValue=""
+                          className="flex-1 px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-violet-400"
+                        >
+                          <option value="" disabled>Selecionar quote livre...</option>
+                          {freeQuotes.map(q => (
+                            <option key={q.id} value={q.id}>
+                              {q.cpo_id} — {q.quote_name} ({q.stage}, ${(q.usd_value / 1000).toFixed(0)}K)
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => {
+                            const sel = (document.getElementById('add-quote-select') as HTMLSelectElement);
+                            const id = parseInt(sel.value);
+                            if (!id) return;
+                            const q = quotes.find(qq => qq.id === id);
+                            if (!q) return;
+                            const nextIdx = scenarioDraft.scenarios.length;
+                            setScenarioDraft(d => ({
+                              ...d,
+                              scenarios: [...d.scenarios, {
+                                quoteId: id,
+                                label: `Cenario ${String.fromCharCode(65 + nextIdx)} — ${q.quote_name}`,
+                                likelihood: 'alternativo' as ScenarioLikelihood,
+                                reason: '',
+                                isPrimary: false,
+                              }],
+                            }));
+                            sel.value = '';
+                          }}
+                          className="px-3 py-1.5 text-xs font-semibold text-violet-700 bg-violet-100 border border-violet-200 rounded-lg hover:bg-violet-200 transition whitespace-nowrap"
+                        >
+                          Adicionar
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-gray-400 mt-1">Apenas quotes sem agrupamento podem ser adicionadas.</p>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Info box */}
