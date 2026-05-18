@@ -2,12 +2,14 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { SlidersHorizontal, X, Pencil, Check, History, Loader2, ChevronUp, ChevronDown, HelpCircle, List, LayoutGrid, Columns3 } from 'lucide-react';
+import { SlidersHorizontal, X, Pencil, Check, History, Loader2, ChevronUp, ChevronDown, HelpCircle, List, LayoutGrid, Columns3, Layers, ChevronRight, Star } from 'lucide-react';
 import { Breadcrumbs, Tooltip } from '@/components/common/breadcrumbs-tooltips';
 import { useOperationHistory } from '@/components/common/operation-history';
 import { useToast } from '@/components/common/toast';
 import { TourOverlay } from '@/components/common/tour-overlay';
-import { getQuotes } from '@/lib/mock-store';
+import { getQuotes, getScenarioGroups, addScenarioGroup, updateScenarioGroup, removeScenarioGroup, updateQuote as storeUpdateQuote } from '@/lib/mock-store';
+import type { ScenarioGroup, ScenarioMeta, ScenarioLikelihood } from '@/lib/mock-store';
+import { LIKELIHOOD_LABELS, LIKELIHOOD_COLORS } from '@/lib/mock-store';
 import { useTour } from '@/hooks/useTour';
 
 
@@ -163,6 +165,73 @@ export default function PipelineDetailsPage() {
 
   const [viewMode, setViewMode] = useState<'list' | 'cards' | 'kanban'>('list');
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+
+  // ── Scenario group states ──────────────────────────────────────────────────
+  const [scenarioGroups, setScenarioGroups] = useState<ScenarioGroup[]>(() => getScenarioGroups());
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [scenarioModalOpen, setScenarioModalOpen] = useState(false);
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+
+  type ScenarioDraft = { groupName: string; scenarios: ScenarioMeta[] };
+  const [scenarioDraft, setScenarioDraft] = useState<ScenarioDraft>({ groupName: '', scenarios: [] });
+
+  const refreshGroups = () => setScenarioGroups([...getScenarioGroups()]);
+
+  const openCreateScenarioModal = () => {
+    const selected = quotes.filter(q => selectedIds.has(q.id));
+    setScenarioDraft({
+      groupName: '',
+      scenarios: selected.map((q, i) => ({
+        quoteId: q.id,
+        label: `Cenário ${String.fromCharCode(65 + i)} — ${q.quote_name}`,
+        likelihood: (i === 0 ? 'mais_provavel' : 'alternativo') as ScenarioLikelihood,
+        reason: '',
+        isPrimary: i === 0,
+      })),
+    });
+    setEditingGroupId(null);
+    setScenarioModalOpen(true);
+  };
+
+  const openEditScenarioModal = (groupId: string) => {
+    const group = scenarioGroups.find(g => g.id === groupId);
+    if (!group) return;
+    setScenarioDraft({ groupName: group.name, scenarios: group.scenarios });
+    setEditingGroupId(groupId);
+    setScenarioModalOpen(true);
+  };
+
+  const handleSaveScenarioGroup = () => {
+    const { groupName, scenarios } = scenarioDraft;
+    if (!groupName.trim() || scenarios.length < 2) return;
+    const hasPrimary = scenarios.some(s => s.isPrimary);
+    const finalScenarios = hasPrimary ? scenarios : scenarios.map((s, i) => ({ ...s, isPrimary: i === 0 }));
+
+    if (editingGroupId) {
+      updateScenarioGroup(editingGroupId, { name: groupName.trim(), scenarios: finalScenarios });
+    } else {
+      const newGroup = addScenarioGroup({ name: groupName.trim(), scenarios: finalScenarios });
+      setQuotes(prev => prev.map(q =>
+        finalScenarios.some(s => s.quoteId === q.id) ? { ...q, scenarioGroupId: newGroup.id } : q
+      ));
+      finalScenarios.forEach(s => storeUpdateQuote(s.quoteId, { scenarioGroupId: newGroup.id }));
+    }
+    refreshGroups();
+    setScenarioModalOpen(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleDeleteScenarioGroup = (groupId: string) => {
+    const group = scenarioGroups.find(g => g.id === groupId);
+    if (!group) return;
+    const ids = group.scenarios.map(s => s.quoteId);
+    setQuotes(prev => prev.map(q => ids.includes(q.id) ? { ...q, scenarioGroupId: undefined } : q));
+    ids.forEach(id => storeUpdateQuote(id, { scenarioGroupId: undefined }));
+    removeScenarioGroup(groupId);
+    refreshGroups();
+  };
+  // ──────────────────────────────────────────────────────────────────────────
+
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [searchTerm, setSearchTerm] = useState('');
