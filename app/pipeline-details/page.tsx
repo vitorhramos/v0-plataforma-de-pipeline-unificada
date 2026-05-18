@@ -745,7 +745,18 @@ export default function PipelineDetailsPage() {
             </div>
           )}
 
-          {/* Item 1 — separador mais visivel entre grupos */}
+          {/* Botao Agrupar Cenarios — aparece com 2+ selecionadas */}
+          {selectedIds.size >= 2 && (
+            <button
+              onClick={openCreateScenarioModal}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-violet-100 text-violet-700 hover:bg-violet-200 transition whitespace-nowrap shrink-0 border border-violet-200"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              Agrupar Cenarios ({selectedIds.size})
+            </button>
+          )}
+
+          {/* separador */}
           <div className="w-px h-6 bg-gray-300 shrink-0 mx-1" />
 
           {/* Item 1 — grupo de edicao em lote com fundo sutil para demarcar area */}
@@ -1055,7 +1066,7 @@ export default function PipelineDetailsPage() {
           </div>
         )}
 
-        {/* ── View: Kanban ─────────��───────────────────────────────────────────── */}
+        {/* ── View: Kanban ─────────��──────────────────────────��────────────────── */}
         {viewMode === 'kanban' && (() => {
           const kanbanGroups = STAGES_LIST.map(stage => ({
             stage,
@@ -1228,46 +1239,139 @@ export default function PipelineDetailsPage() {
                       </div>
                     </td>
                   </tr>
-                ) : paginatedQuotes.map((quote, idx) => (
-                  <tr key={quote.id} className={`hover:bg-blue-50 transition-colors text-gray-900 ${selectedIds.has(quote.id) ? 'bg-blue-50' : idx % 2 === 1 ? 'bg-gray-50/50' : 'bg-white'}`}>
-                    <td className="px-3 py-2.5">
-                      <input type="checkbox" checked={selectedIds.has(quote.id)} onChange={() => toggleSelect(quote.id)} {...(idx === 0 ? { 'data-tour': 'row-checkbox' } : {})} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
-                    </td>
-                    {/* Edit button */}
-                    <td className="px-1 py-2.5">
-                      <button onClick={() => { setEditingQuote(quote); setEditDraft({}); }} data-tour="edit-pencil" className="p-1 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition" title="Editar">
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                    {/* History button */}
-                    <td className="px-1 py-2.5">
-                      {(versions[quote.id]?.length ?? 0) > 0 && (
-                        <button onClick={() => setHistoryQuote(quote)} data-tour="history-icon" className="p-1 rounded text-amber-500 hover:text-amber-700 hover:bg-amber-50 transition" title="Historico de versoes">
-                          <History className="w-3.5 h-3.5" />
+                ) : paginatedQuotes.flatMap((quote, idx) => {
+                  // Scenario metadata for this row
+                  const group = quote.scenarioGroupId
+                    ? scenarioGroups.find(g => g.id === quote.scenarioGroupId)
+                    : null;
+                  const scenarioMeta = group ? group.scenarios.find(s => s.quoteId === quote.id) : null;
+                  const isPrimaryOfGroup = scenarioMeta?.isPrimary === true;
+                  const isGroupExpanded = group ? expandedGroups.has(group.id) : false;
+                  const alternateScenarios = group && isPrimaryOfGroup
+                    ? group.scenarios
+                        .filter(s => s.quoteId !== quote.id)
+                        .map(s => ({ meta: s, altQuote: quotes.find(q => q.id === s.quoteId) }))
+                        .filter(x => x.altQuote != null)
+                    : [];
+
+                  const mainRow = (
+                    <tr key={`row-${quote.id}`} className={`hover:bg-blue-50 transition-colors text-gray-900 ${selectedIds.has(quote.id) ? 'bg-blue-50' : idx % 2 === 1 ? 'bg-gray-50/50' : 'bg-white'}`}>
+                      <td className="px-3 py-2.5">
+                        <input type="checkbox" checked={selectedIds.has(quote.id)} onChange={() => toggleSelect(quote.id)} {...(idx === 0 ? { 'data-tour': 'row-checkbox' } : {})} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                      </td>
+                      <td className="px-1 py-2.5">
+                        <button onClick={() => { setEditingQuote(quote); setEditDraft({}); }} data-tour="edit-pencil" className="p-1 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition" title="Editar">
+                          <Pencil className="w-3.5 h-3.5" />
                         </button>
-                      )}
-                    </td>
-                    {orderedColumns.map(col => {
-                      const k = col.key;
-                      if (k === 'cpo_id')         return <td key={k} className="px-3 py-2.5 font-mono text-blue-600 font-bold whitespace-nowrap">{quote.cpo_id}</td>;
-                      if (k === 'part_no')         return <td key={k} className="px-3 py-2.5 font-mono text-gray-700 whitespace-nowrap">{quote.part_no}</td>;
-                      if (k === 'sales_territory') return <td key={k} className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.sales_territory}</td>;
-                      if (k === 'vendor')          return <td key={k} className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.vendor}</td>;
-                      if (k === 'master_customer') return <td key={k} className="px-3 py-2.5 font-medium text-gray-800 whitespace-nowrap">{quote.master_customer}</td>;
-                      if (k === 'end_user')        return <td key={k} className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.end_user}</td>;
-                      if (k === 'quote_name')      return <td key={k} className="px-3 py-2.5 font-medium text-gray-800 whitespace-nowrap">{quote.quote_name}</td>;
-                      if (k === 'stage')           return <td key={k} className="px-3 py-2.5 whitespace-nowrap"><span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${STAGE_COLORS[quote.stage] ?? 'bg-gray-100 text-gray-700'}`}>{quote.stage}</span></td>;
-                      if (k === 'probability')     return <td key={k} className="px-3 py-2.5 text-right font-bold text-gray-800 whitespace-nowrap">{quote.probability}%</td>;
-                      if (k === 'usd_value')       return <td key={k} className="px-3 py-2.5 text-right font-bold text-emerald-700 whitespace-nowrap">${(quote.usd_value / 1000).toFixed(0)}K</td>;
-                      if (k === 'budgetary')       return <td key={k} className="px-3 py-2.5 text-center whitespace-nowrap"><span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${quote.budgetary === 'Yes' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500'}`}>{quote.budgetary}</span></td>;
-                      if (k === 'close_date')      return <td key={k} className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.close_date}</td>;
-                      if (k === 'quote_age')       return <td key={k} className="px-3 py-2.5 text-center whitespace-nowrap"><span className={`font-semibold ${quote.quote_age > 30 ? 'text-red-600' : 'text-gray-700'}`}>{quote.quote_age}d</span></td>;
-                      if (k === 'status')          return <td key={k} className="px-3 py-2.5 whitespace-nowrap"><span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${STATUS_COLORS[quote.status] ?? 'bg-gray-100 text-gray-600'}`}>{quote.status}</span></td>;
-                      if (k === 'bu')              return <td key={k} className="px-3 py-2.5 text-gray-600 whitespace-nowrap text-[11px]">{quote.bu}</td>;
-                      return null;
-                    })}
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-1 py-2.5">
+                        {(versions[quote.id]?.length ?? 0) > 0 && (
+                          <button onClick={() => setHistoryQuote(quote)} data-tour="history-icon" className="p-1 rounded text-amber-500 hover:text-amber-700 hover:bg-amber-50 transition" title="Historico de versoes">
+                            <History className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </td>
+                      {orderedColumns.map(col => {
+                        const k = col.key;
+                        if (k === 'cpo_id') return (
+                          <td key={k} className="px-3 py-2.5 whitespace-nowrap">
+                            <div className="flex items-center gap-1.5">
+                              {group && isPrimaryOfGroup && (
+                                <button
+                                  onClick={() => setExpandedGroups(prev => {
+                                    const next = new Set(prev);
+                                    next.has(group.id) ? next.delete(group.id) : next.add(group.id);
+                                    return next;
+                                  })}
+                                  className="shrink-0 p-0.5 rounded text-violet-500 hover:text-violet-700 hover:bg-violet-50 transition"
+                                  title={isGroupExpanded ? 'Recolher cenarios' : 'Expandir cenarios'}
+                                >
+                                  <ChevronRight className={`w-3 h-3 transition-transform ${isGroupExpanded ? 'rotate-90' : ''}`} />
+                                </button>
+                              )}
+                              <span className="font-mono text-blue-600 font-bold">{quote.cpo_id}</span>
+                              {group && (
+                                <button
+                                  onClick={() => openEditScenarioModal(group.id)}
+                                  className="flex items-center gap-0.5 px-1.5 py-0.5 bg-violet-100 text-violet-700 rounded-full text-[9px] font-bold border border-violet-200 hover:bg-violet-200 transition"
+                                  title={`Grupo: ${group.name}`}
+                                >
+                                  <Layers className="w-2.5 h-2.5" />
+                                  {isPrimaryOfGroup && <Star className="w-2 h-2 fill-current" />}
+                                </button>
+                              )}
+                              {scenarioMeta && (
+                                <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-semibold border ${LIKELIHOOD_COLORS[scenarioMeta.likelihood]}`}>
+                                  {LIKELIHOOD_LABELS[scenarioMeta.likelihood].split(' ')[0]}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        );
+                        if (k === 'part_no')         return <td key={k} className="px-3 py-2.5 font-mono text-gray-700 whitespace-nowrap">{quote.part_no}</td>;
+                        if (k === 'sales_territory') return <td key={k} className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.sales_territory}</td>;
+                        if (k === 'vendor')          return <td key={k} className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.vendor}</td>;
+                        if (k === 'master_customer') return <td key={k} className="px-3 py-2.5 font-medium text-gray-800 whitespace-nowrap">{quote.master_customer}</td>;
+                        if (k === 'end_user')        return <td key={k} className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.end_user}</td>;
+                        if (k === 'quote_name')      return <td key={k} className="px-3 py-2.5 font-medium text-gray-800 whitespace-nowrap">{quote.quote_name}</td>;
+                        if (k === 'stage')           return <td key={k} className="px-3 py-2.5 whitespace-nowrap"><span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${STAGE_COLORS[quote.stage] ?? 'bg-gray-100 text-gray-700'}`}>{quote.stage}</span></td>;
+                        if (k === 'probability')     return <td key={k} className="px-3 py-2.5 text-right font-bold text-gray-800 whitespace-nowrap">{quote.probability}%</td>;
+                        if (k === 'usd_value')       return <td key={k} className="px-3 py-2.5 text-right font-bold text-emerald-700 whitespace-nowrap">${(quote.usd_value / 1000).toFixed(0)}K</td>;
+                        if (k === 'budgetary')       return <td key={k} className="px-3 py-2.5 text-center whitespace-nowrap"><span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${quote.budgetary === 'Yes' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500'}`}>{quote.budgetary}</span></td>;
+                        if (k === 'close_date')      return <td key={k} className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.close_date}</td>;
+                        if (k === 'quote_age')       return <td key={k} className="px-3 py-2.5 text-center whitespace-nowrap"><span className={`font-semibold ${quote.quote_age > 30 ? 'text-red-600' : 'text-gray-700'}`}>{quote.quote_age}d</span></td>;
+                        if (k === 'status')          return <td key={k} className="px-3 py-2.5 whitespace-nowrap"><span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${STATUS_COLORS[quote.status] ?? 'bg-gray-100 text-gray-600'}`}>{quote.status}</span></td>;
+                        if (k === 'bu')              return <td key={k} className="px-3 py-2.5 text-gray-600 whitespace-nowrap text-[11px]">{quote.bu}</td>;
+                        return null;
+                      })}
+                    </tr>
+                  );
+
+                  // Alternate scenario rows (expanded inline)
+                  const altRows = (group && isPrimaryOfGroup && isGroupExpanded)
+                    ? alternateScenarios.map(({ meta, altQuote }) => altQuote ? (
+                        <tr key={`alt-${altQuote.id}`} className="bg-violet-50/60 border-l-2 border-l-violet-400 text-gray-700 text-[11px]">
+                          <td className="px-3 py-2" />
+                          <td className="px-1 py-2">
+                            <button onClick={() => { setEditingQuote(altQuote); setEditDraft({}); }} className="p-1 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition">
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                          </td>
+                          <td className="px-1 py-2" />
+                          {orderedColumns.map(col => {
+                            const k = col.key;
+                            if (k === 'cpo_id') return (
+                              <td key={k} className="px-3 py-2 whitespace-nowrap">
+                                <div className="flex items-center gap-1.5 pl-4">
+                                  <span className="font-mono text-blue-500 font-semibold">{altQuote.cpo_id}</span>
+                                  <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-semibold border ${LIKELIHOOD_COLORS[meta.likelihood]}`}>{LIKELIHOOD_LABELS[meta.likelihood]}</span>
+                                  {meta.label && <span className="text-gray-400 italic truncate max-w-[100px]">{meta.label}</span>}
+                                </div>
+                              </td>
+                            );
+                            if (k === 'part_no')         return <td key={k} className="px-3 py-2 font-mono text-gray-500 whitespace-nowrap">{altQuote.part_no}</td>;
+                            if (k === 'sales_territory') return <td key={k} className="px-3 py-2 text-gray-500 whitespace-nowrap">{altQuote.sales_territory}</td>;
+                            if (k === 'vendor')          return <td key={k} className="px-3 py-2 text-gray-500 whitespace-nowrap">{altQuote.vendor}</td>;
+                            if (k === 'master_customer') return <td key={k} className="px-3 py-2 text-gray-500 whitespace-nowrap">{altQuote.master_customer}</td>;
+                            if (k === 'end_user')        return <td key={k} className="px-3 py-2 text-gray-500 whitespace-nowrap">{altQuote.end_user}</td>;
+                            if (k === 'quote_name')      return <td key={k} className="px-3 py-2 text-gray-500 whitespace-nowrap">{altQuote.quote_name}</td>;
+                            if (k === 'stage')           return <td key={k} className="px-3 py-2 whitespace-nowrap"><span className={`px-1.5 py-0.5 rounded-full text-[10px] ${STAGE_COLORS[altQuote.stage] ?? 'bg-gray-100 text-gray-600'}`}>{altQuote.stage}</span></td>;
+                            if (k === 'probability')     return <td key={k} className="px-3 py-2 text-right text-gray-500 whitespace-nowrap">{altQuote.probability}%</td>;
+                            if (k === 'usd_value')       return <td key={k} className="px-3 py-2 text-right text-emerald-600 font-semibold whitespace-nowrap">${(altQuote.usd_value / 1000).toFixed(0)}K</td>;
+                            if (k === 'budgetary')       return <td key={k} className="px-3 py-2 text-center text-gray-500 whitespace-nowrap">{altQuote.budgetary}</td>;
+                            if (k === 'close_date')      return <td key={k} className="px-3 py-2 text-gray-500 whitespace-nowrap">{altQuote.close_date}</td>;
+                            if (k === 'quote_age')       return <td key={k} className="px-3 py-2 text-center text-gray-500 whitespace-nowrap">{altQuote.quote_age}d</td>;
+                            if (k === 'status')          return <td key={k} className="px-3 py-2 whitespace-nowrap"><span className={`px-1.5 py-0.5 rounded-full text-[10px] ${STATUS_COLORS[altQuote.status] ?? 'bg-gray-100 text-gray-600'}`}>{altQuote.status}</span></td>;
+                            if (k === 'bu')              return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap">{altQuote.bu}</td>;
+                            return null;
+                          })}
+                        </tr>
+                      ) : null
+                    )
+                    : [];
+
+                  return [mainRow, ...altRows];
+                })}
               </tbody>
             </table>
           </div>

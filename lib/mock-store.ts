@@ -20,7 +20,90 @@ export type Quote = {
   bu: string;
   quote_age: number;
   status: string;
+  scenarioGroupId?: string;
 };
+
+// ── Scenario / Cenario types ──────────────────────────────────────────────────
+
+export type ScenarioLikelihood = 'mais_provavel' | 'alternativo' | 'menos_provavel';
+
+export const LIKELIHOOD_LABELS: Record<ScenarioLikelihood, string> = {
+  mais_provavel:  'Mais Provavel',
+  alternativo:    'Alternativo',
+  menos_provavel: 'Menos Provavel',
+};
+
+export const LIKELIHOOD_COLORS: Record<ScenarioLikelihood, string> = {
+  mais_provavel:  'bg-emerald-100 text-emerald-800 border-emerald-200',
+  alternativo:    'bg-blue-100 text-blue-800 border-blue-200',
+  menos_provavel: 'bg-amber-100 text-amber-800 border-amber-200',
+};
+
+export type ScenarioMeta = {
+  quoteId: number;
+  label: string;
+  likelihood: ScenarioLikelihood;
+  reason: string;
+  isPrimary: boolean;
+};
+
+export type ScenarioGroup = {
+  id: string;
+  name: string;
+  scenarios: ScenarioMeta[];
+  createdAt: string;
+};
+
+// ── ScenarioGroup store ───────────────────────────────────────────────────────
+
+let _groups: ScenarioGroup[] | null = null;
+
+export function getScenarioGroups(): ScenarioGroup[] {
+  if (!_groups) _groups = [];
+  return _groups;
+}
+
+export function addScenarioGroup(group: Omit<ScenarioGroup, 'id' | 'createdAt'>): ScenarioGroup {
+  const groups = getScenarioGroups();
+  const newGroup: ScenarioGroup = {
+    ...group,
+    id: `sg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    createdAt: new Date().toISOString(),
+  };
+  groups.push(newGroup);
+  return newGroup;
+}
+
+export function updateScenarioGroup(
+  id: string,
+  update: Partial<Omit<ScenarioGroup, 'id' | 'createdAt'>>
+): void {
+  const groups = getScenarioGroups();
+  const idx = groups.findIndex(g => g.id === id);
+  if (idx !== -1) groups[idx] = { ...groups[idx], ...update };
+}
+
+export function removeScenarioGroup(id: string): void {
+  const groups = getScenarioGroups();
+  const idx = groups.findIndex(g => g.id === id);
+  if (idx !== -1) groups.splice(idx, 1);
+}
+
+/**
+ * Returns quotes that should count in pipeline KPIs:
+ * - Ungrouped quotes (no scenarioGroupId)
+ * - Primary scenario of each group
+ */
+export function getPrimaryQuotes(quotes: Quote[]): Quote[] {
+  const groups = getScenarioGroups();
+  return quotes.filter(q => {
+    if (!q.scenarioGroupId) return true;
+    const group = groups.find(g => g.id === q.scenarioGroupId);
+    if (!group) return true;
+    const meta = group.scenarios.find(s => s.quoteId === q.id);
+    return meta?.isPrimary === true;
+  });
+}
 
 const PART_PREFIXES = ['NX', 'HP', 'DL', 'CP', 'LN', 'ST', 'VX', 'AX'];
 const USD_VALUES = [702000, 241000, 451000, 2348000, 1614000, 2301000, 890000, 340000, 1200000, 560000];
@@ -68,4 +151,10 @@ export function addQuote(q: Omit<Quote, 'id' | 'quote_age'>): Quote {
   };
   quotes.unshift(newQuote);
   return newQuote;
+}
+
+export function updateQuote(id: number, update: Partial<Quote>): void {
+  const quotes = getQuotes();
+  const idx = quotes.findIndex(q => q.id === id);
+  if (idx !== -1) quotes[idx] = { ...quotes[idx], ...update };
 }
