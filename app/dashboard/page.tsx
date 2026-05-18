@@ -1,15 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card } from '@/components/ui/card';
 import { Breadcrumbs, Tooltip as CustomTooltip } from '@/components/common/breadcrumbs-tooltips';
 import { AdditionalCharts } from '@/components/common/additional-charts';
 import { useKeyboardShortcuts } from '@/components/common/keyboard-shortcuts';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, Layers } from 'lucide-react';
 import { useTour } from '@/hooks/useTour';
 import { TourOverlay } from '@/components/common/tour-overlay';
+import { getQuotes, getScenarioGroups, getPrimaryQuotes } from '@/lib/mock-store';
+import { LIKELIHOOD_LABELS, LIKELIHOOD_COLORS } from '@/lib/mock-store';
 
 // KPI accent colors per index
 const KPI_COLORS = [
@@ -91,6 +93,57 @@ export default function DashboardPage() {
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const tour = useTour(DASHBOARD_TOUR_STEPS);
 
+  // ── Real data from mock-store ──────────────────────────────────────────────
+  const allQuotes = useMemo(() => getQuotes(), []);
+  const groups = useMemo(() => getScenarioGroups(), []);
+  // For KPIs: only count the primary quote of each group (+ ungrouped)
+  const primaryQuotes = useMemo(() => getPrimaryQuotes(allQuotes), [allQuotes]);
+
+  const totalPipeline = primaryQuotes.reduce((s, q) => s + q.usd_value, 0);
+  const avgUsd = primaryQuotes.length ? totalPipeline / primaryQuotes.length : 0;
+  const minUsd = primaryQuotes.length ? Math.min(...primaryQuotes.map(q => q.usd_value)) : 0;
+  const maxUsd = primaryQuotes.length ? Math.max(...primaryQuotes.map(q => q.usd_value)) : 0;
+  const budgetaryCount = primaryQuotes.filter(q => q.budgetary === 'Yes').length;
+  const budgetaryTotal = primaryQuotes.filter(q => q.budgetary === 'Yes').reduce((s, q) => s + q.usd_value, 0);
+  const salesorderCount = primaryQuotes.filter(q => q.status === 'SALESORDER').length;
+  const winRate = primaryQuotes.length ? Math.round((salesorderCount / primaryQuotes.length) * 100) : 0;
+
+  const STAGES = ['Pipelined', 'Pricing 25%', 'Up Selling 50%', 'Committed 75%', 'Net Lost'];
+  const realStageData = STAGES.map(stage => ({
+    name: stage,
+    value: primaryQuotes.filter(q => q.stage === stage).reduce((s, q) => s + q.usd_value, 0),
+    count: primaryQuotes.filter(q => q.stage === stage).length,
+  }));
+
+  // KPI card data — derived from real quotes
+  const realKpis = [
+    ...STAGES.map(stage => {
+      const qs = primaryQuotes.filter(q => q.stage === stage);
+      const usd = qs.reduce((s, q) => s + q.usd_value, 0);
+      return { label: stage, value: `${qs.length} quotes`, unit: `$${(usd / 1_000_000).toFixed(1)}M`, trend: '+0%' };
+    }),
+    { label: 'Total Pipeline', value: `${primaryQuotes.length} quotes`, unit: `$${(totalPipeline / 1_000_000).toFixed(1)}M`, trend: '+0%' },
+    { label: 'Budgetary', value: `${budgetaryCount} quotes`, unit: `$${(budgetaryTotal / 1_000_000).toFixed(1)}M`, trend: '+0%' },
+    { label: 'Avg USD', value: 'por quote', unit: `$${(avgUsd / 1000).toFixed(0)}K`, trend: '+0%' },
+    { label: 'Min USD', value: 'menor deal', unit: `$${(minUsd / 1000).toFixed(0)}K`, trend: '+0%' },
+    { label: 'Max USD', value: 'maior deal', unit: `$${(maxUsd / 1_000_000).toFixed(1)}M`, trend: '+0%' },
+    { label: 'Win Rate', value: 'taxa de ganho', unit: `${winRate}%`, trend: '+0%' },
+  ];
+
+  // Scenario chart data — groups by likelihood distribution
+  const scenarioChartData = [
+    { name: 'Mais Provavel', value: groups.reduce((s, g) => s + g.scenarios.filter(sc => sc.likelihood === 'mais_provavel').length, 0), color: '#10b981' },
+    { name: 'Alternativo',   value: groups.reduce((s, g) => s + g.scenarios.filter(sc => sc.likelihood === 'alternativo').length, 0), color: '#3b82f6' },
+    { name: 'Menos Provavel',value: groups.reduce((s, g) => s + g.scenarios.filter(sc => sc.likelihood === 'menos_provavel').length, 0), color: '#f59e0b' },
+  ];
+  const totalGroupedQuotes = groups.reduce((s, g) => s + g.scenarios.length, 0);
+  const totalScenarioValue = groups.reduce((s, g) => {
+    const primaryMeta = g.scenarios.find(sc => sc.isPrimary);
+    if (!primaryMeta) return s;
+    const q = allQuotes.find(qq => qq.id === primaryMeta.quoteId);
+    return s + (q?.usd_value ?? 0);
+  }, 0);
+
   useKeyboardShortcuts({
     export: () => alert('Exportando dados...'),
     filter: () => setExpandFilters(!expandFilters),
@@ -141,22 +194,35 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* KPI grid */}
+        {/* KPI grid — real data, primary quotes only */}
         <div data-tour="kpi-grid" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-          {mockData.kpis.map((kpi, idx) => (
-            <CustomTooltip key={idx} content={`${kpi.value} quotes — ${kpi.trend} vs. mes anterior`}>
-              <div className={`bg-white rounded-xl border-l-4 ${KPI_COLORS[idx]} border border-gray-200 px-4 py-3 hover:shadow-md transition cursor-help group`}>
+          {realKpis.map((kpi, idx) => (
+            <CustomTooltip key={idx} content={`${kpi.value} — pipeline primario (cenarios nao-principais excluidos)`}>
+              <div className={`bg-white rounded-xl border-l-4 ${KPI_COLORS[idx % KPI_COLORS.length]} border border-gray-200 px-4 py-3 hover:shadow-md transition cursor-help group`}>
                 <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide truncate leading-none mb-2">{kpi.label}</p>
                 <p className="text-lg font-bold text-gray-900 leading-none">{kpi.unit}</p>
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-[11px] text-gray-400">{kpi.value}</span>
-                  <span className={`text-[11px] font-semibold ${kpi.trend.startsWith('+') ? 'text-emerald-600' : 'text-red-500'}`}>
-                    {kpi.trend}
-                  </span>
                 </div>
               </div>
             </CustomTooltip>
           ))}
+          {/* Scenario KPI card */}
+          {groups.length > 0 && (
+            <CustomTooltip content={`${groups.length} grupos com ${totalGroupedQuotes} cenarios alternativos no total`}>
+              <div className="bg-white rounded-xl border-l-4 border-l-violet-500 border border-gray-200 px-4 py-3 hover:shadow-md transition cursor-help">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Layers className="w-3 h-3 text-violet-500 shrink-0" />
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide truncate leading-none">Cenarios</p>
+                </div>
+                <p className="text-lg font-bold text-gray-900 leading-none">{groups.length} grupos</p>
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-[11px] text-gray-400">{totalGroupedQuotes} quotes</span>
+                  <span className="text-[11px] font-semibold text-violet-600">${(totalScenarioValue / 1_000_000).toFixed(1)}M</span>
+                </div>
+              </div>
+            </CustomTooltip>
+          )}
         </div>
 
         {/* Filters panel */}
@@ -269,21 +335,72 @@ export default function DashboardPage() {
         <div>
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Graficos Analiticos</h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Stage Distribution — real data, primary quotes only */}
             <div data-tour="bar-chart" className="bg-white rounded-xl border border-gray-200 p-5">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-900">Stage Distribution</h3>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900">Stage Distribution</h3>
+                  <p className="text-[11px] text-gray-400 mt-0.5">Apenas cenarios principais contabilizados</p>
+                </div>
                 <span className="text-xs text-gray-400 font-medium">USD</span>
               </div>
               <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={mockData.stageData} barSize={28}>
+                <BarChart data={realStageData} barSize={28}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
                   <XAxis dataKey="name" angle={-30} height={60} tick={{ fontSize: 10, fill: '#6b7280' }} />
-                  <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickFormatter={(v) => `$${(v/1000000).toFixed(0)}M`} />
-                  <Tooltip formatter={(value) => [`$${(Number(value) / 1000000).toFixed(1)}M`, 'USD']} />
+                  <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickFormatter={(v) => `$${(v/1000000).toFixed(1)}M`} />
+                  <Tooltip
+                    formatter={(value, name) => name === 'value' ? [`$${(Number(value) / 1_000_000).toFixed(1)}M`, 'USD'] : [value, 'Quotes']}
+                    labelFormatter={(label) => `Stage: ${label}`}
+                  />
                   <Bar dataKey="value" fill="#3b82f6" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
+
+            {/* Cenarios por Probabilidade — novo grafico */}
+            {groups.length > 0 && (
+            <div className="bg-white rounded-xl border border-l-4 border-l-violet-500 border-gray-200 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-violet-500" />
+                    <h3 className="text-sm font-semibold text-gray-900">Cenarios por Probabilidade</h3>
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-0.5">{groups.length} grupos · {totalGroupedQuotes} cenarios</p>
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={scenarioChartData} barSize={48}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#6b7280' }} />
+                  <Tooltip formatter={(value) => [`${value} cenarios`, '']} />
+                  <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                    {scenarioChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              {/* Groups summary list */}
+              <div className="mt-4 space-y-1.5 max-h-28 overflow-y-auto">
+                {groups.map(g => {
+                  const primaryMeta = g.scenarios.find(sc => sc.isPrimary);
+                  const primaryQ = primaryMeta ? allQuotes.find(q => q.id === primaryMeta.quoteId) : null;
+                  return (
+                    <div key={g.id} className="flex items-center justify-between gap-2 text-[11px]">
+                      <span className="text-gray-600 font-medium truncate">{g.name}</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-gray-400">{g.scenarios.length} cen.</span>
+                        {primaryQ && <span className="text-emerald-700 font-semibold">${(primaryQ.usd_value / 1000).toFixed(0)}K</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            )}
 
             <div className="bg-white rounded-xl border border-gray-200 p-5">
               <div className="flex items-center justify-between mb-4">

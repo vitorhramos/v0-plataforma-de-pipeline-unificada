@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Breadcrumbs } from '@/components/common/breadcrumbs-tooltips';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, Layers, Star } from 'lucide-react';
 import { useTour } from '@/hooks/useTour';
 import { TourOverlay } from '@/components/common/tour-overlay';
+import { getQuotes, getScenarioGroups, getPrimaryQuotes } from '@/lib/mock-store';
 
 const PART_PREFIXES = ['NX', 'HP', 'DL', 'CP', 'LN', 'ST', 'VX', 'AX'];
 const USD_VALUES = [702000, 241000, 451000, 2348000, 1614000, 2301000, 890000, 340000, 1200000, 560000];
@@ -85,12 +86,33 @@ export default function PipelineManagerPage() {
   const tour = useTour(MANAGER_TOUR_STEPS);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 25;
-  const totalPages = Math.ceil(mockQuotes.length / pageSize);
-  const paginatedQuotes = mockQuotes.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  const totalUsd = mockQuotes.reduce((s, q) => s + q.usd_value, 0);
-  const committed = mockQuotes.filter(q => q.stage === 'Committed 75%').reduce((s, q) => s + q.usd_value, 0);
-  const avgProb = Math.round(mockQuotes.reduce((s, q) => s + q.probability, 0) / mockQuotes.length);
+  // ── Real store data ────────────────────────────────────────────────────────
+  const allQuotes = useMemo(() => getQuotes(), []);
+  const groups = useMemo(() => getScenarioGroups(), []);
+  // KPIs use only primary quotes (non-primary scenarios excluded)
+  const primaryQuotes = useMemo(() => getPrimaryQuotes(allQuotes), [allQuotes]);
+
+  const totalPages = Math.ceil(allQuotes.length / pageSize);
+  const paginatedQuotes = allQuotes.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  // KPIs — derived from primary quotes to avoid inflating the pipeline
+  const totalUsd = primaryQuotes.reduce((s, q) => s + q.usd_value, 0);
+  const committed = primaryQuotes.filter(q => q.stage === 'Committed 75%').reduce((s, q) => s + q.usd_value, 0);
+  const avgProb = primaryQuotes.length ? Math.round(primaryQuotes.reduce((s, q) => s + q.probability, 0) / primaryQuotes.length) : 0;
+
+  // Real chart data from store
+  const revendasData = useMemo(() => {
+    const map: Record<string, number> = {};
+    primaryQuotes.forEach(q => { map[q.master_customer] = (map[q.master_customer] ?? 0) + q.usd_value; });
+    return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, value]) => ({ name, value }));
+  }, [primaryQuotes]);
+
+  const vendorsData = useMemo(() => {
+    const map: Record<string, number> = {};
+    primaryQuotes.forEach(q => { map[q.vendor] = (map[q.vendor] ?? 0) + q.usd_value; });
+    return Object.entries(map).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }));
+  }, [primaryQuotes]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -136,24 +158,36 @@ export default function PipelineManagerPage() {
           </div>
         </div>
 
-        {/* Summary cards */}
-        <div data-tour="summary-cards" className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {/* Summary cards — KPIs from primary quotes only */}
+        <div data-tour="summary-cards" className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
           <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-blue-500 px-4 py-3">
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Quotes</p>
-            <p className="text-xl font-bold text-gray-900 mt-1">{mockQuotes.length}</p>
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Quotes Totais</p>
+            <p className="text-xl font-bold text-gray-900 mt-1">{allQuotes.length}</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">{primaryQuotes.length} no pipeline</p>
           </div>
           <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-emerald-500 px-4 py-3">
             <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Total USD</p>
-            <p className="text-xl font-bold text-gray-900 mt-1">${(totalUsd / 1000000).toFixed(1)}M</p>
+            <p className="text-xl font-bold text-gray-900 mt-1">${(totalUsd / 1_000_000).toFixed(1)}M</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">cenarios principais</p>
           </div>
           <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-violet-500 px-4 py-3">
             <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Committed</p>
-            <p className="text-xl font-bold text-gray-900 mt-1">${(committed / 1000000).toFixed(1)}M</p>
+            <p className="text-xl font-bold text-gray-900 mt-1">${(committed / 1_000_000).toFixed(1)}M</p>
           </div>
           <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-amber-500 px-4 py-3">
             <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Prob Media</p>
             <p className="text-xl font-bold text-gray-900 mt-1">{avgProb}%</p>
           </div>
+          {groups.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-violet-400 px-4 py-3">
+              <div className="flex items-center gap-1.5">
+                <Layers className="w-3 h-3 text-violet-500" />
+                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Cenarios</p>
+              </div>
+              <p className="text-xl font-bold text-gray-900 mt-1">{groups.length} grupos</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">{groups.reduce((s, g) => s + g.scenarios.length, 0)} quotes agrupadas</p>
+            </div>
+          )}
         </div>
 
         {/* Charts view */}
@@ -162,15 +196,18 @@ export default function PipelineManagerPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="bg-white rounded-xl border border-gray-200 p-5">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-gray-900">Volume por Revenda</h3>
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900">Volume por Revenda</h3>
+                    <p className="text-[11px] text-gray-400 mt-0.5">Apenas cenarios principais</p>
+                  </div>
                   <span className="text-xs text-gray-400">Top 5</span>
                 </div>
                 <ResponsiveContainer width="100%" height={240}>
-                  <BarChart data={mockData.revendas} layout="vertical" barSize={16}>
+                  <BarChart data={revendasData} layout="vertical" barSize={16}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
-                    <XAxis type="number" tick={{ fontSize: 10, fill: '#6b7280' }} tickFormatter={(v) => `$${(v/1000000).toFixed(0)}M`} />
+                    <XAxis type="number" tick={{ fontSize: 10, fill: '#6b7280' }} tickFormatter={(v) => `$${(v/1_000_000).toFixed(1)}M`} />
                     <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 10, fill: '#6b7280' }} />
-                    <Tooltip formatter={(value) => [`$${(Number(value) / 1000000).toFixed(1)}M`, 'USD']} />
+                    <Tooltip formatter={(value) => [`$${(Number(value) / 1_000_000).toFixed(1)}M`, 'USD']} />
                     <Bar dataKey="value" fill="#8b5cf6" radius={[0, 6, 6, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -178,15 +215,18 @@ export default function PipelineManagerPage() {
 
               <div className="bg-white rounded-xl border border-gray-200 p-5">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-gray-900">Volume por Fabricante</h3>
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900">Volume por Fabricante</h3>
+                    <p className="text-[11px] text-gray-400 mt-0.5">Apenas cenarios principais</p>
+                  </div>
                   <span className="text-xs text-gray-400">USD</span>
                 </div>
                 <ResponsiveContainer width="100%" height={240}>
-                  <BarChart data={mockData.vendors} barSize={36}>
+                  <BarChart data={vendorsData} barSize={36}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
                     <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} />
-                    <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickFormatter={(v) => `$${(v/1000000).toFixed(0)}M`} />
-                    <Tooltip formatter={(value) => [`$${(Number(value) / 1000000).toFixed(1)}M`, 'USD']} />
+                    <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickFormatter={(v) => `$${(v/1_000_000).toFixed(1)}M`} />
+                    <Tooltip formatter={(value) => [`$${(Number(value) / 1_000_000).toFixed(1)}M`, 'USD']} />
                     <Bar dataKey="value" fill="#f59e0b" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -234,9 +274,22 @@ export default function PipelineManagerPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {paginatedQuotes.map((q, idx) => (
+                  {paginatedQuotes.map((q, idx) => {
+                    const group = q.scenarioGroupId ? groups.find(g => g.id === q.scenarioGroupId) : null;
+                    const scenarioMeta = group ? group.scenarios.find(s => s.quoteId === q.id) : null;
+                    return (
                     <tr key={idx} className={`hover:bg-blue-50 transition-colors text-gray-900 ${idx % 2 === 1 ? 'bg-gray-50/50' : 'bg-white'}`}>
-                      <td className="px-3 py-2.5 pl-5 font-mono text-blue-600 font-bold whitespace-nowrap">{q.cpo_id}</td>
+                      <td className="px-3 py-2.5 pl-5 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono text-blue-600 font-bold">{q.cpo_id}</span>
+                          {group && (
+                            <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-violet-100 text-violet-700 rounded-full text-[9px] font-bold border border-violet-200" title={`Grupo: ${group.name}`}>
+                              <Layers className="w-2.5 h-2.5" />
+                              {scenarioMeta?.isPrimary && <Star className="w-2 h-2 fill-current" />}
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-3 py-2.5 font-mono text-gray-700 whitespace-nowrap">{q.part_no}</td>
                       <td className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{q.sales_territory}</td>
                       <td className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{q.vendor}</td>
@@ -260,7 +313,8 @@ export default function PipelineManagerPage() {
                       </td>
                       <td className="px-3 py-2.5 pr-5 text-gray-600 whitespace-nowrap text-[11px]">{q.bu}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
