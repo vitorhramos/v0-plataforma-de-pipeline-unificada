@@ -13,6 +13,7 @@ export const LOSS_REASONS = [
   'Preco',
   'Concorrente',
   'Orcamento cancelado',
+  'Consulta de orcamento',
   'Projeto adiado',
   'Requisito tecnico nao atendido',
   'Relacionamento com cliente',

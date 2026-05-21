@@ -80,7 +80,7 @@ type VersionEntry = {
 const VENDORS_LIST = ['Cisco', 'HPE', 'Dell', 'Lenovo'];
 const TERRITORIES_LIST = ['Sao Paulo', 'Rio de Janeiro', 'Minas Gerais'];
 const BU_LIST = ['BU Storage', 'BU Network', 'BU Compute'];
-const STAGES_LIST = ['Pipelined', 'Pricing 25%', 'Up Selling 50%', 'Committed 75%', 'Net Lost'];
+const STAGES_LIST = ['Not Classified', 'Pipelined', 'Pricing 25%', 'Up Selling 50%', 'Committed 75%', 'Net Lost'];
 const REVENDA_LIST = ['Revenda A', 'Revenda B', 'Revenda C', 'Revenda D', 'Revenda E'];
 const PROD_TYPES_LIST = ['Hardware', 'Software', 'Services', 'Renew'];
 const ALL_STATUSES = ['BACKORDER', 'BOSOSPLIT', 'CONVERTOK', 'PARTIALBO', 'SALESORDER', 'TERMSFIX', 'QUOTEPO', 'QUOTESHEET', 'READYAF', 'POCHANGE', 'POLINEQC', 'CANCELLED'];
@@ -107,6 +107,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const STAGE_COLORS: Record<string, string> = {
+  'Not Classified': 'bg-gray-100 text-gray-500',
   'Pipelined':      'bg-blue-100 text-blue-800',
   'Pricing 25%':    'bg-violet-100 text-violet-800',
   'Up Selling 50%': 'bg-amber-100 text-amber-800',
@@ -324,7 +325,6 @@ export default function PipelineDetailsPage() {
     { label: 'GM %',            key: 'gm_pct' },
     { label: 'CPO QTY',        key: 'cpo_qty' },
     { label: 'Stage',           key: 'stage' },
-    { label: 'Prob',            key: 'probability' },
     { label: 'Lost',            key: 'lost_reason' },
     { label: 'Created Date',    key: 'created_date' },
     { label: 'Close Date',      key: 'close_date' },
@@ -657,11 +657,11 @@ export default function PipelineDetailsPage() {
   };
 
   const handleExport = (format: 'CSV' | 'Excel') => {
-    const headers = ['CPO ID','CPO Status','VPC Code','Part No','Part Desc','Sales Terr','Team','Vendor','Master Customer','Bill To','End User','CIF','NET','FOB','GM %','CPO QTY','Stage','Prob %','Lost','Created Date','Close Date','CPO No','CPO Pay Meth','Pay Meth Name','Opportunity','Prod Type','Renew','Pipe Comments','Quote Comments','Budgetary','HTS Code','HTS Description','Eng. Ticket'];
+    const headers = ['CPO ID','CPO Status','VPC Code','Part No','Part Desc','Sales Terr','Team','Vendor','Master Customer','Bill To','End User','CIF','NET','FOB','GM %','CPO QTY','Stage','Lost','Created Date','Close Date','CPO No','CPO Pay Meth','Pay Meth Name','Opportunity','Prod Type','Renew','Pipe Comments','Quote Comments','Budgetary','HTS Code','HTS Description','Eng. Ticket'];
     const rows = sortedQuotes.map(q => [
       q.cpo_id, q.status, q.vpc_code ?? '', q.part_no, q.description, q.sales_territory, q.team, q.vendor,
       q.master_customer, q.bill_to ?? '', q.end_user, q.usd_value, q.net_value ?? '', q.fob_value ?? '',
-      q.gm_pct ?? '', q.cpo_qty ?? '', q.stage, q.probability, q.lost_reason ?? '', q.created_date ?? '',
+      q.gm_pct ?? '', q.cpo_qty ?? '', q.stage, q.lost_reason ?? '', q.created_date ?? '',
       q.close_date, q.cpo_no ?? '', q.cpo_pay_meth ?? '', q.pay_meth_name ?? '', q.quote_name,
       q.prod_type ?? '', q.renew ?? '', q.pipe_comments ?? '', q.quote_comments ?? '', q.budgetary,
       q.hts_code ?? '', q.hts_description ?? '', q.is_engineering_ticket ?? ''
@@ -1249,6 +1249,7 @@ export default function PipelineDetailsPage() {
               };
 
               const STAGE_COLORS: Record<string, string> = {
+                'Not Classified':'bg-gray-500 text-white border-gray-500',
                 'Pipelined':     'bg-blue-600 text-white border-blue-600',
                 'Pricing 25%':   'bg-violet-600 text-white border-violet-600',
                 'Up Selling 50%':'bg-amber-500 text-white border-amber-500',
@@ -1766,7 +1767,24 @@ export default function PipelineDetailsPage() {
                         );
                         if (k === 'status')               return <td key={k} className="px-3 py-2.5 whitespace-nowrap"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${STATUS_COLORS[quote.status] ?? 'bg-gray-100 text-gray-600'}`}>{quote.status}</span></td>;
                         if (k === 'vpc_code')             return <td key={k} className="px-3 py-2.5 font-mono text-gray-600 whitespace-nowrap text-[11px]">{quote.vpc_code ?? '—'}</td>;
-                        if (k === 'part_no')              return <td key={k} className="px-3 py-2.5 font-mono text-gray-700 whitespace-nowrap text-[11px]">{quote.part_no}</td>;
+                        if (k === 'part_no') {
+                          const parts = (quote.part_no ?? '').split(',').map((s: string) => s.trim()).filter(Boolean);
+                          const first = parts[0] ?? '—';
+                          const extra = parts.length - 1;
+                          return (
+                            <td key={k} className="px-3 py-2.5 whitespace-nowrap">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono text-gray-700 text-[11px]">{first}</span>
+                                {extra > 0 && (
+                                  <span
+                                    className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-blue-100 text-blue-700 cursor-default"
+                                    title={parts.slice(1).join(', ')}
+                                  >+{extra}</span>
+                                )}
+                              </div>
+                            </td>
+                          );
+                        }
                         if (k === 'description')          return <td key={k} className="px-3 py-2.5 text-gray-700 max-w-[140px]"><span className="block truncate" title={quote.description}>{quote.description}</span></td>;
                         if (k === 'sales_territory')      return <td key={k} className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.sales_territory}</td>;
                         if (k === 'team')                 return <td key={k} className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{quote.team}</td>;
@@ -1784,18 +1802,25 @@ export default function PipelineDetailsPage() {
                           </td>;
                         }
                         if (k === 'cpo_qty')              return <td key={k} className="px-3 py-2.5 text-center text-gray-700 whitespace-nowrap">{quote.cpo_qty ?? '—'}</td>;
-                        if (k === 'stage')                return <td key={k} className="px-3 py-2.5 whitespace-nowrap"><span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${STAGE_COLORS[quote.stage] ?? 'bg-gray-100 text-gray-700'}`}>{quote.stage}</span></td>;
-                        if (k === 'probability') {
-                          const p = quote.probability;
-                          const barColor = p >= 75 ? 'bg-emerald-500' : p >= 50 ? 'bg-amber-400' : p >= 25 ? 'bg-blue-400' : 'bg-red-400';
-                          return <td key={k} className="px-3 py-2.5 whitespace-nowrap">
-                            <div className="flex items-center gap-1.5">
-                              <div className="w-14 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                <div className={`h-full rounded-full ${barColor}`} style={{ width: `${p}%` }} />
-                              </div>
-                              <span className="font-bold text-gray-800 text-[11px]">{p}%</span>
-                            </div>
-                          </td>;
+                        if (k === 'stage') {
+                          const stagePct: Record<string, number> = {
+                            'Not Classified': 0, 'Pipelined': 0, 'Pricing 25%': 25, 'Up Selling 50%': 50, 'Committed 75%': 75, 'Net Lost': 0,
+                          };
+                          const pct = stagePct[quote.stage] ?? 0;
+                          const barColor: Record<string, string> = {
+                            'Pricing 25%': 'bg-violet-500', 'Up Selling 50%': 'bg-amber-500', 'Committed 75%': 'bg-emerald-500',
+                          };
+                          const showBar = pct > 0;
+                          return (
+                            <td key={k} className="px-3 py-2.5 whitespace-nowrap min-w-[110px]">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${STAGE_COLORS[quote.stage] ?? 'bg-gray-100 text-gray-700'}`}>{quote.stage}</span>
+                              {showBar && (
+                                <div className="mt-1 w-full h-1 bg-gray-200 rounded-full overflow-hidden">
+                                  <div className={`h-full rounded-full ${barColor[quote.stage] ?? 'bg-gray-400'}`} style={{ width: `${pct}%` }} />
+                                </div>
+                              )}
+                            </td>
+                          );
                         }
                         if (k === 'lost_reason')          return <td key={k} className="px-3 py-2.5 whitespace-nowrap">{quote.lost_reason ? <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700">{quote.lost_reason}</span> : <span className="text-gray-300">—</span>}</td>;
                         if (k === 'created_date')         return <td key={k} className="px-3 py-2.5 text-gray-600 whitespace-nowrap text-[11px]">{fmtDate(quote.created_date)}</td>;
@@ -1854,7 +1879,19 @@ export default function PipelineDetailsPage() {
                             );
                             if (k === 'status')               return <td key={k} className="px-3 py-2 whitespace-nowrap opacity-70"><span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${STATUS_COLORS[altQuote.status] ?? 'bg-gray-100 text-gray-600'}`}>{altQuote.status}</span></td>;
                             if (k === 'vpc_code')             return <td key={k} className="px-3 py-2 font-mono text-gray-400 whitespace-nowrap text-[11px]">{altQuote.vpc_code ?? '—'}</td>;
-                            if (k === 'part_no')              return <td key={k} className="px-3 py-2 font-mono text-gray-400 whitespace-nowrap text-[11px]">{altQuote.part_no}</td>;
+                            if (k === 'part_no') {
+                              const altParts = (altQuote.part_no ?? '').split(',').map((s: string) => s.trim()).filter(Boolean);
+                              const altFirst = altParts[0] ?? '—';
+                              const altExtra = altParts.length - 1;
+                              return (
+                                <td key={k} className="px-3 py-2 whitespace-nowrap">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="font-mono text-gray-400 text-[11px]">{altFirst}</span>
+                                    {altExtra > 0 && <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-blue-50 text-blue-500" title={altParts.slice(1).join(', ')}>+{altExtra}</span>}
+                                  </div>
+                                </td>
+                              );
+                            }
                             if (k === 'description')          return <td key={k} className="px-3 py-2 text-gray-400 max-w-[140px]"><span className="block truncate text-[11px]">{altQuote.description}</span></td>;
                             if (k === 'sales_territory')      return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap">{altQuote.sales_territory}</td>;
                             if (k === 'team')                 return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap">{altQuote.team}</td>;
@@ -1867,8 +1904,21 @@ export default function PipelineDetailsPage() {
                             if (k === 'fob_value')            return <td key={k} className="px-3 py-2 text-right text-violet-400 whitespace-nowrap">{fmtM(altQuote.fob_value)}</td>;
                             if (k === 'gm_pct')               return <td key={k} className="px-3 py-2 text-right text-gray-400 whitespace-nowrap">{altQuote.gm_pct != null ? `${altQuote.gm_pct.toFixed(1)}%` : '—'}</td>;
                             if (k === 'cpo_qty')              return <td key={k} className="px-3 py-2 text-center text-gray-400 whitespace-nowrap">{altQuote.cpo_qty ?? '—'}</td>;
-                            if (k === 'stage')                return <td key={k} className="px-3 py-2 whitespace-nowrap"><span className={`px-1.5 py-0.5 rounded-full text-[10px] opacity-70 ${STAGE_COLORS[altQuote.stage] ?? 'bg-gray-100 text-gray-600'}`}>{altQuote.stage}</span></td>;
-                            if (k === 'probability')          return <td key={k} className="px-3 py-2 text-right text-gray-400 whitespace-nowrap">{altQuote.probability}%</td>;
+                            if (k === 'stage') {
+                              const altStagePct: Record<string, number> = { 'Not Classified': 0, 'Pipelined': 0, 'Pricing 25%': 25, 'Up Selling 50%': 50, 'Committed 75%': 75, 'Net Lost': 0 };
+                              const altBarColor: Record<string, string> = { 'Pricing 25%': 'bg-violet-500', 'Up Selling 50%': 'bg-amber-500', 'Committed 75%': 'bg-emerald-500' };
+                              const altPct = altStagePct[altQuote.stage] ?? 0;
+                              return (
+                                <td key={k} className="px-3 py-2 whitespace-nowrap min-w-[110px]">
+                                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] opacity-70 ${STAGE_COLORS[altQuote.stage] ?? 'bg-gray-100 text-gray-600'}`}>{altQuote.stage}</span>
+                                  {altPct > 0 && (
+                                    <div className="mt-1 w-full h-1 bg-gray-200 rounded-full overflow-hidden">
+                                      <div className={`h-full rounded-full ${altBarColor[altQuote.stage] ?? 'bg-gray-400'}`} style={{ width: `${altPct}%` }} />
+                                    </div>
+                                  )}
+                                </td>
+                              );
+                            }
                             if (k === 'lost_reason')          return <td key={k} className="px-3 py-2 whitespace-nowrap text-gray-400 text-[11px]">{altQuote.lost_reason ?? '—'}</td>;
                             if (k === 'created_date')         return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap text-[11px]">{fmtD(altQuote.created_date)}</td>;
                             if (k === 'close_date')           return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap text-[11px]">{fmtD(altQuote.close_date)}</td>;
@@ -2053,10 +2103,6 @@ export default function PipelineDetailsPage() {
                         <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Identificacao</p>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1.5 text-[11px]">
                           <div>
-                            <span className="text-gray-400 block leading-none mb-0.5">Part No</span>
-                            <span className="font-mono font-semibold text-gray-800">{editingQuote.part_no}</span>
-                          </div>
-                          <div>
                             <span className="text-gray-400 block leading-none mb-0.5">Vendor</span>
                             <span className="font-semibold text-gray-800">{editingQuote.vendor}</span>
                           </div>
@@ -2073,20 +2119,38 @@ export default function PipelineDetailsPage() {
                             <span className="text-gray-700">{editingQuote.bill_to ?? '—'}</span>
                           </div>
                           <div>
-                            <span className="text-gray-400 block leading-none mb-0.5">Prod Type</span>
-                            <span className="text-gray-700">{editingQuote.prod_type ?? '—'}</span>
+                            <span className="text-gray-400 block leading-none mb-0.5">Territorio</span>
+                            <span className="text-gray-700">{editingQuote.sales_territory}</span>
                           </div>
                           <div>
                             <span className="text-gray-400 block leading-none mb-0.5">Created</span>
                             <span className="text-gray-700">{editingQuote.created_date ? editingQuote.created_date.split('-').reverse().join('/') : '—'}</span>
                           </div>
-                          <div>
-                            <span className="text-gray-400 block leading-none mb-0.5">Close Date</span>
-                            <div className="flex items-center gap-1.5">
-                              <span className={`font-semibold ${closeOverdue ? 'text-red-600' : closeUrgent ? 'text-amber-600' : 'text-gray-700'}`}>{closeFmt}</span>
-                              {closeOverdue && <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-100 text-red-700">Vencida</span>}
-                              {!closeOverdue && closeUrgent && daysLeft !== null && <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-700">{daysLeft}d</span>}
-                            </div>
+                          {/* Close Date — editavel */}
+                          <div className="col-span-2">
+                            {(() => {
+                              const cdVal = (editDraft as Record<string, unknown>)['close_date'] !== undefined
+                                ? String((editDraft as Record<string, unknown>)['close_date'])
+                                : editingQuote.close_date ?? '';
+                              const cdChanged = (editDraft as Record<string, unknown>)['close_date'] !== undefined &&
+                                String((editDraft as Record<string, unknown>)['close_date']) !== String(editingQuote.close_date ?? '');
+                              return (
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="text-gray-400 block leading-none mb-0.5 flex items-center gap-1">
+                                    Close Date
+                                    {cdChanged && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" title="Alterado" />}
+                                    {closeOverdue && <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-100 text-red-700 ml-1">Vencida</span>}
+                                    {!closeOverdue && closeUrgent && daysLeft !== null && <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-700 ml-1">{daysLeft}d</span>}
+                                  </span>
+                                  <input
+                                    type="date"
+                                    value={cdVal}
+                                    onChange={e => setEditDraft(d => ({ ...d, close_date: e.target.value }))}
+                                    className={`px-2 py-1 text-xs border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 ${cdChanged ? 'ring-1 ring-amber-400 border-amber-300' : 'border-gray-200'} ${closeOverdue ? 'text-red-600' : closeUrgent ? 'text-amber-600' : 'text-gray-700'}`}
+                                  />
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -2129,16 +2193,15 @@ export default function PipelineDetailsPage() {
                 <div className="px-6 pt-4 pb-4">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Pipeline</p>
 
-                  {/* Stage + Prob — linked */}
-                  <div className="grid grid-cols-2 gap-3 mb-3">
-                    {/* Stage with auto-prob suggestion */}
+                  {/* Stage — full width */}
+                  <div className="mb-3">
                     {(() => {
                       const stageField = EDITABLE_FIELDS.find(f => f.key === 'stage')!;
                       const val = String((editDraft as Record<string, unknown>)['stage'] ?? editingQuote['stage'] ?? '');
                       const changed = (editDraft as Record<string, unknown>)['stage'] !== undefined &&
                         String((editDraft as Record<string, unknown>)['stage']) !== String(editingQuote['stage'] ?? '');
                       const STAGE_PROB: Record<string, number> = {
-                        'Pipelined': 20, 'Pricing 25%': 25, 'Up Selling 50%': 50, 'Committed 75%': 75, 'Net Lost': 0,
+                        'Not Classified': 0, 'Pipelined': 20, 'Pricing 25%': 25, 'Up Selling 50%': 50, 'Committed 75%': 75, 'Net Lost': 0,
                       };
                       return (
                         <div className="flex flex-col gap-1">
@@ -2168,28 +2231,6 @@ export default function PipelineDetailsPage() {
                         </div>
                       );
                     })()}
-
-                    {/* Prob % */}
-                    {(() => {
-                      const val = String((editDraft as Record<string, unknown>)['probability'] ?? editingQuote['probability'] ?? '');
-                      const changed = (editDraft as Record<string, unknown>)['probability'] !== undefined &&
-                        String((editDraft as Record<string, unknown>)['probability']) !== String(editingQuote['probability'] ?? '');
-                      return (
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-                            Prob %
-                            {changed && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" title="Alterado" />}
-                          </label>
-                          <input
-                            type="number"
-                            min={0} max={100}
-                            value={val}
-                            onChange={e => setEditDraft(d => ({ ...d, probability: Number(e.target.value) }))}
-                            className={`${inp} ${changed ? 'ring-1 ring-amber-400 border-amber-300' : ''}`}
-                          />
-                        </div>
-                      );
-                    })()}
                   </div>
 
                   {/* Budgetary — select */}
@@ -2197,40 +2238,42 @@ export default function PipelineDetailsPage() {
                     <Field field={EDITABLE_FIELDS.find(f => f.key === 'budgetary')!} />
                   </div>
 
-                  {/* Renew + Eng. Ticket — toggle buttons */}
-                  <div className="flex items-center gap-4">
-                    {(['renew', 'is_engineering_ticket'] as const).map(key => {
-                      const labelMap: Record<string, string> = { renew: 'Renew', is_engineering_ticket: 'Eng. Ticket' };
-                      const current = String((editDraft as Record<string, unknown>)[key] ?? editingQuote[key] ?? 'No');
-                      const changed = (editDraft as Record<string, unknown>)[key] !== undefined &&
-                        String((editDraft as Record<string, unknown>)[key]) !== String(editingQuote[key] ?? '');
+                  {/* Renew (read-only) + Eng. Ticket (number input) */}
+                  <div className="flex items-start gap-4">
+                    {/* Renew — read-only badge */}
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Renew</span>
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold w-fit ${
+                        (editingQuote.renew ?? 'No') === 'Yes'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-gray-100 text-gray-500'
+                      }`}>
+                        {(editingQuote.renew ?? 'No') === 'Yes' ? 'Sim' : 'Nao'}
+                      </span>
+                    </div>
+
+                    {/* Eng. Ticket — number input */}
+                    {(() => {
+                      const val = String((editDraft as Record<string, unknown>)['is_engineering_ticket'] ?? editingQuote.is_engineering_ticket ?? '');
+                      const changed = (editDraft as Record<string, unknown>)['is_engineering_ticket'] !== undefined &&
+                        String((editDraft as Record<string, unknown>)['is_engineering_ticket']) !== String(editingQuote.is_engineering_ticket ?? '');
                       return (
-                        <div key={key} className="flex flex-col gap-1">
+                        <div className="flex flex-col gap-1">
                           <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-                            {labelMap[key]}
+                            Eng. Ticket
                             {changed && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" title="Alterado" />}
                           </span>
-                          <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-                            {['Yes', 'No'].map(opt => (
-                              <button
-                                key={opt}
-                                type="button"
-                                onClick={() => setEditDraft(d => ({ ...d, [key]: opt }))}
-                                className={`px-4 py-1.5 text-xs font-semibold transition-all ${
-                                  current === opt
-                                    ? opt === 'Yes'
-                                      ? 'bg-emerald-500 text-white'
-                                      : 'bg-gray-200 text-gray-700'
-                                    : 'bg-white text-gray-400 hover:bg-gray-50'
-                                }`}
-                              >
-                                {opt}
-                              </button>
-                            ))}
-                          </div>
+                          <input
+                            type="number"
+                            min={0}
+                            placeholder="—"
+                            value={val}
+                            onChange={e => setEditDraft(d => ({ ...d, is_engineering_ticket: e.target.value }))}
+                            className={`${inp} w-28 ${changed ? 'ring-1 ring-amber-400 border-amber-300' : ''}`}
+                          />
                         </div>
                       );
-                    })}
+                    })()}
                   </div>
                 </div>
 
@@ -2283,21 +2326,30 @@ export default function PipelineDetailsPage() {
                         })}
                       </div>
 
-                      {/* Editor */}
-                      <RichTextEditor
-                        key={activeTab}
-                        value={activeDraft}
-                        onChange={html => setEditDraft(d => ({
-                          ...d,
-                          [activeTab === 'pipe' ? 'pipe_comments' : 'quote_comments']: html,
-                        }))}
-                        placeholder={
-                          activeTab === 'pipe'
-                            ? 'Proximos passos, contato, contexto estrategico...'
-                            : 'Condicoes comerciais, aprovacoes, restricoes...'
-                        }
-                        changed={activeHasContent}
-                      />
+                      {/* Editor — Pipe Comments editavel, Quote Comments somente leitura */}
+                      {activeTab === 'pipe' ? (
+                        <RichTextEditor
+                          key="pipe"
+                          value={pipeDraft}
+                          onChange={html => setEditDraft(d => ({ ...d, pipe_comments: html }))}
+                          placeholder="Proximos passos, contato, contexto estrategico..."
+                          changed={pipeHasContent}
+                        />
+                      ) : (
+                        <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 min-h-[80px]">
+                          {editingQuote.quote_comments
+                            ? <div
+                                className="text-xs text-gray-700 prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-4 [&_a]:text-blue-600 [&_a]:underline"
+                                dangerouslySetInnerHTML={{ __html: editingQuote.quote_comments }}
+                              />
+                            : <span className="text-xs text-gray-400 italic">Sem comentarios do sistema.</span>
+                          }
+                          <p className="text-[10px] text-gray-400 mt-2 flex items-center gap-1">
+                            <span className="inline-block w-2 h-2 rounded-full bg-gray-300" />
+                            Preenchido automaticamente pelo sistema — nao editavel.
+                          </p>
+                        </div>
+                      )}
 
                       {/* History for active tab */}
                       {activeHistory.length > 0 && (

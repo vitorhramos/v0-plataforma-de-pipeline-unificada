@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronLeft, BarChart3, ArrowRightLeft, ListFilter, Cog, Moon, Sun } from 'lucide-react';
+import { ChevronLeft, BarChart3, ArrowRightLeft, ListFilter, Moon, Sun } from 'lucide-react';
 
 const NAV_GROUPS = [
   {
@@ -14,12 +14,7 @@ const NAV_GROUPS = [
       { href: '/pipeline-details', label: 'Details', icon: ListFilter },
     ],
   },
-  {
-    label: 'Operacoes',
-    items: [
-      { href: '/batch-process', label: 'Process', icon: Cog },
-    ],
-  },
+
 ];
 
 export function Sidebar() {
