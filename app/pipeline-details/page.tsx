@@ -391,6 +391,7 @@ export default function PipelineDetailsPage() {
   const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
   const [editDraft, setEditDraft] = useState<Partial<Quote>>({});
   const [historyQuote, setHistoryQuote] = useState<Quote | null>(null);
+  const [activeCommentTab, setActiveCommentTab] = useState<'pipe' | 'quote'>('pipe');
 
   // Net Lost popup
   const [netLostOpen, setNetLostOpen] = useState(false);
@@ -1183,7 +1184,7 @@ export default function PipelineDetailsPage() {
                 className={`bg-white rounded-xl border border-l-4 shadow-sm hover:shadow-md transition-all cursor-pointer group ${
                   STAGE_BORDER[quote.stage] ?? 'border-l-gray-300'
                 } border-gray-200`}
-                onClick={() => { setEditingQuote(quote); setEditDraft({}); }}
+                onClick={() => { setEditingQuote(quote); setEditDraft({}); setActiveCommentTab('pipe'); }}
               >
                 <div className="p-3.5">
                   {/* Header do card */}
@@ -1331,7 +1332,7 @@ export default function PipelineDetailsPage() {
                           key={quote.id}
                           draggable
                           onDragStart={e => handleDragStart(e, quote.id)}
-                          onClick={() => { setEditingQuote(quote); setEditDraft({}); }}
+                          onClick={() => { setEditingQuote(quote); setEditDraft({}); setActiveCommentTab('pipe'); }}
                           className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm hover:shadow-md hover:border-blue-200 transition-all cursor-grab active:cursor-grabbing active:opacity-50 select-none"
                         >
                           <div className="flex items-center justify-between gap-2 mb-1.5">
@@ -1460,7 +1461,7 @@ export default function PipelineDetailsPage() {
                         <input type="checkbox" checked={selectedIds.has(quote.id)} onChange={() => toggleSelect(quote.id)} {...(idx === 0 ? { 'data-tour': 'row-checkbox' } : {})} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
                       </td>
                       <td className="px-1 py-2.5">
-                        <button onClick={() => { setEditingQuote(quote); setEditDraft({}); }} data-tour="edit-pencil" className="p-1 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition" title="Editar">
+                        <button onClick={() => { setEditingQuote(quote); setEditDraft({}); setActiveCommentTab('pipe'); }} data-tour="edit-pencil" className="p-1 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition" title="Editar">
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                       </td>
@@ -1772,140 +1773,315 @@ export default function PipelineDetailsPage() {
               {/* Body */}
               <div className="overflow-y-auto flex-1">
 
-                {/* Read-only info strip */}
-                <div className="px-6 pt-4 pb-3 bg-gray-50 border-b border-gray-100">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 text-[11px]">
-                    <div><span className="text-gray-400 block">Part No</span><span className="font-mono font-semibold text-gray-700">{editingQuote.part_no}</span></div>
-                    <div><span className="text-gray-400 block">Vendor</span><span className="font-semibold text-gray-700">{editingQuote.vendor}</span></div>
-                    <div><span className="text-gray-400 block">Master Customer</span><span className="font-semibold text-gray-700">{editingQuote.master_customer}</span></div>
-                    <div><span className="text-gray-400 block">End User</span><span className="font-semibold text-gray-700 truncate block">{editingQuote.end_user}</span></div>
-                    <div><span className="text-gray-400 block">CIF</span><span className="font-bold text-emerald-700">{editingQuote.usd_value >= 1_000_000 ? `$${(editingQuote.usd_value/1_000_000).toFixed(2)}M` : `$${(editingQuote.usd_value/1_000).toFixed(0)}K`}</span></div>
-                    <div><span className="text-gray-400 block">NET</span><span className="font-bold text-blue-700">{editingQuote.net_value ? (editingQuote.net_value >= 1_000_000 ? `$${(editingQuote.net_value/1_000_000).toFixed(2)}M` : `$${(editingQuote.net_value/1_000).toFixed(0)}K`) : '—'}</span></div>
-                    <div><span className="text-gray-400 block">FOB</span><span className="font-bold text-violet-700">{editingQuote.fob_value ? (editingQuote.fob_value >= 1_000_000 ? `$${(editingQuote.fob_value/1_000_000).toFixed(2)}M` : `$${(editingQuote.fob_value/1_000).toFixed(0)}K`) : '—'}</span></div>
-                    <div><span className="text-gray-400 block">GM %</span><span className={`font-bold ${(editingQuote.gm_pct ?? 0) >= 15 ? 'text-emerald-700' : (editingQuote.gm_pct ?? 0) >= 8 ? 'text-amber-600' : 'text-red-600'}`}>{editingQuote.gm_pct != null ? `${editingQuote.gm_pct.toFixed(1)}%` : '—'}</span></div>
-                    <div><span className="text-gray-400 block">Prod Type</span><span className="font-semibold text-gray-700">{editingQuote.prod_type ?? '—'}</span></div>
-                    <div><span className="text-gray-400 block">HTS Code</span><span className="font-mono text-gray-700">{editingQuote.hts_code ?? '—'}</span></div>
-                    <div><span className="text-gray-400 block">Close Date</span><span className="text-gray-700">{editingQuote.close_date ? editingQuote.close_date.split('-').reverse().join('/') : '—'}</span></div>
-                    <div><span className="text-gray-400 block">Created Date</span><span className="text-gray-700">{editingQuote.created_date ? editingQuote.created_date.split('-').reverse().join('/') : '—'}</span></div>
-                  </div>
-                  {/* Net Lost info */}
-                  {editingQuote.stage === 'Net Lost' && editingQuote.lost_reason && (
-                    <div className="mt-3 p-2.5 bg-red-50 border border-red-100 rounded-lg flex items-start gap-2">
-                      <span className="text-[10px] font-bold text-red-700 uppercase tracking-wide shrink-0 mt-0.5">Motivo:</span>
-                      <span className="text-[11px] text-red-800 font-semibold">{editingQuote.lost_reason}</span>
-                      {editingQuote.lost_comment && <span className="text-[11px] text-red-600 ml-2 truncate">— {editingQuote.lost_comment}</span>}
-                    </div>
-                  )}
-                </div>
+                {/* ── Read-only info strip ── */}
+                {(() => {
+                  const cif = editingQuote.usd_value;
+                  const fmtVal = (v?: number) => v == null ? '—' : v >= 1_000_000 ? `$${(v/1_000_000).toFixed(2)}M` : `$${(v/1_000).toFixed(0)}K`;
+                  const gm = editingQuote.gm_pct ?? 0;
+                  const gmColor = gm >= 15 ? 'text-emerald-700' : gm >= 8 ? 'text-amber-600' : 'text-red-600';
 
-                {/* Grupo 1 — Pipeline (editaveis) */}
+                  // Close date urgency
+                  const closeStr = editingQuote.close_date;
+                  const daysLeft = closeStr ? Math.ceil((new Date(closeStr).getTime() - Date.now()) / 86_400_000) : null;
+                  const closeFmt = closeStr ? closeStr.split('-').reverse().join('/') : '—';
+                  const closeUrgent = daysLeft !== null && daysLeft <= 30;
+                  const closeOverdue = daysLeft !== null && daysLeft < 0;
+
+                  return (
+                    <div className="px-6 pt-4 pb-3 bg-gray-50 border-b border-gray-100 space-y-3">
+
+                      {/* Net Lost banner — shown prominently when applicable */}
+                      {editingQuote.stage === 'Net Lost' && editingQuote.lost_reason && (
+                        <div className="flex items-start gap-2.5 p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <span className="shrink-0 w-5 h-5 rounded-full bg-red-100 flex items-center justify-center mt-0.5">
+                            <X className="w-3 h-3 text-red-600" />
+                          </span>
+                          <div>
+                            <p className="text-[10px] font-bold text-red-700 uppercase tracking-wide">Net Lost — Motivo</p>
+                            <p className="text-[12px] font-semibold text-red-800 mt-0.5">{editingQuote.lost_reason}</p>
+                            {editingQuote.lost_comment && <p className="text-[11px] text-red-600 mt-0.5">{editingQuote.lost_comment}</p>}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Row 1 — Identificacao */}
+                      <div>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Identificacao</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1.5 text-[11px]">
+                          <div>
+                            <span className="text-gray-400 block leading-none mb-0.5">Part No</span>
+                            <span className="font-mono font-semibold text-gray-800">{editingQuote.part_no}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400 block leading-none mb-0.5">Vendor</span>
+                            <span className="font-semibold text-gray-800">{editingQuote.vendor}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400 block leading-none mb-0.5">Master Customer</span>
+                            <span className="font-semibold text-gray-800">{editingQuote.master_customer}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400 block leading-none mb-0.5">End User</span>
+                            <span className="font-semibold text-gray-800 truncate block">{editingQuote.end_user}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400 block leading-none mb-0.5">Bill To</span>
+                            <span className="text-gray-700">{editingQuote.bill_to ?? '—'}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400 block leading-none mb-0.5">Prod Type</span>
+                            <span className="text-gray-700">{editingQuote.prod_type ?? '—'}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400 block leading-none mb-0.5">Created</span>
+                            <span className="text-gray-700">{editingQuote.created_date ? editingQuote.created_date.split('-').reverse().join('/') : '—'}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400 block leading-none mb-0.5">Close Date</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className={`font-semibold ${closeOverdue ? 'text-red-600' : closeUrgent ? 'text-amber-600' : 'text-gray-700'}`}>{closeFmt}</span>
+                              {closeOverdue && <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-red-100 text-red-700">Vencida</span>}
+                              {!closeOverdue && closeUrgent && daysLeft !== null && <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-700">{daysLeft}d</span>}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="border-t border-gray-200" />
+
+                      {/* Row 2 — Valores */}
+                      <div>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Valores</p>
+                        <div className="grid grid-cols-4 gap-x-4 gap-y-1.5 text-[11px]">
+                          <div>
+                            <span className="text-gray-400 block leading-none mb-0.5">CIF</span>
+                            <span className="font-bold text-emerald-700 text-[13px]">{fmtVal(cif)}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400 block leading-none mb-0.5">NET</span>
+                            <span className="font-bold text-blue-700 text-[13px]">{fmtVal(editingQuote.net_value)}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400 block leading-none mb-0.5">FOB</span>
+                            <span className="font-bold text-violet-700 text-[13px]">{fmtVal(editingQuote.fob_value)}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400 block leading-none mb-0.5">GM %</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className={`font-bold text-[13px] ${gmColor}`}>{gm.toFixed(1)}%</span>
+                              <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${gm >= 15 ? 'bg-emerald-500' : gm >= 8 ? 'bg-amber-400' : 'bg-red-500'}`} style={{ width: `${Math.min(gm * 3, 100)}%` }} />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* ── Pipeline (editaveis) ── */}
                 <div className="px-6 pt-4 pb-4">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Pipeline</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <div className="col-span-2 sm:col-span-1">
-                      <Field field={EDITABLE_FIELDS.find(f => f.key === 'stage')!} />
-                    </div>
-                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'probability')!} />
+
+                  {/* Stage + Prob — linked */}
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    {/* Stage with auto-prob suggestion */}
+                    {(() => {
+                      const stageField = EDITABLE_FIELDS.find(f => f.key === 'stage')!;
+                      const val = String((editDraft as Record<string, unknown>)['stage'] ?? editingQuote['stage'] ?? '');
+                      const changed = (editDraft as Record<string, unknown>)['stage'] !== undefined &&
+                        String((editDraft as Record<string, unknown>)['stage']) !== String(editingQuote['stage'] ?? '');
+                      const STAGE_PROB: Record<string, number> = {
+                        'Pipelined': 20, 'Pricing 25%': 25, 'Up Selling 50%': 50, 'Committed 75%': 75, 'Net Lost': 0,
+                      };
+                      return (
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+                            Stage
+                            {changed && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" title="Alterado" />}
+                          </label>
+                          <select
+                            value={val}
+                            onChange={e => {
+                              const newStage = e.target.value;
+                              if (newStage === 'Net Lost' && editingQuote.stage !== 'Net Lost') {
+                                setNetLostOpen(true);
+                              } else {
+                                const suggestedProb = STAGE_PROB[newStage];
+                                setEditDraft(d => ({
+                                  ...d,
+                                  stage: newStage,
+                                  ...(suggestedProb !== undefined ? { probability: suggestedProb } : {}),
+                                }));
+                              }
+                            }}
+                            className={`${inp} bg-white ${changed ? 'ring-1 ring-amber-400 border-amber-300' : ''}`}
+                          >
+                            {stageField.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                          </select>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Prob % */}
+                    {(() => {
+                      const val = String((editDraft as Record<string, unknown>)['probability'] ?? editingQuote['probability'] ?? '');
+                      const changed = (editDraft as Record<string, unknown>)['probability'] !== undefined &&
+                        String((editDraft as Record<string, unknown>)['probability']) !== String(editingQuote['probability'] ?? '');
+                      return (
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+                            Prob %
+                            {changed && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" title="Alterado" />}
+                          </label>
+                          <input
+                            type="number"
+                            min={0} max={100}
+                            value={val}
+                            onChange={e => setEditDraft(d => ({ ...d, probability: Number(e.target.value) }))}
+                            className={`${inp} ${changed ? 'ring-1 ring-amber-400 border-amber-300' : ''}`}
+                          />
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Budgetary — select */}
+                  <div className="mb-3">
                     <Field field={EDITABLE_FIELDS.find(f => f.key === 'budgetary')!} />
-                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'renew')!} />
-                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'is_engineering_ticket')!} />
+                  </div>
+
+                  {/* Renew + Eng. Ticket — toggle buttons */}
+                  <div className="flex items-center gap-4">
+                    {(['renew', 'is_engineering_ticket'] as const).map(key => {
+                      const labelMap: Record<string, string> = { renew: 'Renew', is_engineering_ticket: 'Eng. Ticket' };
+                      const current = String((editDraft as Record<string, unknown>)[key] ?? editingQuote[key] ?? 'No');
+                      const changed = (editDraft as Record<string, unknown>)[key] !== undefined &&
+                        String((editDraft as Record<string, unknown>)[key]) !== String(editingQuote[key] ?? '');
+                      return (
+                        <div key={key} className="flex flex-col gap-1">
+                          <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+                            {labelMap[key]}
+                            {changed && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" title="Alterado" />}
+                          </span>
+                          <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+                            {['Yes', 'No'].map(opt => (
+                              <button
+                                key={opt}
+                                type="button"
+                                onClick={() => setEditDraft(d => ({ ...d, [key]: opt }))}
+                                className={`px-4 py-1.5 text-xs font-semibold transition-all ${
+                                  current === opt
+                                    ? opt === 'Yes'
+                                      ? 'bg-emerald-500 text-white'
+                                      : 'bg-gray-200 text-gray-700'
+                                    : 'bg-white text-gray-400 hover:bg-gray-50'
+                                }`}
+                              >
+                                {opt}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
                 <div className="mx-6 border-t border-gray-100 dark:border-gray-800" />
 
-                {/* Comentarios — Pipe Comments e Quote Comments com rich text + historico */}
-                <div className="px-6 pt-4 pb-5 flex flex-col gap-6">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest -mb-3">Comentarios</p>
+                {/* ── Comentarios — abas Pipe | Quote ── */}
+                {(() => {
+                  const activeTab = activeCommentTab;
+                  const setActiveTab = setActiveCommentTab;
+                  const pipeDraft = (editDraft.pipe_comments ?? '') as string;
+                  const quoteDraft = (editDraft.quote_comments ?? '') as string;
+                  const pipeHasContent = pipeDraft.replace(/<[^>]+>/g, '').trim() !== '';
+                  const quoteHasContent = quoteDraft.replace(/<[^>]+>/g, '').trim() !== '';
+                  const pipeHistory = editingQuote.pipeCommentHistory ?? [];
+                  const quoteHistory = editingQuote.quoteCommentHistory ?? [];
+                  const activeHistory = activeTab === 'pipe' ? pipeHistory : quoteHistory;
+                  const activeDraft = activeTab === 'pipe' ? pipeDraft : quoteDraft;
+                  const activeHasContent = activeTab === 'pipe' ? pipeHasContent : quoteHasContent;
 
-                  {/* ── Pipe Comments ── */}
-                  {(() => {
-                    const draftHtml = (editDraft.pipe_comments ?? '') as string;
-                    const hasContent = draftHtml.replace(/<[^>]+>/g, '').trim() !== '';
-                    const history = editingQuote.pipeCommentHistory ?? [];
-                    return (
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-                          Pipe Comments
-                          {hasContent && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" title="Comentario nao salvo" />}
-                        </label>
-                        <RichTextEditor
-                          value={draftHtml}
-                          onChange={html => setEditDraft(d => ({ ...d, pipe_comments: html }))}
-                          placeholder="Observacoes de pipeline: proximos passos, contato, contexto estrategico..."
-                          changed={hasContent}
-                        />
-                        {history.length > 0 && (
-                          <div className="mt-1">
-                            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-2">
-                              Historico — Pipe ({history.length})
-                            </p>
-                            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                              {[...history].reverse().map(entry => (
-                                <div key={entry.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                                  <div className="flex items-center justify-between gap-2 mb-1.5">
-                                    <span className="text-[11px] font-semibold text-gray-700">{entry.author}</span>
-                                    <span className="text-[10px] text-gray-400">
-                                      {new Date(entry.timestamp).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                  </div>
-                                  <div
-                                    className="text-xs text-gray-700 prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:pl-4 [&_a]:text-blue-600 [&_a]:underline [&_img]:max-w-full [&_img]:rounded"
-                                    dangerouslySetInnerHTML={{ __html: entry.html }}
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
+                  return (
+                    <div className="px-6 pt-4 pb-5">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Comentarios</p>
 
-                  {/* ── Quote Comments ── */}
-                  {(() => {
-                    const draftHtml = (editDraft.quote_comments ?? '') as string;
-                    const hasContent = draftHtml.replace(/<[^>]+>/g, '').trim() !== '';
-                    const history = editingQuote.quoteCommentHistory ?? [];
-                    return (
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-                          Quote Comments
-                          {hasContent && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" title="Comentario nao salvo" />}
-                        </label>
-                        <RichTextEditor
-                          value={draftHtml}
-                          onChange={html => setEditDraft(d => ({ ...d, quote_comments: html }))}
-                          placeholder="Observacoes da quote: condicoes comerciais, aprovacoes, restricoes..."
-                          changed={hasContent}
-                        />
-                        {history.length > 0 && (
-                          <div className="mt-1">
-                            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-2">
-                              Historico — Quote ({history.length})
-                            </p>
-                            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                              {[...history].reverse().map(entry => (
-                                <div key={entry.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                                  <div className="flex items-center justify-between gap-2 mb-1.5">
-                                    <span className="text-[11px] font-semibold text-gray-700">{entry.author}</span>
-                                    <span className="text-[10px] text-gray-400">
-                                      {new Date(entry.timestamp).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                  </div>
-                                  <div
-                                    className="text-xs text-gray-700 prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:pl-4 [&_a]:text-blue-600 [&_a]:underline [&_img]:max-w-full [&_img]:rounded"
-                                    dangerouslySetInnerHTML={{ __html: entry.html }}
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                      {/* Tab bar */}
+                      <div className="flex rounded-lg border border-gray-200 overflow-hidden mb-3 w-fit">
+                        {(['pipe', 'quote'] as const).map(tab => {
+                          const label = tab === 'pipe' ? 'Pipe Comments' : 'Quote Comments';
+                          const hasUnsaved = tab === 'pipe' ? pipeHasContent : quoteHasContent;
+                          const histCount = (tab === 'pipe' ? pipeHistory : quoteHistory).length;
+                          return (
+                            <button
+                              key={tab}
+                              type="button"
+                              onClick={() => setActiveTab(tab)}
+                              className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold transition-all ${
+                                activeTab === tab
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-white text-gray-500 hover:bg-gray-50'
+                              }`}
+                            >
+                              {label}
+                              {hasUnsaved && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />}
+                              {histCount > 0 && (
+                                <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${activeTab === tab ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                                  {histCount}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
-                    );
-                  })()}
-                </div>
+
+                      {/* Editor */}
+                      <RichTextEditor
+                        key={activeTab}
+                        value={activeDraft}
+                        onChange={html => setEditDraft(d => ({
+                          ...d,
+                          [activeTab === 'pipe' ? 'pipe_comments' : 'quote_comments']: html,
+                        }))}
+                        placeholder={
+                          activeTab === 'pipe'
+                            ? 'Proximos passos, contato, contexto estrategico...'
+                            : 'Condicoes comerciais, aprovacoes, restricoes...'
+                        }
+                        changed={activeHasContent}
+                      />
+
+                      {/* History for active tab */}
+                      {activeHistory.length > 0 && (
+                        <div className="mt-3">
+                          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-2">
+                            Historico ({activeHistory.length})
+                          </p>
+                          <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                            {[...activeHistory].reverse().map(entry => (
+                              <div key={entry.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                <div className="flex items-center justify-between gap-2 mb-1.5">
+                                  <span className="text-[11px] font-semibold text-gray-700">{entry.author}</span>
+                                  <span className="text-[10px] text-gray-400">
+                                    {new Date(entry.timestamp).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                </div>
+                                <div
+                                  className="text-xs text-gray-700 prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:pl-4 [&_a]:text-blue-600 [&_a]:underline [&_img]:max-w-full [&_img]:rounded"
+                                  dangerouslySetInnerHTML={{ __html: entry.html }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Footer */}
