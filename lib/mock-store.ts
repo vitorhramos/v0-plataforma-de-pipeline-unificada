@@ -20,6 +20,7 @@ export type Quote = {
   bu: string;
   quote_age: number;
   status: string;
+  comments?: string; // HTML string from rich text editor
   scenarioGroupId?: string;
 };
 

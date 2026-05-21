@@ -11,8 +11,7 @@ import { getQuotes, getScenarioGroups, addScenarioGroup, updateScenarioGroup, re
 import type { ScenarioGroup, ScenarioMeta, ScenarioLikelihood } from '@/lib/mock-store';
 import { LIKELIHOOD_LABELS, LIKELIHOOD_COLORS } from '@/lib/mock-store';
 import { useTour } from '@/hooks/useTour';
-
-
+import { RichTextEditor } from '@/components/common/rich-text-editor';
 
 type Quote = {
   id: number;
@@ -34,6 +33,7 @@ type Quote = {
   bu: string;
   quote_age: number;
   status: string;
+  comments?: string;
 };
 
 type VersionEntry = {
@@ -122,7 +122,7 @@ const EDITABLE_FIELDS: { key: keyof Quote; label: string; type: 'text' | 'select
   { key: 'close_date',      label: 'Close Date',     type: 'date' },
   { key: 'part_no',         label: 'Part No',        type: 'text' },
   { key: 'quote_name',      label: 'Quote Name',     type: 'text' },
-  { key: 'description',     label: 'Descricao',      type: 'text' },
+  { key: 'description',     label: 'Titulo',         type: 'text' },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -1584,8 +1584,22 @@ export default function PipelineDetailsPage() {
               {/* Body */}
               <div className="overflow-y-auto flex-1">
 
-                {/* Grupo 1 — Pipeline */}
+                {/* Grupo 1 — Identificacao (topo) */}
                 <div className="px-6 pt-5 pb-4">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Identificacao</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'part_no')!} />
+                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'quote_name')!} />
+                    <div className="col-span-2">
+                      <Field field={EDITABLE_FIELDS.find(f => f.key === 'description')!} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mx-6 border-t border-gray-100 dark:border-gray-800" />
+
+                {/* Grupo 2 — Pipeline */}
+                <div className="px-6 pt-4 pb-4">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Pipeline</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     <Field field={EDITABLE_FIELDS.find(f => f.key === 'stage')!} />
@@ -1596,7 +1610,7 @@ export default function PipelineDetailsPage() {
 
                 <div className="mx-6 border-t border-gray-100 dark:border-gray-800" />
 
-                {/* Grupo 2 — Valores */}
+                {/* Grupo 3 — Valores */}
                 <div className="px-6 pt-4 pb-4">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Valores</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -1608,7 +1622,7 @@ export default function PipelineDetailsPage() {
 
                 <div className="mx-6 border-t border-gray-100 dark:border-gray-800" />
 
-                {/* Grupo 3 — Classificacao */}
+                {/* Grupo 4 — Classificacao */}
                 <div className="px-6 pt-4 pb-4">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Classificacao</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -1623,16 +1637,26 @@ export default function PipelineDetailsPage() {
 
                 <div className="mx-6 border-t border-gray-100 dark:border-gray-800" />
 
-                {/* Grupo 4 — Identificacao */}
+                {/* Grupo 5 — Comentarios (rich text, sempre por ultimo) */}
                 <div className="px-6 pt-4 pb-5">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Identificacao</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'part_no')!} />
-                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'quote_name')!} />
-                    <div className="col-span-2">
-                      <Field field={EDITABLE_FIELDS.find(f => f.key === 'description')!} />
-                    </div>
-                  </div>
+                  {(() => {
+                    const commentsChanged = editDraft.comments !== undefined &&
+                      editDraft.comments !== (editingQuote.comments ?? '');
+                    return (
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+                          Comentarios
+                          {commentsChanged && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" title="Alterado" />}
+                        </label>
+                        <RichTextEditor
+                          value={editDraft.comments ?? editingQuote.comments ?? ''}
+                          onChange={html => setEditDraft(d => ({ ...d, comments: html }))}
+                          placeholder="Adicione anotacoes, links, imagens ou qualquer observacao relevante sobre este quote..."
+                          changed={commentsChanged}
+                        />
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 
