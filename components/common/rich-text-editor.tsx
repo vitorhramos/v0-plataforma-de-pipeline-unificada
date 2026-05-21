@@ -1,5 +1,5 @@
 'use client';
-
+// RichTextEditor — Tiptap v3, StarterKit-only (no separate Link/Underline imports)
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
