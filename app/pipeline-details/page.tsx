@@ -1817,8 +1817,16 @@ export default function PipelineDetailsPage() {
                                   >+{extra}</button>
                                 )}
                                 {isOpen && (
-                                  <div className="absolute left-0 top-6 z-50 bg-white border border-gray-200 rounded-xl shadow-xl p-3 min-w-[180px]" onClick={e => e.stopPropagation()}>
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Todos os Part No ({parts.length})</p>
+                                  <div className="absolute left-0 top-6 z-50 bg-white border border-gray-200 rounded-xl shadow-xl p-3 min-w-[200px]" onClick={e => e.stopPropagation()}>
+                                    <div className="flex items-center justify-between mb-2">
+                                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Todos os Part No ({parts.length})</p>
+                                      <button
+                                        type="button"
+                                        onClick={() => { navigator.clipboard?.writeText(parts.join(', ')); }}
+                                        className="text-[10px] font-semibold text-blue-600 hover:text-blue-800 transition whitespace-nowrap"
+                                        title="Copiar todos"
+                                      >copiar todos</button>
+                                    </div>
                                     <div className="flex flex-col gap-1.5">
                                       {parts.map((p, i) => (
                                         <div key={i} className="flex items-center gap-2">
