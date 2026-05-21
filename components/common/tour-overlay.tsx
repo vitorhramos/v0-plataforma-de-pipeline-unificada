@@ -21,6 +21,10 @@ interface TargetRect {
   height: number;
 }
 
+const PAD = 10;
+const GAP = 16;
+const TOOLTIP_W = 340;
+
 export function TourOverlay({
   isActive,
   currentStep,
@@ -32,137 +36,213 @@ export function TourOverlay({
 }: TourOverlayProps) {
   const [targetRect, setTargetRect] = useState<TargetRect | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });
+  const [ready, setReady] = useState(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
-  const step = steps[currentStep];
-  const PAD = 10;
-  const GAP = 20;
-  const TOOLTIP_W = 340;
+  const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Keep a ref to the current step so the async callbacks read the latest value
+  const stepRef = useRef<TourStep | null>(null);
 
+  const step = steps[currentStep] ?? null;
+
+  function placeTooltip(r: DOMRect, position: TourStep['position']) {
+    const tooltipH = tooltipRef.current?.offsetHeight ?? 160;
+    let top = 0;
+    let left = 0;
+
+    switch (position) {
+      case 'bottom':
+        top = r.bottom + GAP;
+        left = r.left + r.width / 2 - TOOLTIP_W / 2;
+        break;
+      case 'top':
+        top = r.top - tooltipH - GAP;
+        left = r.left + r.width / 2 - TOOLTIP_W / 2;
+        break;
+      case 'left':
+        top = r.top + r.height / 2 - tooltipH / 2;
+        left = r.left - TOOLTIP_W - GAP;
+        break;
+      case 'right':
+        top = r.top + r.height / 2 - tooltipH / 2;
+        left = r.right + GAP;
+        break;
+    }
+
+    left = Math.max(16, Math.min(left, window.innerWidth - TOOLTIP_W - 16));
+    top = Math.max(16, Math.min(top, window.innerHeight - tooltipH - 16));
+    setTooltipPos({ top, left });
+  }
+
+  function measureAndPosition(s: TourStep) {
+    const el = document.querySelector(s.selector);
+    if (!el) {
+      // Element not in DOM — show centered tooltip anyway
+      const tooltipH = tooltipRef.current?.offsetHeight ?? 160;
+      setTargetRect(null);
+      setTooltipPos({
+        top: Math.max(16, (window.innerHeight - tooltipH) / 2),
+        left: Math.max(16, (window.innerWidth - TOOLTIP_W) / 2),
+      });
+      setReady(true);
+      return;
+    }
+
+    // Scroll element into view synchronously (instant bypasses the global smooth-scroll CSS)
+    el.scrollIntoView({ behavior: 'instant' as ScrollBehavior, block: 'center', inline: 'nearest' });
+
+    // Two rAF passes: first ensures scroll position applied, second ensures paint
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        // Check we're still on the same step (user might have clicked Next quickly)
+        if (stepRef.current?.id !== s.id) return;
+
+        const r = el.getBoundingClientRect();
+        const isVisible =
+          r.bottom > 0 &&
+          r.top < window.innerHeight &&
+          r.right > 0 &&
+          r.left < window.innerWidth &&
+          r.width > 0 &&
+          r.height > 0;
+
+        if (isVisible) {
+          setTargetRect({ top: r.top, left: r.left, width: r.width, height: r.height });
+          placeTooltip(r, s.position);
+          setReady(true);
+        } else {
+          // Not visible yet — retry once more after 200ms
+          if (retryRef.current) clearTimeout(retryRef.current);
+          retryRef.current = setTimeout(() => {
+            if (stepRef.current?.id !== s.id) return;
+            const r2 = el.getBoundingClientRect();
+            setTargetRect({ top: r2.top, left: r2.left, width: r2.width, height: r2.height });
+            placeTooltip(r2, s.position);
+            setReady(true);
+          }, 250);
+        }
+      });
+    });
+  }
+
+  // Trigger measurement when step changes or tour activates
+  useEffect(() => {
+    if (!isActive || !step) {
+      setTargetRect(null);
+      setReady(false);
+      return;
+    }
+
+    stepRef.current = step;
+    setReady(false);
+    setTargetRect(null);
+
+    // Small leading delay so React has finished painting the new step state
+    const leadTimer = setTimeout(() => {
+      if (stepRef.current?.id === step.id) measureAndPosition(step);
+    }, 50);
+
+    return () => {
+      clearTimeout(leadTimer);
+      if (retryRef.current) clearTimeout(retryRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive, currentStep]);
+
+  // Recalculate on window resize
   useEffect(() => {
     if (!isActive || !step) return;
-
-    const update = () => {
-      const el = document.querySelector(step.selector);
-      if (!el) return;
-
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-      // Wait for scroll to settle before measuring
-      setTimeout(() => {
-        const r = el.getBoundingClientRect();
-        setTargetRect({ top: r.top, left: r.left, width: r.width, height: r.height });
-
-        const tooltipH = tooltipRef.current?.offsetHeight ?? 150;
-        let top = 0;
-        let left = 0;
-
-        switch (step.position) {
-          case 'bottom':
-            top = r.bottom + GAP;
-            left = r.left + r.width / 2 - TOOLTIP_W / 2;
-            break;
-          case 'top':
-            top = r.top - tooltipH - GAP;
-            left = r.left + r.width / 2 - TOOLTIP_W / 2;
-            break;
-          case 'left':
-            top = r.top + r.height / 2 - tooltipH / 2;
-            left = r.left - TOOLTIP_W - GAP;
-            break;
-          case 'right':
-            top = r.top + r.height / 2 - tooltipH / 2;
-            left = r.right + GAP;
-            break;
-        }
-
-        // Clamp to viewport
-        left = Math.max(16, Math.min(left, window.innerWidth - TOOLTIP_W - 16));
-        top = Math.max(16, Math.min(top, window.innerHeight - tooltipH - 16));
-
-        setTooltipPos({ top, left });
-      }, 300);
+    const onResize = () => {
+      if (step) measureAndPosition(step);
     };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive, currentStep]);
 
-    update();
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
-  }, [isActive, step, currentStep]);
+  // Esc closes the tour (only here — page.tsx also handles Esc, but keep both for resilience)
+  useEffect(() => {
+    if (!isActive) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isActive, onClose]);
 
   if (!isActive || !step) return null;
 
   return (
     <>
-      {/* Dark overlay using 4 rects around the highlighted element */}
-      {targetRect ? (
+      {/* ── Dark overlay: 4 rects leaving a spotlight on the target ── */}
+      {ready && targetRect ? (
         <>
-          {/* Top */}
+          {/* Top stripe */}
           <div
-            className="fixed z-40 pointer-events-auto"
-            style={{ top: 0, left: 0, right: 0, height: Math.max(0, targetRect.top - PAD), background: 'rgba(0,0,0,0.82)' }}
+            className="fixed inset-x-0 top-0 z-40 pointer-events-auto"
+            style={{ height: Math.max(0, targetRect.top - PAD), background: 'rgba(0,0,0,0.75)' }}
             onClick={onClose}
           />
-          {/* Bottom */}
+          {/* Bottom stripe */}
           <div
-            className="fixed z-40 pointer-events-auto"
-            style={{ top: targetRect.top + targetRect.height + PAD, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.82)' }}
+            className="fixed inset-x-0 bottom-0 z-40 pointer-events-auto"
+            style={{ top: targetRect.top + targetRect.height + PAD, background: 'rgba(0,0,0,0.75)' }}
             onClick={onClose}
           />
-          {/* Left */}
+          {/* Left stripe */}
           <div
-            className="fixed z-40 pointer-events-auto"
+            className="fixed left-0 z-40 pointer-events-auto"
             style={{
               top: targetRect.top - PAD,
-              left: 0,
               width: Math.max(0, targetRect.left - PAD),
               height: targetRect.height + PAD * 2,
-              background: 'rgba(0,0,0,0.82)',
+              background: 'rgba(0,0,0,0.75)',
             }}
             onClick={onClose}
           />
-          {/* Right */}
+          {/* Right stripe */}
           <div
-            className="fixed z-40 pointer-events-auto"
+            className="fixed right-0 z-40 pointer-events-auto"
             style={{
               top: targetRect.top - PAD,
               left: targetRect.left + targetRect.width + PAD,
-              right: 0,
               height: targetRect.height + PAD * 2,
-              background: 'rgba(0,0,0,0.82)',
+              background: 'rgba(0,0,0,0.75)',
             }}
             onClick={onClose}
           />
-          {/* Spotlight cutout — bright border ring around target */}
+          {/* Blue spotlight ring */}
           <div
-            className="fixed z-41 pointer-events-none rounded-lg"
+            className="fixed pointer-events-none rounded-lg z-[41]"
             style={{
               top: targetRect.top - PAD,
               left: targetRect.left - PAD,
               width: targetRect.width + PAD * 2,
               height: targetRect.height + PAD * 2,
-              outline: '3px solid #3b82f6',
+              outline: '2px solid #3b82f6',
               outlineOffset: '2px',
-              boxShadow: '0 0 0 3px rgba(59,130,246,0.5), inset 0 0 0 1px rgba(59,130,246,0.2)',
-              transition: 'all 0.25s ease',
+              boxShadow: '0 0 0 4px rgba(59,130,246,0.25)',
             }}
           />
         </>
-      ) : (
-        <div className="fixed inset-0 z-40 pointer-events-auto" style={{ background: 'rgba(0,0,0,0.82)' }} onClick={onClose} />
-      )}
+      ) : ready ? (
+        /* No targetRect — full-screen overlay (element off-screen or not found) */
+        <div
+          className="fixed inset-0 z-40 pointer-events-auto"
+          style={{ background: 'rgba(0,0,0,0.75)' }}
+          onClick={onClose}
+        />
+      ) : null}
 
-      {/* Tooltip card */}
+      {/* ── Tooltip card ── */}
       <div
         ref={tooltipRef}
         style={{
           position: 'fixed',
-          top: tooltipPos.top,
-          left: tooltipPos.left,
+          top: ready ? tooltipPos.top : -9999,
+          left: ready ? tooltipPos.left : -9999,
           width: TOOLTIP_W,
-          transition: 'top 0.3s ease, left 0.3s ease',
         }}
         className="z-50 bg-white rounded-2xl shadow-2xl border border-gray-100 p-5 pointer-events-auto"
       >
-        {/* Step indicator dots */}
+        {/* Progress dots */}
         <div className="flex items-center gap-1 mb-3">
           {steps.map((_, i) => (
             <div
@@ -188,7 +268,7 @@ export function TourOverlay({
         {/* Description */}
         <p className="text-xs text-gray-600 leading-relaxed mb-4">{step.description}</p>
 
-        {/* Footer */}
+        {/* Nav footer */}
         <div className="flex items-center justify-between">
           <span className="text-[11px] font-medium text-gray-400">
             {currentStep + 1} de {totalSteps}
