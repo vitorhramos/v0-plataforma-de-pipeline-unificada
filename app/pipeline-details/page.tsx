@@ -133,7 +133,7 @@ const EMPTY_FILTERS = {
   // Status
   status: '',
   // Flags ('' | 'yes' | 'no')
-  budgetary: '', renew: '', eng_ticket: '',
+  renew: '', eng_ticket: '',
   // Values
   min_usd: '', max_usd: '', min_prob: '', max_prob: '', min_gm: '', max_gm: '',
   // Dates
@@ -148,7 +148,6 @@ const EDITABLE_FIELDS: { key: keyof Quote; label: string; type: 'text' | 'select
   { key: 'stage',                  label: 'Stage',              type: 'select',   options: STAGES_LIST },
   { key: 'probability',            label: 'Prob %',             type: 'number' },
   { key: 'renew',                  label: 'Renew',              type: 'select',   options: ['Yes', 'No'] },
-  { key: 'budgetary',              label: 'Budgetary Related',  type: 'select',   options: ['Yes', 'No'] },
   { key: 'is_engineering_ticket',  label: 'Eng. Ticket',        type: 'select',   options: ['Yes', 'No'] },
 ];
 
@@ -336,7 +335,6 @@ export default function PipelineDetailsPage() {
     { label: 'Renew',           key: 'renew' },
     { label: 'Pipe Comments',   key: 'pipe_comments' },
     { label: 'Quote Comments',  key: 'quote_comments' },
-    { label: 'Budgetary',       key: 'budgetary' },
     { label: 'HTS Code',        key: 'hts_code' },
     { label: 'HTS Description', key: 'hts_description' },
     { label: 'Eng. Ticket',     key: 'is_engineering_ticket' },
@@ -546,8 +544,6 @@ export default function PipelineDetailsPage() {
     // Status
     if (applied.status && q.status !== applied.status) return false;
     // Flags (yes/no toggles)
-    if (applied.budgetary === 'yes' && q.budgetary !== 'Yes') return false;
-    if (applied.budgetary === 'no' && q.budgetary !== 'No') return false;
     if (applied.renew === 'yes' && q.renew !== 'Yes') return false;
     if (applied.renew === 'no' && q.renew !== 'No') return false;
     if (applied.eng_ticket === 'yes' && q.is_engineering_ticket !== 'Yes') return false;
@@ -610,7 +606,6 @@ export default function PipelineDetailsPage() {
   const totalPages = Math.ceil(visibleQuotes.length / pageSize);
 
   const totalUsd = filteredQuotes.reduce((s, q) => s + q.usd_value, 0);
-  const budgetaryCount = filteredQuotes.filter(q => q.budgetary === 'Yes').length;
   const avgProb = filteredQuotes.length > 0
     ? Math.round(filteredQuotes.reduce((s, q) => s + q.probability, 0) / filteredQuotes.length)
     : 0;
@@ -657,13 +652,13 @@ export default function PipelineDetailsPage() {
   };
 
   const handleExport = (format: 'CSV' | 'Excel') => {
-    const headers = ['CPO ID','CPO Status','VPC Code','Part No','Part Desc','Sales Terr','Team','Vendor','Master Customer','Bill To','End User','CIF','NET','FOB','GM %','CPO QTY','Stage','Lost','Created Date','Close Date','CPO No','CPO Pay Meth','Pay Meth Name','Opportunity','Prod Type','Renew','Pipe Comments','Quote Comments','Budgetary','HTS Code','HTS Description','Eng. Ticket'];
+    const headers = ['CPO ID','CPO Status','VPC Code','Part No','Part Desc','Sales Terr','Team','Vendor','Master Customer','Bill To','End User','CIF','NET','FOB','GM %','CPO QTY','Stage','Lost','Created Date','Close Date','CPO No','CPO Pay Meth','Pay Meth Name','Opportunity','Prod Type','Renew','Pipe Comments','Quote Comments','HTS Code','HTS Description','Eng. Ticket'];
     const rows = sortedQuotes.map(q => [
       q.cpo_id, q.status, q.vpc_code ?? '', q.part_no, q.description, q.sales_territory, q.team, q.vendor,
       q.master_customer, q.bill_to ?? '', q.end_user, q.usd_value, q.net_value ?? '', q.fob_value ?? '',
       q.gm_pct ?? '', q.cpo_qty ?? '', q.stage, q.lost_reason ?? '', q.created_date ?? '',
       q.close_date, q.cpo_no ?? '', q.cpo_pay_meth ?? '', q.pay_meth_name ?? '', q.quote_name,
-      q.prod_type ?? '', q.renew ?? '', q.pipe_comments ?? '', q.quote_comments ?? '', q.budgetary,
+      q.prod_type ?? '', q.renew ?? '', q.pipe_comments ?? '', q.quote_comments ?? '',
       q.hts_code ?? '', q.hts_description ?? '', q.is_engineering_ticket ?? ''
     ]);
     const csvContent = [headers.join(','), ...rows.map(r => r.map(cell => `"${cell}"`).join(','))].join('\n');
@@ -962,7 +957,7 @@ export default function PipelineDetailsPage() {
                   stage: 'Stage', prod_type: 'Prod Type',
                   vendor: 'Vendor', territory: 'Territory', bu: 'BU', revenda: 'Revenda', end_user: 'End User',
                   status: 'Status',
-                  budgetary: 'Budgetary', renew: 'Renew', eng_ticket: 'Eng. Ticket',
+                  renew: 'Renew', eng_ticket: 'Eng. Ticket',
                   min_usd: 'CIF min', max_usd: 'CIF max',
                   min_prob: 'Prob min', max_prob: 'Prob max',
                   min_gm: 'GM min', max_gm: 'GM max',
@@ -980,7 +975,7 @@ export default function PipelineDetailsPage() {
                       pills.push({ key: k, label: `${FILTER_LABELS[k] ?? k}: ${item}`, value: item });
                     });
                   } else {
-                    const humanVal = (k === 'budgetary' || k === 'renew' || k === 'eng_ticket')
+                    const humanVal = (k === 'renew' || k === 'eng_ticket')
                       ? `${FILTER_LABELS[k]}: ${v === 'yes' ? 'Yes' : 'No'}`
                       : `${FILTER_LABELS[k] ?? k}: ${v}`;
                     pills.push({ key: k, label: humanVal, value: v });
@@ -1225,7 +1220,7 @@ export default function PipelineDetailsPage() {
               );
 
               // Binary toggle: All / Yes / No
-              const FlagToggle = ({ label, filterKey }: { label: string; filterKey: 'budgetary' | 'renew' | 'eng_ticket' }) => {
+              const FlagToggle = ({ label, filterKey }: { label: string; filterKey: 'renew' | 'eng_ticket' }) => {
                 const cur = filters[filterKey];
                 return (
                   <div>
@@ -1373,8 +1368,7 @@ export default function PipelineDetailsPage() {
                   {/* Row 4 — Flags */}
                   <div className="px-5 py-4">
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Flags</p>
-                    <div className="grid grid-cols-3 gap-4">
-                      <FlagToggle label="Budgetary" filterKey="budgetary" />
+                    <div className="grid grid-cols-2 gap-4">
                       <FlagToggle label="Renew" filterKey="renew" />
                       <FlagToggle label="Eng. Ticket" filterKey="eng_ticket" />
                     </div>
@@ -1477,9 +1471,7 @@ export default function PipelineDetailsPage() {
                     {quote.is_engineering_ticket === 'Yes' && (
                       <span className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-blue-100 text-blue-800">Eng. Ticket</span>
                     )}
-                    {quote.budgetary === 'Yes' && (
-                      <span className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-amber-100 text-amber-800">Budget</span>
-                    )}
+
                   </div>
 
                   {/* Footer */}
@@ -1833,7 +1825,7 @@ export default function PipelineDetailsPage() {
                         if (k === 'renew')                return <td key={k} className="px-3 py-2.5 text-center whitespace-nowrap">{yesNoBadge(quote.renew)}</td>;
                         if (k === 'pipe_comments')        return <td key={k} className="px-3 py-2.5 text-gray-600 max-w-[110px]"><span className="block truncate text-[11px]" title={quote.pipe_comments}>{quote.pipe_comments || <span className="text-gray-300">—</span>}</span></td>;
                         if (k === 'quote_comments')       return <td key={k} className="px-3 py-2.5 text-gray-600 max-w-[110px]"><span className="block truncate text-[11px]" title={quote.quote_comments}>{quote.quote_comments || <span className="text-gray-300">—</span>}</span></td>;
-                        if (k === 'budgetary')            return <td key={k} className="px-3 py-2.5 text-center whitespace-nowrap"><span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${quote.budgetary === 'Yes' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500'}`}>{quote.budgetary}</span></td>;
+
                         if (k === 'hts_code')             return <td key={k} className="px-3 py-2.5 font-mono text-gray-600 whitespace-nowrap text-[11px]">{quote.hts_code ?? '—'}</td>;
                         if (k === 'hts_description')      return <td key={k} className="px-3 py-2.5 text-gray-600 max-w-[130px]"><span className="block truncate text-[11px]" title={quote.hts_description}>{quote.hts_description ?? '—'}</span></td>;
                         if (k === 'is_engineering_ticket') return <td key={k} className="px-3 py-2.5 text-center whitespace-nowrap">{yesNoBadge(quote.is_engineering_ticket)}</td>;
@@ -1930,7 +1922,7 @@ export default function PipelineDetailsPage() {
                             if (k === 'renew')                return <td key={k} className="px-3 py-2 text-center text-gray-400 whitespace-nowrap text-[11px]">{altQuote.renew ?? '—'}</td>;
                             if (k === 'pipe_comments')        return <td key={k} className="px-3 py-2 text-gray-400 max-w-[110px]"><span className="block truncate text-[11px]">{altQuote.pipe_comments || '—'}</span></td>;
                             if (k === 'quote_comments')       return <td key={k} className="px-3 py-2 text-gray-400 max-w-[110px]"><span className="block truncate text-[11px]">{altQuote.quote_comments || '—'}</span></td>;
-                            if (k === 'budgetary')            return <td key={k} className="px-3 py-2 text-center text-gray-400 whitespace-nowrap text-[11px]">{altQuote.budgetary}</td>;
+
                             if (k === 'hts_code')             return <td key={k} className="px-3 py-2 font-mono text-gray-400 whitespace-nowrap text-[11px]">{altQuote.hts_code ?? '—'}</td>;
                             if (k === 'hts_description')      return <td key={k} className="px-3 py-2 text-gray-400 max-w-[130px]"><span className="block truncate text-[11px]">{altQuote.hts_description ?? '—'}</span></td>;
                             if (k === 'is_engineering_ticket') return <td key={k} className="px-3 py-2 text-center text-gray-400 whitespace-nowrap text-[11px]">{altQuote.is_engineering_ticket ?? '—'}</td>;
@@ -2231,11 +2223,6 @@ export default function PipelineDetailsPage() {
                         </div>
                       );
                     })()}
-                  </div>
-
-                  {/* Budgetary — select */}
-                  <div className="mb-3">
-                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'budgetary')!} />
                   </div>
 
                   {/* Renew (read-only) + Eng. Ticket (number input) */}

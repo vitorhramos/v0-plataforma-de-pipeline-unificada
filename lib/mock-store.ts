@@ -43,7 +43,6 @@ export type Quote = {
   fob_value?: number;
   gm_pct?: number;
   cpo_qty?: number;
-  budgetary: string;
   close_date: string;
   created_date?: string;
   cpo_no?: string;
@@ -201,7 +200,6 @@ function buildInitial(): Quote[] {
       renew: i % 4 === 0 ? 'Yes' : 'No',
       pipe_comments: i % 7 === 0 ? 'Oportunidade estrategica. Acompanhar com cliente.' : '',
       quote_comments: i % 9 === 0 ? 'Aprovacao necessaria do financeiro.' : '',
-      budgetary: i % 3 === 0 ? 'Yes' : 'No',
       hts_code: HTS_CODES[i % HTS_CODES.length],
       hts_description: HTS_DESCS[i % HTS_DESCS.length],
       is_engineering_ticket: i % 6 === 0 ? 'Yes' : 'No',
