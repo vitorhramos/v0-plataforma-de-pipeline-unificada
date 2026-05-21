@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronLeft, BarChart3, ArrowRightLeft, ListFilter, PlusCircle, Cog, Moon, Sun } from 'lucide-react';
+import { ChevronLeft, BarChart3, ArrowRightLeft, ListFilter, Cog, Moon, Sun } from 'lucide-react';
 
 const NAV_GROUPS = [
   {
@@ -17,7 +17,6 @@ const NAV_GROUPS = [
   {
     label: 'Operacoes',
     items: [
-      { href: '/quote-details', label: 'New', icon: PlusCircle },
       { href: '/batch-process', label: 'Process', icon: Cog },
     ],
   },
