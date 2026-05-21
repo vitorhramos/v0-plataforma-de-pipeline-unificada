@@ -1,6 +1,20 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
+/* Tiptap rich text editor — alpha ordered list */
+ol[data-list-type="alpha"] {
+  list-style-type: lower-alpha;
+}
+ol[data-list-type="decimal"] {
+  list-style-type: decimal;
+}
+/* Prose content inside .ProseMirror */
+.ProseMirror ol,
+.ProseMirror ul {
+  padding-left: 1.25rem;
+  margin: 0.25rem 0;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 /* Custom Animations */

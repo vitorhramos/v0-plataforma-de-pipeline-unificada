@@ -1,10 +1,9 @@
 'use client';
 
-import { useEditor, EditorContent, Extension } from '@tiptap/react';
+import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Underline from '@tiptap/extension-underline';
-import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
+import OrderedList from '@tiptap/extension-ordered-list';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   Bold, Italic, Underline as UnderlineIcon, Link as LinkIcon,
@@ -17,46 +16,6 @@ interface RichTextEditorProps {
   placeholder?: string;
   changed?: boolean;
 }
-
-// ── Custom alpha (a. b. c.) ordered list extension ────────────────────────────
-// Tiptap's OrderedList uses `list-style-type: decimal` by default.
-// We create a separate node type that renders an <ol style="list-style-type: lower-alpha">
-import { Node, mergeAttributes } from '@tiptap/core';
-
-const AlphaList = Node.create({
-  name: 'alphaList',
-  group: 'block list',
-  // Use the standard listItem node so StarterKit's indent/outdent and
-  // Enter/Backspace keyboard shortcuts work out of the box.
-  content: 'listItem+',
-  parseHTML() {
-    return [{ tag: 'ol[data-list-type="alpha"]' }];
-  },
-  renderHTML({ HTMLAttributes }) {
-    return [
-      'ol',
-      mergeAttributes(HTMLAttributes, {
-        'data-list-type': 'alpha',
-        style: 'list-style-type: lower-alpha; padding-left: 1.25rem; margin: 0.25rem 0;',
-      }),
-      0,
-    ];
-  },
-  addCommands() {
-    return {
-      // toggleList is provided by @tiptap/extension-list which StarterKit includes
-      toggleAlphaList:
-        () =>
-        ({ commands }: { commands: Record<string, (...args: unknown[]) => boolean> }) =>
-          commands['toggleList']('alphaList', 'listItem'),
-    } as any;
-  },
-  addKeyboardShortcuts() {
-    return {
-      'Mod-Shift-a': () => (this.editor.commands as any).toggleAlphaList(),
-    };
-  },
-});
 
 // ── Toolbar button helper ─────────────────────────────────────────────────────
 function ToolBtn({
@@ -100,22 +59,38 @@ export function RichTextEditor({ value, onChange, placeholder, changed }: RichTe
   const editorWrapRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
-      // Disable StarterKit's built-in list nodes — we register our own below
       StarterKit.configure({
-        bulletList:  { HTMLAttributes: { class: 'list-disc pl-5 my-1' } },
-        orderedList: { HTMLAttributes: { class: 'list-decimal pl-5 my-1' } },
+        // Disable built-in orderedList — we register an extended version below
+        orderedList: false,
+        bulletList: { HTMLAttributes: { class: 'list-disc pl-5 my-1' } },
+        // Configure link and underline (already included in StarterKit v3)
+        link: {
+          openOnClick: false,
+          HTMLAttributes: { class: 'text-blue-600 underline cursor-pointer' },
+        },
+        underline: {},
       }),
-      Underline,
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: { class: 'text-blue-600 underline cursor-pointer' },
+      // Extended OrderedList with data-list-type attribute for decimal vs lower-alpha
+      OrderedList.extend({
+        addAttributes() {
+          return {
+            ...this.parent?.(),
+            'data-list-type': {
+              default: 'decimal',
+              parseHTML: el => el.getAttribute('data-list-type') ?? 'decimal',
+              renderHTML: attrs => ({ 'data-list-type': attrs['data-list-type'] }),
+            },
+          };
+        },
+      }).configure({
+        HTMLAttributes: { class: 'pl-5 my-1' },
       }),
       Image.configure({
         allowBase64: true,
         HTMLAttributes: { class: 'max-w-full rounded my-2' },
       }),
-      AlphaList,
     ],
     content: value || '',
     onUpdate({ editor }) {
@@ -233,15 +208,34 @@ export function RichTextEditor({ value, onChange, placeholder, changed }: RichTe
           <List className="w-3.5 h-3.5" />
         </ToolBtn>
         <ToolBtn
-          active={editor.isActive('orderedList')}
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          active={editor.isActive('orderedList') && !editor.isActive('orderedList', { 'data-list-type': 'alpha' })}
+          onClick={() => {
+            if (editor.isActive('orderedList', { 'data-list-type': 'alpha' })) {
+              // Switch from alpha back to decimal
+              editor.chain().focus().updateAttributes('orderedList', { 'data-list-type': 'decimal' }).run();
+            } else {
+              editor.chain().focus().toggleOrderedList().run();
+            }
+          }}
           title="Lista numerada (1. 2. 3.)"
         >
           <ListOrdered className="w-3.5 h-3.5" />
         </ToolBtn>
         <ToolBtn
-          active={editor.isActive('alphaList')}
-          onClick={() => (editor.commands as any).toggleAlphaList()}
+          active={editor.isActive('orderedList', { 'data-list-type': 'alpha' })}
+          onClick={() => {
+            const isAlphaActive = editor.isActive('orderedList', { 'data-list-type': 'alpha' });
+            if (isAlphaActive) {
+              // Toggle off — remove the ordered list entirely
+              editor.chain().focus().toggleOrderedList().run();
+            } else if (editor.isActive('orderedList')) {
+              // Already a numbered list — switch to alpha
+              editor.chain().focus().updateAttributes('orderedList', { 'data-list-type': 'alpha' }).run();
+            } else {
+              // Not a list — create one and set alpha
+              editor.chain().focus().toggleOrderedList().updateAttributes('orderedList', { 'data-list-type': 'alpha' }).run();
+            }
+          }}
           title="Lista em letras (a. b. c.)"
         >
           <span className="text-[11px] font-bold leading-none select-none">a.</span>
