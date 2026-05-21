@@ -23,26 +23,44 @@ type CommentEntry = {
 type Quote = {
   id: number;
   cpo_id: string;
+  vpc_code?: string;
   part_no: string;
+  description: string;
   sales_territory: string;
   team: string;
   vendor: string;
   master_customer: string;
+  bill_to?: string;
   end_user: string;
-  description: string;
-  quote_name: string;
-  quote_number: string;
+  usd_value: number;          // CIF
+  net_value?: number;
+  fob_value?: number;
+  gm_pct?: number;
+  cpo_qty?: number;
   stage: string;
   probability: number;
-  usd_value: number;
-  budgetary: string;
+  lost_reason?: string;
+  created_date?: string;
   close_date: string;
+  cpo_no?: string;
+  cpo_pay_meth?: string;
+  pay_meth_name?: string;
+  quote_name: string;
+  prod_type?: string;
+  renew?: string;
+  pipe_comments?: string;
+  quote_comments?: string;
+  budgetary: string;
+  hts_code?: string;
+  hts_description?: string;
+  is_engineering_ticket?: string;
+  // internal only (not shown as columns)
+  quote_number: string;
   bu: string;
   quote_age: number;
   status: string;
   comments?: string;
   commentHistory?: CommentEntry[];
-  lost_reason?: string;
   lost_comment?: string;
   scenarioGroupId?: string;
 };
@@ -117,23 +135,15 @@ const EMPTY_FILTERS = {
   max_age: '',
 };
 
-// Editable fields config for bulk edit and modal
-const EDITABLE_FIELDS: { key: keyof Quote; label: string; type: 'text' | 'select' | 'number' | 'date'; options?: string[] }[] = [
-  { key: 'stage',           label: 'Stage',          type: 'select', options: STAGES_LIST },
-  { key: 'vendor',          label: 'Vendor',         type: 'select', options: VENDORS_LIST },
-  { key: 'sales_territory', label: 'Territory',      type: 'select', options: TERRITORIES_LIST },
-  { key: 'team',            label: 'Team',           type: 'text' },
-  { key: 'master_customer', label: 'Revenda',        type: 'text' },
-  { key: 'end_user',        label: 'End User',       type: 'text' },
-  { key: 'bu',              label: 'BU',             type: 'select', options: BU_LIST },
-  { key: 'status',          label: 'Status',         type: 'select', options: Object.values(STATUS_GROUPS).flat() },
-  { key: 'budgetary',       label: 'Budgetary',      type: 'select', options: ['Yes', 'No'] },
-  { key: 'probability',     label: 'Prob %',         type: 'number' },
-  { key: 'usd_value',       label: 'USD Value',      type: 'number' },
-  { key: 'close_date',      label: 'Close Date',     type: 'date' },
-  { key: 'part_no',         label: 'Part No',        type: 'text' },
-  { key: 'quote_name',      label: 'Quote Name',     type: 'text' },
-  { key: 'description',     label: 'Titulo',         type: 'text' },
+// Editable fields config — only the authorized fields can be edited
+const EDITABLE_FIELDS: { key: keyof Quote; label: string; type: 'text' | 'select' | 'number' | 'date' | 'textarea'; options?: string[] }[] = [
+  { key: 'stage',                  label: 'Stage',              type: 'select',   options: STAGES_LIST },
+  { key: 'probability',            label: 'Prob %',             type: 'number' },
+  { key: 'renew',                  label: 'Renew',              type: 'select',   options: ['Yes', 'No'] },
+  { key: 'budgetary',              label: 'Budgetary Related',  type: 'select',   options: ['Yes', 'No'] },
+  { key: 'is_engineering_ticket',  label: 'Eng. Ticket',        type: 'select',   options: ['Yes', 'No'] },
+  { key: 'pipe_comments',          label: 'Pipe Comments',      type: 'textarea' },
+  { key: 'quote_comments',         label: 'Quote Comments',     type: 'textarea' },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -177,7 +187,7 @@ export default function PipelineDetailsPage() {
   const [viewMode, setViewMode] = useState<'list' | 'cards' | 'kanban'>('list');
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
 
-  // ── Scenario group states ──────────────────────────────────────────────────
+  // ── Scenario group states ──────────────────────────────────────��───────────
   const [scenarioGroups, setScenarioGroups] = useState<ScenarioGroup[]>(() => getScenarioGroups());
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [scenarioModalOpen, setScenarioModalOpen] = useState(false);
@@ -290,23 +300,41 @@ export default function PipelineDetailsPage() {
     }
   };
 
-  // Column definitions (source of truth)
+  // Column definitions (source of truth) — 33 columns per spec
   const ALL_COLUMNS: { label: string; key: keyof Quote }[] = [
-    { label: 'CPO ID',     key: 'cpo_id' },
-    { label: 'Part No',    key: 'part_no' },
-    { label: 'Territory',  key: 'sales_territory' },
-    { label: 'Vendor',     key: 'vendor' },
-    { label: 'Revenda',    key: 'master_customer' },
-    { label: 'End User',   key: 'end_user' },
-    { label: 'Quote Name', key: 'quote_name' },
-    { label: 'Stage',      key: 'stage' },
-    { label: 'Prob',       key: 'probability' },
-    { label: 'USD',        key: 'usd_value' },
-    { label: 'Budget',     key: 'budgetary' },
-    { label: 'Close Date', key: 'close_date' },
-    { label: 'Age',        key: 'quote_age' },
-    { label: 'Status',     key: 'status' },
-    { label: 'BU',         key: 'bu' },
+    { label: 'CPO ID',          key: 'cpo_id' },
+    { label: 'CPO Status',      key: 'status' },
+    { label: 'VPC Code',        key: 'vpc_code' },
+    { label: 'Part No',         key: 'part_no' },
+    { label: 'Part Desc',       key: 'description' },
+    { label: 'Sales Terr',      key: 'sales_territory' },
+    { label: 'Team',            key: 'team' },
+    { label: 'Vendor',          key: 'vendor' },
+    { label: 'Master Customer', key: 'master_customer' },
+    { label: 'Bill To',         key: 'bill_to' },
+    { label: 'End User',        key: 'end_user' },
+    { label: 'CIF',             key: 'usd_value' },
+    { label: 'NET',             key: 'net_value' },
+    { label: 'FOB',             key: 'fob_value' },
+    { label: 'GM %',            key: 'gm_pct' },
+    { label: 'CPO QTY',        key: 'cpo_qty' },
+    { label: 'Stage',           key: 'stage' },
+    { label: 'Prob',            key: 'probability' },
+    { label: 'Lost',            key: 'lost_reason' },
+    { label: 'Created Date',    key: 'created_date' },
+    { label: 'Close Date',      key: 'close_date' },
+    { label: 'CPO No',         key: 'cpo_no' },
+    { label: 'CPO Pay Meth',    key: 'cpo_pay_meth' },
+    { label: 'Pay Meth Name',   key: 'pay_meth_name' },
+    { label: 'Opportunity',     key: 'quote_name' },
+    { label: 'Prod Type',       key: 'prod_type' },
+    { label: 'Renew',           key: 'renew' },
+    { label: 'Pipe Comments',   key: 'pipe_comments' },
+    { label: 'Quote Comments',  key: 'quote_comments' },
+    { label: 'Budgetary',       key: 'budgetary' },
+    { label: 'HTS Code',        key: 'hts_code' },
+    { label: 'HTS Description', key: 'hts_description' },
+    { label: 'Eng. Ticket',     key: 'is_engineering_ticket' },
   ];
 
   const DEFAULT_COL_ORDER = ALL_COLUMNS.map(c => c.key);
@@ -560,10 +588,14 @@ export default function PipelineDetailsPage() {
   };
 
   const handleExport = (format: 'CSV' | 'Excel') => {
-    const headers = ['CPO ID', 'Part No', 'Territory', 'Vendor', 'Revenda', 'End User', 'Quote Name', 'Stage', 'Prob %', 'USD Value', 'Budget', 'Close Date', 'Age', 'Status', 'BU'];
+    const headers = ['CPO ID','CPO Status','VPC Code','Part No','Part Desc','Sales Terr','Team','Vendor','Master Customer','Bill To','End User','CIF','NET','FOB','GM %','CPO QTY','Stage','Prob %','Lost','Created Date','Close Date','CPO No','CPO Pay Meth','Pay Meth Name','Opportunity','Prod Type','Renew','Pipe Comments','Quote Comments','Budgetary','HTS Code','HTS Description','Eng. Ticket'];
     const rows = sortedQuotes.map(q => [
-      q.cpo_id, q.part_no, q.sales_territory, q.vendor, q.master_customer, q.end_user,
-      q.quote_name, q.stage, q.probability, q.usd_value, q.budgetary, q.close_date, q.quote_age, q.status, q.bu
+      q.cpo_id, q.status, q.vpc_code ?? '', q.part_no, q.description, q.sales_territory, q.team, q.vendor,
+      q.master_customer, q.bill_to ?? '', q.end_user, q.usd_value, q.net_value ?? '', q.fob_value ?? '',
+      q.gm_pct ?? '', q.cpo_qty ?? '', q.stage, q.probability, q.lost_reason ?? '', q.created_date ?? '',
+      q.close_date, q.cpo_no ?? '', q.cpo_pay_meth ?? '', q.pay_meth_name ?? '', q.quote_name,
+      q.prod_type ?? '', q.renew ?? '', q.pipe_comments ?? '', q.quote_comments ?? '', q.budgetary,
+      q.hts_code ?? '', q.hts_description ?? '', q.is_engineering_ticket ?? ''
     ]);
     const csvContent = [headers.join(','), ...rows.map(r => r.map(cell => `"${cell}"`).join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1161,27 +1193,42 @@ export default function PipelineDetailsPage() {
                   {/* Dados principais */}
                   <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
                     <div>
-                      <p className="text-gray-400 leading-none">Valor</p>
-                      <p className="font-bold text-emerald-700 leading-none mt-0.5">${(quote.usd_value / 1000).toFixed(0)}K</p>
+                      <p className="text-gray-400 leading-none">CIF</p>
+                      <p className="font-bold text-emerald-700 leading-none mt-0.5">
+                        {quote.usd_value >= 1_000_000 ? `$${(quote.usd_value/1_000_000).toFixed(1)}M` : `$${(quote.usd_value/1_000).toFixed(0)}K`}
+                      </p>
                     </div>
                     <div>
                       <p className="text-gray-400 leading-none">Prob.</p>
                       <p className="font-bold text-gray-800 leading-none mt-0.5">{quote.probability}%</p>
                     </div>
                     <div>
+                      <p className="text-gray-400 leading-none">Prod Type</p>
+                      <p className="font-medium text-gray-700 leading-none mt-0.5 truncate">{quote.prod_type ?? '—'}</p>
+                    </div>
+                    <div>
                       <p className="text-gray-400 leading-none">Vendor</p>
                       <p className="font-medium text-gray-700 leading-none mt-0.5 truncate">{quote.vendor}</p>
                     </div>
-                    <div>
-                      <p className="text-gray-400 leading-none">Revenda</p>
-                      <p className="font-medium text-gray-700 leading-none mt-0.5 truncate">{quote.master_customer}</p>
-                    </div>
+                  </div>
+
+                  {/* Badges row */}
+                  <div className="flex items-center gap-1.5 mt-2">
+                    {quote.renew === 'Yes' && (
+                      <span className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-100 text-emerald-800">Renew</span>
+                    )}
+                    {quote.is_engineering_ticket === 'Yes' && (
+                      <span className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-blue-100 text-blue-800">Eng. Ticket</span>
+                    )}
+                    {quote.budgetary === 'Yes' && (
+                      <span className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-amber-100 text-amber-800">Budget</span>
+                    )}
                   </div>
 
                   {/* Footer */}
-                  <div className="mt-2.5 pt-2 border-t border-gray-100 flex items-center justify-between">
-                    <p className="text-[10px] text-gray-400 truncate">{quote.end_user}</p>
-                    <p className="text-[10px] text-gray-400 shrink-0 ml-2">{quote.close_date}</p>
+                  <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between">
+                    <p className="text-[10px] text-gray-400 truncate">{quote.master_customer}</p>
+                    <p className="text-[10px] text-gray-400 shrink-0 ml-2">{quote.close_date ? quote.close_date.split('-').reverse().join('/') : '—'}</p>
                   </div>
                 </div>
               </div>
@@ -1279,14 +1326,21 @@ export default function PipelineDetailsPage() {
                             <p className="text-[11px] font-mono font-bold text-blue-600 leading-none">{quote.cpo_id}</p>
                             <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${STATUS_COLORS[quote.status] ?? 'bg-gray-100 text-gray-600'}`}>{quote.status}</span>
                           </div>
-                          <p className="text-[11px] font-semibold text-gray-800 leading-tight mb-2 line-clamp-2">{quote.quote_name}</p>
-                          <div className="flex items-center justify-between text-[11px]">
-                            <span className="font-bold text-emerald-700">${(quote.usd_value / 1000).toFixed(0)}K</span>
+                          <p className="text-[11px] font-semibold text-gray-800 leading-tight mb-1.5 line-clamp-2">{quote.quote_name}</p>
+                          <div className="flex items-center justify-between text-[11px] mb-1">
+                            <span className="font-bold text-emerald-700">
+                              {quote.usd_value >= 1_000_000 ? `$${(quote.usd_value/1_000_000).toFixed(1)}M` : `$${(quote.usd_value/1_000).toFixed(0)}K`}
+                            </span>
                             <span className="font-semibold text-gray-600">{quote.probability}%</span>
                           </div>
-                          <div className="mt-1.5 pt-1.5 border-t border-gray-100 text-[10px] text-gray-400 flex items-center justify-between gap-1">
-                            <span className="truncate">{quote.vendor} · {quote.master_customer}</span>
-                            <span className="shrink-0">{quote.close_date.slice(5)}</span>
+                          <div className="flex items-center gap-1 mb-1.5">
+                            {quote.renew === 'Yes' && <span className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-100 text-emerald-800">Renew</span>}
+                            {quote.is_engineering_ticket === 'Yes' && <span className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-blue-100 text-blue-800">Eng</span>}
+                            {quote.prod_type && <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-gray-100 text-gray-600">{quote.prod_type}</span>}
+                          </div>
+                          <div className="pt-1.5 border-t border-gray-100 text-[10px] text-gray-400 flex items-center justify-between gap-1">
+                            <span className="truncate">{quote.vendor} · {quote.cpo_no ?? quote.master_customer}</span>
+                            <span className="shrink-0">{quote.close_date ? quote.close_date.split('-').slice(1).reverse().join('/') : '—'}</span>
                           </div>
                         </div>
                       ))}
@@ -1302,7 +1356,7 @@ export default function PipelineDetailsPage() {
         {viewMode === 'list' && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-xs" style={{ minWidth: '1600px' }}>
+            <table className="w-full text-xs" style={{ minWidth: '3200px' }}>
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="px-3 py-2.5 w-10">
@@ -1340,7 +1394,7 @@ export default function PipelineDetailsPage() {
               <tbody className="divide-y divide-gray-100">
                 {paginatedQuotes.length === 0 ? (
                   <tr>
-                    <td colSpan={18} className="py-20 text-center">
+                    <td colSpan={36} className="py-20 text-center">
                       <div className="flex flex-col items-center gap-3">
                         <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
                           <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1407,6 +1461,12 @@ export default function PipelineDetailsPage() {
                       </td>
                       {orderedColumns.map(col => {
                         const k = col.key;
+                        const fmtMoney = (v?: number) => v == null ? '—' : v >= 1_000_000 ? `$${(v/1_000_000).toFixed(1)}M` : `$${(v/1_000).toFixed(0)}K`;
+                        const fmtDate  = (d?: string) => d ? d.split('-').reverse().join('/') : '—';
+                        const yesNoBadge = (val?: string) => val === 'Yes'
+                          ? <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">Yes</span>
+                          : <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-500">No</span>;
+
                         if (k === 'cpo_id') return (
                           <td key={k} className="px-3 py-2.5 whitespace-nowrap">
                             <div className="flex items-center gap-1.5">
@@ -1423,7 +1483,7 @@ export default function PipelineDetailsPage() {
                                   <ChevronRight className={`w-3 h-3 transition-transform ${isGroupExpanded ? 'rotate-90' : ''}`} />
                                 </button>
                               )}
-                              <span className="font-mono text-blue-600 font-bold">{quote.cpo_id}</span>
+                              <span className="font-mono text-blue-600 font-bold text-[11px]">{quote.cpo_id}</span>
                               {group && (
                                 <button
                                   onClick={() => openEditScenarioModal(group.id)}
@@ -1439,7 +1499,6 @@ export default function PipelineDetailsPage() {
                                   {LIKELIHOOD_LABELS[scenarioMeta.likelihood].split(' ')[0]}
                                 </span>
                               )}
-                              {/* When surfaced as standalone by search: show group name so user knows it belongs to a group */}
                               {isStandaloneSubordinate && group && (
                                 <span className="text-[9px] text-violet-500 italic truncate max-w-[110px]" title={`Grupo: ${group.name}`}>
                                   {group.name}
@@ -1448,21 +1507,55 @@ export default function PipelineDetailsPage() {
                             </div>
                           </td>
                         );
-                        if (k === 'part_no')         return <td key={k} className="px-3 py-2.5 font-mono text-gray-700 whitespace-nowrap">{quote.part_no}</td>;
-                        if (k === 'sales_territory') return <td key={k} className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.sales_territory}</td>;
-                        if (k === 'vendor')          return <td key={k} className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.vendor}</td>;
-                        if (k === 'master_customer') return <td key={k} className="px-3 py-2.5 font-medium text-gray-800 whitespace-nowrap">{quote.master_customer}</td>;
-                        if (k === 'end_user')        return <td key={k} className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.end_user}</td>;
-                        if (k === 'quote_name')      return <td key={k} className="px-3 py-2.5 font-medium text-gray-800 whitespace-nowrap">{quote.quote_name}</td>;
-                        if (k === 'stage')           return <td key={k} className="px-3 py-2.5 whitespace-nowrap"><span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${STAGE_COLORS[quote.stage] ?? 'bg-gray-100 text-gray-700'}`}>{quote.stage}</span></td>;
-                        if (k === 'probability')     return <td key={k} className="px-3 py-2.5 text-right font-bold text-gray-800 whitespace-nowrap">{quote.probability}%</td>;
-                        if (k === 'usd_value')       return <td key={k} className="px-3 py-2.5 text-right font-bold text-emerald-700 whitespace-nowrap">${(quote.usd_value / 1000).toFixed(0)}K</td>;
-                        if (k === 'budgetary')       return <td key={k} className="px-3 py-2.5 text-center whitespace-nowrap"><span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${quote.budgetary === 'Yes' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500'}`}>{quote.budgetary}</span></td>;
-                        if (k === 'close_date')      return <td key={k} className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.close_date}</td>;
-                        if (k === 'quote_age')       return <td key={k} className="px-3 py-2.5 text-center whitespace-nowrap"><span className={`font-semibold ${quote.quote_age > 30 ? 'text-red-600' : 'text-gray-700'}`}>{quote.quote_age}d</span></td>;
-                        if (k === 'status')          return <td key={k} className="px-3 py-2.5 whitespace-nowrap"><span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${STATUS_COLORS[quote.status] ?? 'bg-gray-100 text-gray-600'}`}>{quote.status}</span></td>;
-                        if (k === 'bu')              return <td key={k} className="px-3 py-2.5 text-gray-600 whitespace-nowrap text-[11px]">{quote.bu}</td>;
-                        return null;
+                        if (k === 'status')               return <td key={k} className="px-3 py-2.5 whitespace-nowrap"><span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${STATUS_COLORS[quote.status] ?? 'bg-gray-100 text-gray-600'}`}>{quote.status}</span></td>;
+                        if (k === 'vpc_code')             return <td key={k} className="px-3 py-2.5 font-mono text-gray-600 whitespace-nowrap text-[11px]">{quote.vpc_code ?? '—'}</td>;
+                        if (k === 'part_no')              return <td key={k} className="px-3 py-2.5 font-mono text-gray-700 whitespace-nowrap text-[11px]">{quote.part_no}</td>;
+                        if (k === 'description')          return <td key={k} className="px-3 py-2.5 text-gray-700 max-w-[140px]"><span className="block truncate" title={quote.description}>{quote.description}</span></td>;
+                        if (k === 'sales_territory')      return <td key={k} className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{quote.sales_territory}</td>;
+                        if (k === 'team')                 return <td key={k} className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{quote.team}</td>;
+                        if (k === 'vendor')               return <td key={k} className="px-3 py-2.5 text-gray-700 whitespace-nowrap font-medium">{quote.vendor}</td>;
+                        if (k === 'master_customer')      return <td key={k} className="px-3 py-2.5 font-medium text-gray-800 whitespace-nowrap">{quote.master_customer}</td>;
+                        if (k === 'bill_to')              return <td key={k} className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{quote.bill_to ?? '—'}</td>;
+                        if (k === 'end_user')             return <td key={k} className="px-3 py-2.5 text-gray-700 max-w-[130px]"><span className="block truncate" title={quote.end_user}>{quote.end_user}</span></td>;
+                        if (k === 'usd_value')            return <td key={k} className="px-3 py-2.5 text-right font-bold text-emerald-700 whitespace-nowrap">{fmtMoney(quote.usd_value)}</td>;
+                        if (k === 'net_value')            return <td key={k} className="px-3 py-2.5 text-right font-semibold text-blue-700 whitespace-nowrap">{fmtMoney(quote.net_value)}</td>;
+                        if (k === 'fob_value')            return <td key={k} className="px-3 py-2.5 text-right font-semibold text-violet-700 whitespace-nowrap">{fmtMoney(quote.fob_value)}</td>;
+                        if (k === 'gm_pct') {
+                          const gm = quote.gm_pct ?? 0;
+                          return <td key={k} className="px-3 py-2.5 text-right whitespace-nowrap">
+                            <span className={`font-bold ${gm >= 15 ? 'text-emerald-700' : gm >= 8 ? 'text-amber-600' : 'text-red-600'}`}>{gm.toFixed(1)}%</span>
+                          </td>;
+                        }
+                        if (k === 'cpo_qty')              return <td key={k} className="px-3 py-2.5 text-center text-gray-700 whitespace-nowrap">{quote.cpo_qty ?? '—'}</td>;
+                        if (k === 'stage')                return <td key={k} className="px-3 py-2.5 whitespace-nowrap"><span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${STAGE_COLORS[quote.stage] ?? 'bg-gray-100 text-gray-700'}`}>{quote.stage}</span></td>;
+                        if (k === 'probability') {
+                          const p = quote.probability;
+                          const barColor = p >= 75 ? 'bg-emerald-500' : p >= 50 ? 'bg-amber-400' : p >= 25 ? 'bg-blue-400' : 'bg-red-400';
+                          return <td key={k} className="px-3 py-2.5 whitespace-nowrap">
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-14 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${barColor}`} style={{ width: `${p}%` }} />
+                              </div>
+                              <span className="font-bold text-gray-800 text-[11px]">{p}%</span>
+                            </div>
+                          </td>;
+                        }
+                        if (k === 'lost_reason')          return <td key={k} className="px-3 py-2.5 whitespace-nowrap">{quote.lost_reason ? <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700">{quote.lost_reason}</span> : <span className="text-gray-300">—</span>}</td>;
+                        if (k === 'created_date')         return <td key={k} className="px-3 py-2.5 text-gray-600 whitespace-nowrap text-[11px]">{fmtDate(quote.created_date)}</td>;
+                        if (k === 'close_date')           return <td key={k} className="px-3 py-2.5 text-gray-700 whitespace-nowrap text-[11px]">{fmtDate(quote.close_date)}</td>;
+                        if (k === 'cpo_no')               return <td key={k} className="px-3 py-2.5 font-mono text-gray-600 whitespace-nowrap text-[11px]">{quote.cpo_no ?? '—'}</td>;
+                        if (k === 'cpo_pay_meth')         return <td key={k} className="px-3 py-2.5 whitespace-nowrap"><span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700">{quote.cpo_pay_meth ?? '—'}</span></td>;
+                        if (k === 'pay_meth_name')        return <td key={k} className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{quote.pay_meth_name ?? '—'}</td>;
+                        if (k === 'quote_name')           return <td key={k} className="px-3 py-2.5 font-medium text-gray-800 whitespace-nowrap">{quote.quote_name}</td>;
+                        if (k === 'prod_type')            return <td key={k} className="px-3 py-2.5 whitespace-nowrap"><span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-700">{quote.prod_type ?? '—'}</span></td>;
+                        if (k === 'renew')                return <td key={k} className="px-3 py-2.5 text-center whitespace-nowrap">{yesNoBadge(quote.renew)}</td>;
+                        if (k === 'pipe_comments')        return <td key={k} className="px-3 py-2.5 text-gray-600 max-w-[110px]"><span className="block truncate text-[11px]" title={quote.pipe_comments}>{quote.pipe_comments || <span className="text-gray-300">—</span>}</span></td>;
+                        if (k === 'quote_comments')       return <td key={k} className="px-3 py-2.5 text-gray-600 max-w-[110px]"><span className="block truncate text-[11px]" title={quote.quote_comments}>{quote.quote_comments || <span className="text-gray-300">—</span>}</span></td>;
+                        if (k === 'budgetary')            return <td key={k} className="px-3 py-2.5 text-center whitespace-nowrap"><span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${quote.budgetary === 'Yes' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-500'}`}>{quote.budgetary}</span></td>;
+                        if (k === 'hts_code')             return <td key={k} className="px-3 py-2.5 font-mono text-gray-600 whitespace-nowrap text-[11px]">{quote.hts_code ?? '—'}</td>;
+                        if (k === 'hts_description')      return <td key={k} className="px-3 py-2.5 text-gray-600 max-w-[130px]"><span className="block truncate text-[11px]" title={quote.hts_description}>{quote.hts_description ?? '—'}</span></td>;
+                        if (k === 'is_engineering_ticket') return <td key={k} className="px-3 py-2.5 text-center whitespace-nowrap">{yesNoBadge(quote.is_engineering_ticket)}</td>;
+                        return <td key={k} className="px-3 py-2.5 text-gray-500 whitespace-nowrap text-[11px]">{String((quote as Record<string, unknown>)[k as string] ?? '—')}</td>;
                       })}
                     </tr>
                   );
@@ -1486,36 +1579,55 @@ export default function PipelineDetailsPage() {
                           <td className="px-1 py-2" />
                           {orderedColumns.map(col => {
                             const k = col.key;
+                            const fmtM = (v?: number) => v == null ? '—' : v >= 1_000_000 ? `$${(v/1_000_000).toFixed(1)}M` : `$${(v/1_000).toFixed(0)}K`;
+                            const fmtD = (d?: string) => d ? d.split('-').reverse().join('/') : '—';
                             if (k === 'cpo_id') return (
                               <td key={k} className="px-3 py-2 whitespace-nowrap">
                                 <div className="flex items-center gap-1.5 pl-5">
-                                  {/* tree branch indicator */}
                                   <span className="text-violet-300 font-mono text-[10px] shrink-0">└</span>
-                                  <span className="font-mono text-blue-400 font-semibold">{altQuote.cpo_id}</span>
+                                  <span className="font-mono text-blue-400 font-semibold text-[11px]">{altQuote.cpo_id}</span>
                                   <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-semibold border ${LIKELIHOOD_COLORS[meta.likelihood]}`}>
                                     {LIKELIHOOD_LABELS[meta.likelihood]}
                                   </span>
                                   {meta.label && (
-                                    <span className="text-gray-400 italic truncate max-w-[120px]">{meta.label}</span>
+                                    <span className="text-gray-400 italic truncate max-w-[120px] text-[10px]">{meta.label}</span>
                                   )}
                                 </div>
                               </td>
                             );
-                            if (k === 'part_no')         return <td key={k} className="px-3 py-2 font-mono text-gray-400 whitespace-nowrap">{altQuote.part_no}</td>;
-                            if (k === 'sales_territory') return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap">{altQuote.sales_territory}</td>;
-                            if (k === 'vendor')          return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap">{altQuote.vendor}</td>;
-                            if (k === 'master_customer') return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap">{altQuote.master_customer}</td>;
-                            if (k === 'end_user')        return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap">{altQuote.end_user}</td>;
-                            if (k === 'quote_name')      return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap">{altQuote.quote_name}</td>;
-                            if (k === 'stage')           return <td key={k} className="px-3 py-2 whitespace-nowrap"><span className={`px-1.5 py-0.5 rounded-full text-[10px] opacity-70 ${STAGE_COLORS[altQuote.stage] ?? 'bg-gray-100 text-gray-600'}`}>{altQuote.stage}</span></td>;
-                            if (k === 'probability')     return <td key={k} className="px-3 py-2 text-right text-gray-400 whitespace-nowrap">{altQuote.probability}%</td>;
-                            if (k === 'usd_value')       return <td key={k} className="px-3 py-2 text-right text-emerald-500 font-semibold whitespace-nowrap">${(altQuote.usd_value / 1000).toFixed(0)}K</td>;
-                            if (k === 'budgetary')       return <td key={k} className="px-3 py-2 text-center text-gray-400 whitespace-nowrap">{altQuote.budgetary}</td>;
-                            if (k === 'close_date')      return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap">{altQuote.close_date}</td>;
-                            if (k === 'quote_age')       return <td key={k} className="px-3 py-2 text-center text-gray-400 whitespace-nowrap">{altQuote.quote_age}d</td>;
-                            if (k === 'status')          return <td key={k} className="px-3 py-2 whitespace-nowrap"><span className={`px-1.5 py-0.5 rounded-full text-[10px] opacity-70 ${STATUS_COLORS[altQuote.status] ?? 'bg-gray-100 text-gray-600'}`}>{altQuote.status}</span></td>;
-                            if (k === 'bu')              return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap">{altQuote.bu}</td>;
-                            return null;
+                            if (k === 'status')               return <td key={k} className="px-3 py-2 whitespace-nowrap opacity-70"><span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${STATUS_COLORS[altQuote.status] ?? 'bg-gray-100 text-gray-600'}`}>{altQuote.status}</span></td>;
+                            if (k === 'vpc_code')             return <td key={k} className="px-3 py-2 font-mono text-gray-400 whitespace-nowrap text-[11px]">{altQuote.vpc_code ?? '—'}</td>;
+                            if (k === 'part_no')              return <td key={k} className="px-3 py-2 font-mono text-gray-400 whitespace-nowrap text-[11px]">{altQuote.part_no}</td>;
+                            if (k === 'description')          return <td key={k} className="px-3 py-2 text-gray-400 max-w-[140px]"><span className="block truncate text-[11px]">{altQuote.description}</span></td>;
+                            if (k === 'sales_territory')      return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap">{altQuote.sales_territory}</td>;
+                            if (k === 'team')                 return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap">{altQuote.team}</td>;
+                            if (k === 'vendor')               return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap">{altQuote.vendor}</td>;
+                            if (k === 'master_customer')      return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap">{altQuote.master_customer}</td>;
+                            if (k === 'bill_to')              return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap">{altQuote.bill_to ?? '—'}</td>;
+                            if (k === 'end_user')             return <td key={k} className="px-3 py-2 text-gray-400 max-w-[130px]"><span className="block truncate text-[11px]">{altQuote.end_user}</span></td>;
+                            if (k === 'usd_value')            return <td key={k} className="px-3 py-2 text-right text-emerald-500 font-semibold whitespace-nowrap">{fmtM(altQuote.usd_value)}</td>;
+                            if (k === 'net_value')            return <td key={k} className="px-3 py-2 text-right text-blue-400 whitespace-nowrap">{fmtM(altQuote.net_value)}</td>;
+                            if (k === 'fob_value')            return <td key={k} className="px-3 py-2 text-right text-violet-400 whitespace-nowrap">{fmtM(altQuote.fob_value)}</td>;
+                            if (k === 'gm_pct')               return <td key={k} className="px-3 py-2 text-right text-gray-400 whitespace-nowrap">{altQuote.gm_pct != null ? `${altQuote.gm_pct.toFixed(1)}%` : '—'}</td>;
+                            if (k === 'cpo_qty')              return <td key={k} className="px-3 py-2 text-center text-gray-400 whitespace-nowrap">{altQuote.cpo_qty ?? '—'}</td>;
+                            if (k === 'stage')                return <td key={k} className="px-3 py-2 whitespace-nowrap"><span className={`px-1.5 py-0.5 rounded-full text-[10px] opacity-70 ${STAGE_COLORS[altQuote.stage] ?? 'bg-gray-100 text-gray-600'}`}>{altQuote.stage}</span></td>;
+                            if (k === 'probability')          return <td key={k} className="px-3 py-2 text-right text-gray-400 whitespace-nowrap">{altQuote.probability}%</td>;
+                            if (k === 'lost_reason')          return <td key={k} className="px-3 py-2 whitespace-nowrap text-gray-400 text-[11px]">{altQuote.lost_reason ?? '—'}</td>;
+                            if (k === 'created_date')         return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap text-[11px]">{fmtD(altQuote.created_date)}</td>;
+                            if (k === 'close_date')           return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap text-[11px]">{fmtD(altQuote.close_date)}</td>;
+                            if (k === 'cpo_no')               return <td key={k} className="px-3 py-2 font-mono text-gray-400 whitespace-nowrap text-[11px]">{altQuote.cpo_no ?? '—'}</td>;
+                            if (k === 'cpo_pay_meth')         return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap text-[11px]">{altQuote.cpo_pay_meth ?? '—'}</td>;
+                            if (k === 'pay_meth_name')        return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap text-[11px]">{altQuote.pay_meth_name ?? '—'}</td>;
+                            if (k === 'quote_name')           return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap">{altQuote.quote_name}</td>;
+                            if (k === 'prod_type')            return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap text-[11px]">{altQuote.prod_type ?? '—'}</td>;
+                            if (k === 'renew')                return <td key={k} className="px-3 py-2 text-center text-gray-400 whitespace-nowrap text-[11px]">{altQuote.renew ?? '—'}</td>;
+                            if (k === 'pipe_comments')        return <td key={k} className="px-3 py-2 text-gray-400 max-w-[110px]"><span className="block truncate text-[11px]">{altQuote.pipe_comments || '—'}</span></td>;
+                            if (k === 'quote_comments')       return <td key={k} className="px-3 py-2 text-gray-400 max-w-[110px]"><span className="block truncate text-[11px]">{altQuote.quote_comments || '—'}</span></td>;
+                            if (k === 'budgetary')            return <td key={k} className="px-3 py-2 text-center text-gray-400 whitespace-nowrap text-[11px]">{altQuote.budgetary}</td>;
+                            if (k === 'hts_code')             return <td key={k} className="px-3 py-2 font-mono text-gray-400 whitespace-nowrap text-[11px]">{altQuote.hts_code ?? '—'}</td>;
+                            if (k === 'hts_description')      return <td key={k} className="px-3 py-2 text-gray-400 max-w-[130px]"><span className="block truncate text-[11px]">{altQuote.hts_description ?? '—'}</span></td>;
+                            if (k === 'is_engineering_ticket') return <td key={k} className="px-3 py-2 text-center text-gray-400 whitespace-nowrap text-[11px]">{altQuote.is_engineering_ticket ?? '—'}</td>;
+                            return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap text-[11px]">{String((altQuote as Record<string, unknown>)[k as string] ?? '—')}</td>;
                           })}
                         </tr>
                       ) : null
@@ -1571,24 +1683,24 @@ export default function PipelineDetailsPage() {
                   value={val}
                   onChange={e => {
                     const newVal = e.target.value;
-                    // Intercept Net Lost: open popup when changing TO it
                     if (field.key === 'stage' && newVal === 'Net Lost' && editingQuote.stage !== 'Net Lost') {
                       setNetLostOpen(true);
                     } else {
                       setEditDraft(d => ({ ...d, [field.key]: newVal }));
                     }
                   }}
-                  className={`${inp} ${changed ? 'ring-1 ring-amber-400 border-amber-300' : ''}`}
+                  className={`${inp} ${changed ? 'ring-1 ring-amber-400 border-amber-300' : ''} bg-white`}
                 >
-                  {field.key === 'status'
-                    ? Object.entries(STATUS_GROUPS).map(([group, vals]) => (
-                        <optgroup key={group} label={group}>
-                          {vals.map(s => <option key={s} value={s}>{s}</option>)}
-                        </optgroup>
-                      ))
-                    : field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)
-                  }
+                  {field.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                 </select>
+              ) : field.type === 'textarea' ? (
+                <textarea
+                  value={val}
+                  rows={3}
+                  onChange={e => setEditDraft(d => ({ ...d, [field.key]: e.target.value }))}
+                  className={`${inp} resize-none ${changed ? 'ring-1 ring-amber-400 border-amber-300' : ''}`}
+                  placeholder={`${field.label}...`}
+                />
               ) : (
                 <input
                   type={field.type}
@@ -1642,61 +1754,62 @@ export default function PipelineDetailsPage() {
               {/* Body */}
               <div className="overflow-y-auto flex-1">
 
-                {/* Grupo 1 — Identificacao (topo) */}
-                <div className="px-6 pt-5 pb-4">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Identificacao</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'part_no')!} />
-                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'quote_name')!} />
-                    <div className="col-span-2">
-                      <Field field={EDITABLE_FIELDS.find(f => f.key === 'description')!} />
-                    </div>
+                {/* Read-only info strip */}
+                <div className="px-6 pt-4 pb-3 bg-gray-50 border-b border-gray-100">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 text-[11px]">
+                    <div><span className="text-gray-400 block">Part No</span><span className="font-mono font-semibold text-gray-700">{editingQuote.part_no}</span></div>
+                    <div><span className="text-gray-400 block">Vendor</span><span className="font-semibold text-gray-700">{editingQuote.vendor}</span></div>
+                    <div><span className="text-gray-400 block">Master Customer</span><span className="font-semibold text-gray-700">{editingQuote.master_customer}</span></div>
+                    <div><span className="text-gray-400 block">End User</span><span className="font-semibold text-gray-700 truncate block">{editingQuote.end_user}</span></div>
+                    <div><span className="text-gray-400 block">CIF</span><span className="font-bold text-emerald-700">{editingQuote.usd_value >= 1_000_000 ? `$${(editingQuote.usd_value/1_000_000).toFixed(2)}M` : `$${(editingQuote.usd_value/1_000).toFixed(0)}K`}</span></div>
+                    <div><span className="text-gray-400 block">NET</span><span className="font-bold text-blue-700">{editingQuote.net_value ? (editingQuote.net_value >= 1_000_000 ? `$${(editingQuote.net_value/1_000_000).toFixed(2)}M` : `$${(editingQuote.net_value/1_000).toFixed(0)}K`) : '—'}</span></div>
+                    <div><span className="text-gray-400 block">FOB</span><span className="font-bold text-violet-700">{editingQuote.fob_value ? (editingQuote.fob_value >= 1_000_000 ? `$${(editingQuote.fob_value/1_000_000).toFixed(2)}M` : `$${(editingQuote.fob_value/1_000).toFixed(0)}K`) : '—'}</span></div>
+                    <div><span className="text-gray-400 block">GM %</span><span className={`font-bold ${(editingQuote.gm_pct ?? 0) >= 15 ? 'text-emerald-700' : (editingQuote.gm_pct ?? 0) >= 8 ? 'text-amber-600' : 'text-red-600'}`}>{editingQuote.gm_pct != null ? `${editingQuote.gm_pct.toFixed(1)}%` : '—'}</span></div>
+                    <div><span className="text-gray-400 block">Prod Type</span><span className="font-semibold text-gray-700">{editingQuote.prod_type ?? '—'}</span></div>
+                    <div><span className="text-gray-400 block">HTS Code</span><span className="font-mono text-gray-700">{editingQuote.hts_code ?? '—'}</span></div>
+                    <div><span className="text-gray-400 block">Close Date</span><span className="text-gray-700">{editingQuote.close_date ? editingQuote.close_date.split('-').reverse().join('/') : '—'}</span></div>
+                    <div><span className="text-gray-400 block">Created Date</span><span className="text-gray-700">{editingQuote.created_date ? editingQuote.created_date.split('-').reverse().join('/') : '—'}</span></div>
                   </div>
+                  {/* Net Lost info */}
+                  {editingQuote.stage === 'Net Lost' && editingQuote.lost_reason && (
+                    <div className="mt-3 p-2.5 bg-red-50 border border-red-100 rounded-lg flex items-start gap-2">
+                      <span className="text-[10px] font-bold text-red-700 uppercase tracking-wide shrink-0 mt-0.5">Motivo:</span>
+                      <span className="text-[11px] text-red-800 font-semibold">{editingQuote.lost_reason}</span>
+                      {editingQuote.lost_comment && <span className="text-[11px] text-red-600 ml-2 truncate">— {editingQuote.lost_comment}</span>}
+                    </div>
+                  )}
                 </div>
 
-                <div className="mx-6 border-t border-gray-100 dark:border-gray-800" />
-
-                {/* Grupo 2 — Pipeline */}
+                {/* Grupo 1 — Pipeline (editaveis) */}
                 <div className="px-6 pt-4 pb-4">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Pipeline</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'stage')!} />
-                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'status')!} />
-                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'budgetary')!} />
-                  </div>
-                </div>
-
-                <div className="mx-6 border-t border-gray-100 dark:border-gray-800" />
-
-                {/* Grupo 3 — Valores */}
-                <div className="px-6 pt-4 pb-4">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Valores</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'usd_value')!} />
+                    <div className="col-span-2 sm:col-span-1">
+                      <Field field={EDITABLE_FIELDS.find(f => f.key === 'stage')!} />
+                    </div>
                     <Field field={EDITABLE_FIELDS.find(f => f.key === 'probability')!} />
-                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'close_date')!} />
+                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'budgetary')!} />
+                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'renew')!} />
+                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'is_engineering_ticket')!} />
                   </div>
                 </div>
 
                 <div className="mx-6 border-t border-gray-100 dark:border-gray-800" />
 
-                {/* Grupo 4 — Classificacao */}
+                {/* Grupo 2 — Comentarios simples */}
                 <div className="px-6 pt-4 pb-4">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Classificacao</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'sales_territory')!} />
-                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'vendor')!} />
-                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'bu')!} />
-                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'master_customer')!} />
-                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'end_user')!} />
-                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'team')!} />
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Comentarios</p>
+                  <div className="flex flex-col gap-3">
+                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'pipe_comments')!} />
+                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'quote_comments')!} />
                   </div>
                 </div>
 
                 <div className="mx-6 border-t border-gray-100 dark:border-gray-800" />
 
-                {/* Grupo 5 — Comentarios (rich text, sempre por ultimo) */}
+                {/* Grupo 3 — Comentarios rich text + historico */}
                 <div className="px-6 pt-4 pb-5">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Notas Gerais (Rich Text)</p>
                   {(() => {
                     const commentsChanged = editDraft.comments !== undefined &&
                       (editDraft.comments ?? '').replace(/<[^>]+>/g, '').trim() !== '';
