@@ -124,9 +124,9 @@ export default function DashboardPage() {
     }),
     { label: 'Total Pipeline', value: `${primaryQuotes.length} quotes`, unit: `$${(totalPipeline / 1_000_000).toFixed(1)}M`, trend: '+0%' },
     { label: 'Budgetary', value: `${budgetaryCount} quotes`, unit: `$${(budgetaryTotal / 1_000_000).toFixed(1)}M`, trend: '+0%' },
-    { label: 'Avg USD', value: 'por quote', unit: `$${(avgUsd / 1000).toFixed(0)}K`, trend: '+0%' },
-    { label: 'Min USD', value: 'menor deal', unit: `$${(minUsd / 1000).toFixed(0)}K`, trend: '+0%' },
-    { label: 'Max USD', value: 'maior deal', unit: `$${(maxUsd / 1_000_000).toFixed(1)}M`, trend: '+0%' },
+    { label: 'Avg CIF', value: 'por quote', unit: `$${(avgUsd / 1000).toFixed(0)}K`, trend: '+0%' },
+    { label: 'Min CIF', value: 'menor deal', unit: `$${(minUsd / 1000).toFixed(0)}K`, trend: '+0%' },
+    { label: 'Max CIF', value: 'maior deal', unit: `$${(maxUsd / 1_000_000).toFixed(1)}M`, trend: '+0%' },
     { label: 'Win Rate', value: 'taxa de ganho', unit: `${winRate}%`, trend: '+0%' },
   ];
 
@@ -403,7 +403,7 @@ export default function DashboardPage() {
                   <XAxis dataKey="name" angle={-30} height={60} tick={{ fontSize: 10, fill: '#6b7280' }} />
                   <YAxis tick={{ fontSize: 10, fill: '#6b7280' }} tickFormatter={(v) => `$${(v/1000000).toFixed(1)}M`} />
                   <Tooltip
-                    formatter={(value, name) => name === 'value' ? [`$${(Number(value) / 1_000_000).toFixed(1)}M`, 'USD'] : [value, 'Quotes']}
+                    formatter={(value, name) => name === 'value' ? [`$${(Number(value) / 1_000_000).toFixed(1)}M`, 'CIF'] : [value, 'Quotes']}
                     labelFormatter={(label) => `Stage: ${label}`}
                   />
                   <Bar dataKey="value" fill="#3b82f6" radius={[6, 6, 0, 0]} />
