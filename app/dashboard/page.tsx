@@ -106,7 +106,7 @@ export default function DashboardPage() {
   const notClassifiedCount = primaryQuotes.filter(q => q.stage === 'Not Classified').length;
   const highProbCount = primaryQuotes.filter(q => q.stage === 'Committed 75%').length;
   const highProbTotal = primaryQuotes.filter(q => q.stage === 'Committed 75%').reduce((s, q) => s + q.usd_value, 0);
-  const lostTotal = primaryQuotes.filter(q => q.stage === 'Net Lost').reduce((s, q) => s + q.usd_value, 0);
+  const netLostKpiTotal = primaryQuotes.filter(q => q.stage === 'Net Lost').reduce((s, q) => s + q.usd_value, 0);
   const salesorderCount = primaryQuotes.filter(q => q.status === 'SALESORDER').length;
   const winRate = primaryQuotes.length ? Math.round((salesorderCount / primaryQuotes.length) * 100) : 0;
 
@@ -127,7 +127,7 @@ export default function DashboardPage() {
     { label: 'Total Pipeline', value: `${primaryQuotes.length} quotes`, unit: `$${(totalPipeline / 1_000_000).toFixed(1)}M`, trend: '+0%' },
     { label: 'Not Classified', value: `${notClassifiedCount} sem stage`, unit: `${notClassifiedCount} quotes`, trend: '0' },
     { label: 'High Prob (75%)', value: `${highProbCount} committed`, unit: `$${(highProbTotal / 1_000_000).toFixed(1)}M`, trend: '+0%' },
-    { label: 'Lost Value', value: 'Net Lost acumulado', unit: `$${(lostTotal / 1_000_000).toFixed(1)}M`, trend: '+0%' },
+    { label: 'Lost Value', value: 'Net Lost acumulado', unit: `$${(netLostKpiTotal / 1_000_000).toFixed(1)}M`, trend: '+0%' },
     { label: 'Avg CIF', value: 'por quote', unit: `$${(avgUsd / 1000).toFixed(0)}K`, trend: '+0%' },
     { label: 'Min CIF', value: 'menor deal', unit: `$${(minUsd / 1000).toFixed(0)}K`, trend: '+0%' },
     { label: 'Max CIF', value: 'maior deal', unit: `$${(maxUsd / 1_000_000).toFixed(1)}M`, trend: '+0%' },
