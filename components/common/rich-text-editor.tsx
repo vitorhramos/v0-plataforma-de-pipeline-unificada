@@ -8,7 +8,7 @@ import Image from '@tiptap/extension-image';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   Bold, Italic, Underline as UnderlineIcon, Link as LinkIcon,
-  Image as ImageIcon, List, ListOrdered, X, LinkIcon as UnlinkIcon,
+  Image as ImageIcon, List, ListOrdered, X,
 } from 'lucide-react';
 
 interface RichTextEditorProps {
@@ -26,18 +26,29 @@ import { Node, mergeAttributes } from '@tiptap/core';
 const AlphaList = Node.create({
   name: 'alphaList',
   group: 'block list',
+  // Use the standard listItem node so StarterKit's indent/outdent and
+  // Enter/Backspace keyboard shortcuts work out of the box.
   content: 'listItem+',
   parseHTML() {
-    return [{ tag: 'ol[data-type="alpha"]' }];
+    return [{ tag: 'ol[data-list-type="alpha"]' }];
   },
   renderHTML({ HTMLAttributes }) {
-    return ['ol', mergeAttributes(HTMLAttributes, { 'data-type': 'alpha', style: 'list-style-type: lower-alpha; padding-left: 1.25rem; margin: 0.25rem 0;' }), 0];
+    return [
+      'ol',
+      mergeAttributes(HTMLAttributes, {
+        'data-list-type': 'alpha',
+        style: 'list-style-type: lower-alpha; padding-left: 1.25rem; margin: 0.25rem 0;',
+      }),
+      0,
+    ];
   },
   addCommands() {
     return {
-      toggleAlphaList: () => ({ commands }: { commands: any }) => {
-        return commands.toggleList('alphaList', 'listItem');
-      },
+      // toggleList is provided by @tiptap/extension-list which StarterKit includes
+      toggleAlphaList:
+        () =>
+        ({ commands }: { commands: Record<string, (...args: unknown[]) => boolean> }) =>
+          commands['toggleList']('alphaList', 'listItem'),
     } as any;
   },
   addKeyboardShortcuts() {
@@ -101,6 +112,7 @@ export function RichTextEditor({ value, onChange, placeholder, changed }: RichTe
         HTMLAttributes: { class: 'text-blue-600 underline cursor-pointer' },
       }),
       Image.configure({
+        allowBase64: true,
         HTMLAttributes: { class: 'max-w-full rounded my-2' },
       }),
       AlphaList,
@@ -279,14 +291,14 @@ export function RichTextEditor({ value, onChange, placeholder, changed }: RichTe
           )}
         </div>
 
-        {/* Remove link (shown only when cursor is on a link) */}
+        {/* Remove link — shown only when cursor is inside a link */}
         {editor.isActive('link') && (
           <ToolBtn
             active={false}
             onClick={() => editor.chain().focus().unsetLink().run()}
             title="Remover link"
           >
-            <span className="text-[11px] font-bold leading-none line-through select-none">url</span>
+            <span className="text-[10px] font-bold leading-none text-red-500 select-none">unlink</span>
           </ToolBtn>
         )}
 
