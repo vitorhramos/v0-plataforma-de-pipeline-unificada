@@ -173,7 +173,13 @@ function buildInitial(): Quote[] {
       id: i + 1,
       cpo_id: `CPO-${String(i + 1001).padStart(4, '0').slice(-4)}`,
       vpc_code: VPC_CODES[i % VPC_CODES.length],
-      part_no: `${PART_PREFIXES[i % PART_PREFIXES.length]}-${String(10000 + i * 137).slice(-5)}`,
+      part_no: i % 3 === 0
+        ? [
+            `${PART_PREFIXES[i % PART_PREFIXES.length]}-${String(10000 + i * 137).slice(-5)}`,
+            `${PART_PREFIXES[(i + 1) % PART_PREFIXES.length]}-${String(20000 + i * 79).slice(-5)}`,
+            `${PART_PREFIXES[(i + 2) % PART_PREFIXES.length]}-${String(30000 + i * 53).slice(-5)}`,
+          ].join(', ')
+        : `${PART_PREFIXES[i % PART_PREFIXES.length]}-${String(10000 + i * 137).slice(-5)}`,
       description: `Solucao ${PART_PREFIXES[i % PART_PREFIXES.length]} Enterprise`,
       sales_territory: ['Sao Paulo', 'Rio de Janeiro', 'Minas Gerais'][i % 3],
       team: ['Team Alpha', 'Team Beta', 'Team Gamma'][i % 3],
@@ -186,8 +192,8 @@ function buildInitial(): Quote[] {
       fob_value: fobVal,
       gm_pct: gm,
       cpo_qty: 1 + (i % 10),
-      stage: ['Pipelined', 'Pricing 25%', 'Up Selling 50%', 'Committed 75%', 'Net Lost'][i % 5],
-      probability: [20, 40, 60, 80, 0][i % 5],
+      stage: ['Pipelined', 'Pricing 25%', 'Up Selling 50%', 'Committed 75%', 'Net Lost', 'Not Classified'][i % 6],
+      probability: [20, 40, 60, 80, 0, 0][i % 6],
       lost_reason: i % 5 === 4 ? LOSS_REASONS[i % LOSS_REASONS.length] : undefined,
       lost_comment: i % 5 === 4 ? 'Perda registrada automaticamente no seed de dados.' : undefined,
       created_date: CREATED_DATES[i % CREATED_DATES.length],

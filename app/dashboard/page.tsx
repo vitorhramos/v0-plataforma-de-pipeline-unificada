@@ -103,12 +103,14 @@ export default function DashboardPage() {
   const avgUsd = primaryQuotes.length ? totalPipeline / primaryQuotes.length : 0;
   const minUsd = primaryQuotes.length ? Math.min(...primaryQuotes.map(q => q.usd_value)) : 0;
   const maxUsd = primaryQuotes.length ? Math.max(...primaryQuotes.map(q => q.usd_value)) : 0;
-  const budgetaryCount = primaryQuotes.filter(q => q.budgetary === 'Yes').length;
-  const budgetaryTotal = primaryQuotes.filter(q => q.budgetary === 'Yes').reduce((s, q) => s + q.usd_value, 0);
+  const notClassifiedCount = primaryQuotes.filter(q => q.stage === 'Not Classified').length;
+  const highProbCount = primaryQuotes.filter(q => q.stage === 'Committed 75%').length;
+  const highProbTotal = primaryQuotes.filter(q => q.stage === 'Committed 75%').reduce((s, q) => s + q.usd_value, 0);
+  const lostTotal = primaryQuotes.filter(q => q.stage === 'Net Lost').reduce((s, q) => s + q.usd_value, 0);
   const salesorderCount = primaryQuotes.filter(q => q.status === 'SALESORDER').length;
   const winRate = primaryQuotes.length ? Math.round((salesorderCount / primaryQuotes.length) * 100) : 0;
 
-  const STAGES = ['Pipelined', 'Pricing 25%', 'Up Selling 50%', 'Committed 75%', 'Net Lost'];
+  const STAGES = ['Not Classified', 'Pipelined', 'Pricing 25%', 'Up Selling 50%', 'Committed 75%', 'Net Lost'];
   const realStageData = STAGES.map(stage => ({
     name: stage,
     value: primaryQuotes.filter(q => q.stage === stage).reduce((s, q) => s + q.usd_value, 0),
@@ -123,7 +125,9 @@ export default function DashboardPage() {
       return { label: stage, value: `${qs.length} quotes`, unit: `$${(usd / 1_000_000).toFixed(1)}M`, trend: '+0%' };
     }),
     { label: 'Total Pipeline', value: `${primaryQuotes.length} quotes`, unit: `$${(totalPipeline / 1_000_000).toFixed(1)}M`, trend: '+0%' },
-    { label: 'Budgetary', value: `${budgetaryCount} quotes`, unit: `$${(budgetaryTotal / 1_000_000).toFixed(1)}M`, trend: '+0%' },
+    { label: 'Not Classified', value: `${notClassifiedCount} sem stage`, unit: `${notClassifiedCount} quotes`, trend: '0' },
+    { label: 'High Prob (75%)', value: `${highProbCount} committed`, unit: `$${(highProbTotal / 1_000_000).toFixed(1)}M`, trend: '+0%' },
+    { label: 'Lost Value', value: 'Net Lost acumulado', unit: `$${(lostTotal / 1_000_000).toFixed(1)}M`, trend: '+0%' },
     { label: 'Avg CIF', value: 'por quote', unit: `$${(avgUsd / 1000).toFixed(0)}K`, trend: '+0%' },
     { label: 'Min CIF', value: 'menor deal', unit: `$${(minUsd / 1000).toFixed(0)}K`, trend: '+0%' },
     { label: 'Max CIF', value: 'maior deal', unit: `$${(maxUsd / 1_000_000).toFixed(1)}M`, trend: '+0%' },
@@ -266,7 +270,7 @@ export default function DashboardPage() {
               <div className="bg-white rounded-xl border-l-4 border-l-violet-500 border border-gray-200 px-4 py-3 hover:shadow-md transition cursor-help">
                 <div className="flex items-center gap-1.5 mb-2">
                   <Layers className="w-3 h-3 text-violet-500 shrink-0" />
-                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide truncate leading-none">Cenarios</p>
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide truncate leading-none">Cen. Alternativos</p>
                 </div>
                 <p className="text-lg font-bold text-gray-900 leading-none">{groups.length} grupos</p>
                 <div className="flex items-center justify-between mt-2">
@@ -307,6 +311,7 @@ export default function DashboardPage() {
                 <label className="block text-xs font-medium text-gray-600 mb-1">Stage</label>
                 <select className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
                   <option>Todos</option>
+                  <option>Not Classified</option>
                   <option>Pipelined</option>
                   <option>Pricing 25%</option>
                   <option>Up Selling 50%</option>
@@ -331,14 +336,7 @@ export default function DashboardPage() {
                 <label className="block text-xs font-medium text-gray-600 mb-1">Fabricante</label>
                 <input type="text" placeholder="Buscar..." className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Budgetary</label>
-                <select className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                  <option>Todos</option>
-                  <option>Yes</option>
-                  <option>No</option>
-                </select>
-              </div>
+
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">BU</label>
                 <input type="text" placeholder="Buscar..." className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -418,9 +416,9 @@ export default function DashboardPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <Layers className="w-4 h-4 text-violet-500" />
-                    <h3 className="text-sm font-semibold text-gray-900">Cenarios por Probabilidade</h3>
+                    <h3 className="text-sm font-semibold text-gray-900">Distribuicao de Cenarios Alternativos</h3>
                   </div>
-                  <p className="text-[11px] text-gray-400 mt-0.5">{groups.length} grupos · {totalGroupedQuotes} cenarios</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">{groups.length} grupos · {totalGroupedQuotes} cenarios por probabilidade de fechamento</p>
                 </div>
               </div>
               <ResponsiveContainer width="100%" height={200}>

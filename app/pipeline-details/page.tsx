@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { SlidersHorizontal, X, Pencil, Check, History, Loader2, ChevronUp, ChevronDown, HelpCircle, List, LayoutGrid, Columns3, Layers, ChevronRight, Star, BookmarkCheck, RotateCcw, Bookmark } from 'lucide-react';
+import { SlidersHorizontal, X, Pencil, Check, History, Loader2, ChevronUp, ChevronDown, HelpCircle, List, LayoutGrid, Columns3, Layers, ChevronRight, Star, BookmarkCheck, RotateCcw, Bookmark, Lock } from 'lucide-react';
 import { Breadcrumbs, Tooltip } from '@/components/common/breadcrumbs-tooltips';
 import { useOperationHistory } from '@/components/common/operation-history';
 import { useToast } from '@/components/common/toast';
@@ -116,6 +116,7 @@ const STAGE_COLORS: Record<string, string> = {
 };
 
 const STAGE_BORDER: Record<string, string> = {
+  'Not Classified': 'border-l-gray-400',
   'Pipelined':      'border-l-blue-400',
   'Pricing 25%':    'border-l-violet-400',
   'Up Selling 50%': 'border-l-amber-400',
@@ -289,6 +290,10 @@ export default function PipelineDetailsPage() {
   const [pageSize, setPageSize] = useState(25);
   const [searchTerm, setSearchTerm] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filterSections, setFilterSections] = useState({ identificacao: true, classificacao: true, valores: true, flags: true });
+  const [partNoPopover, setPartNoPopover] = useState<{ id: string; parts: string[] } | null>(null);
+  const toggleFilterSection = (key: keyof typeof filterSections) =>
+    setFilterSections(prev => ({ ...prev, [key]: !prev[key] }));
   const [filters, setFilters] = useState(() => getFiltersFromUrl());
   const [applied, setApplied] = useState(() => getFiltersFromUrl());
 
@@ -1274,27 +1279,44 @@ export default function PipelineDetailsPage() {
                 <div className="divide-y divide-gray-100">
 
                   {/* Row 1 — Identificacao */}
-                  <div className="px-5 py-4">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Identificacao</p>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div>
-                        <label className={lbl}>CPO ID</label>
-                        <input type="text" placeholder="CPO-1001..." value={filters.cpo_id} onChange={e => setF('cpo_id', e.target.value)} className={inp} />
+                  <div className="px-5 py-3">
+                    <button
+                      type="button"
+                      onClick={() => toggleFilterSection('identificacao')}
+                      className="flex items-center justify-between w-full group mb-1"
+                    >
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest group-hover:text-gray-600 transition">Identificacao</span>
+                      <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${filterSections.identificacao ? '' : '-rotate-90'}`} />
+                    </button>
+                    {filterSections.identificacao && (
+                      <div className="grid grid-cols-3 gap-3 mt-3">
+                        <div>
+                          <label className={lbl}>CPO ID</label>
+                          <input type="text" placeholder="CPO-1001..." value={filters.cpo_id} onChange={e => setF('cpo_id', e.target.value)} className={inp} />
+                        </div>
+                        <div>
+                          <label className={lbl}>Part No</label>
+                          <input type="text" placeholder="NX-10000..." value={filters.part_no} onChange={e => setF('part_no', e.target.value)} className={inp} />
+                        </div>
+                        <div>
+                          <label className={lbl}>Quote Name</label>
+                          <input type="text" placeholder="QT-024000..." value={filters.quote_name} onChange={e => setF('quote_name', e.target.value)} className={inp} />
+                        </div>
                       </div>
-                      <div>
-                        <label className={lbl}>Part No</label>
-                        <input type="text" placeholder="NX-10000..." value={filters.part_no} onChange={e => setF('part_no', e.target.value)} className={inp} />
-                      </div>
-                      <div>
-                        <label className={lbl}>Quote Name</label>
-                        <input type="text" placeholder="QT-024000..." value={filters.quote_name} onChange={e => setF('quote_name', e.target.value)} className={inp} />
-                      </div>
-                    </div>
+                    )}
                   </div>
 
                   {/* Row 2 — Classificacao */}
-                  <div className="px-5 py-4">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Classificacao</p>
+                  <div className="px-5 py-3">
+                    <button
+                      type="button"
+                      onClick={() => toggleFilterSection('classificacao')}
+                      className="flex items-center justify-between w-full group mb-1"
+                    >
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest group-hover:text-gray-600 transition">Classificacao</span>
+                      <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${filterSections.classificacao ? '' : '-rotate-90'}`} />
+                    </button>
+                    {filterSections.classificacao && (<>
                     <div className="grid grid-cols-3 gap-3 mb-3">
                       <div>
                         <label className={lbl}>Territory</label>
@@ -1350,28 +1372,46 @@ export default function PipelineDetailsPage() {
                         <ChipGroup options={PROD_TYPES_LIST} filterKey="prod_type" />
                       </div>
                     </div>
+                    </>)}
                   </div>
 
                   {/* Row 3 — Valores + Datas + Idade */}
-                  <div className="px-5 py-4">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Valores, Datas e Idade</p>
-                    <div className="grid grid-cols-3 gap-3">
-                      <RangeInput labelText="CIF (USD)" minKey="min_usd" maxKey="max_usd" />
-                      <RangeInput labelText="Probabilidade (%)" minKey="min_prob" maxKey="max_prob" minPlaceholder="0" maxPlaceholder="100" />
-                      <RangeInput labelText="GM %" minKey="min_gm" maxKey="max_gm" minPlaceholder="0" maxPlaceholder="100" />
-                      <RangeInput labelText="Close Date" minKey="close_date_from" maxKey="close_date_to" type="date" />
-                      <RangeInput labelText="Created Date" minKey="created_date_from" maxKey="created_date_to" type="date" />
-                      <RangeInput labelText="Age (dias)" minKey="min_age" maxKey="max_age" />
-                    </div>
+                  <div className="px-5 py-3">
+                    <button
+                      type="button"
+                      onClick={() => toggleFilterSection('valores')}
+                      className="flex items-center justify-between w-full group mb-1"
+                    >
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest group-hover:text-gray-600 transition">Valores, Datas e Idade</span>
+                      <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${filterSections.valores ? '' : '-rotate-90'}`} />
+                    </button>
+                    {filterSections.valores && (
+                      <div className="grid grid-cols-3 gap-3 mt-3">
+                        <RangeInput labelText="CIF (USD)" minKey="min_usd" maxKey="max_usd" />
+                        <RangeInput labelText="GM %" minKey="min_gm" maxKey="max_gm" minPlaceholder="0" maxPlaceholder="100" />
+                        <RangeInput labelText="Age (dias)" minKey="min_age" maxKey="max_age" />
+                        <RangeInput labelText="Close Date" minKey="close_date_from" maxKey="close_date_to" type="date" />
+                        <RangeInput labelText="Created Date" minKey="created_date_from" maxKey="created_date_to" type="date" />
+                      </div>
+                    )}
                   </div>
 
                   {/* Row 4 — Flags */}
-                  <div className="px-5 py-4">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Flags</p>
-                    <div className="grid grid-cols-2 gap-4">
-                      <FlagToggle label="Renew" filterKey="renew" />
-                      <FlagToggle label="Eng. Ticket" filterKey="eng_ticket" />
-                    </div>
+                  <div className="px-5 py-3">
+                    <button
+                      type="button"
+                      onClick={() => toggleFilterSection('flags')}
+                      className="flex items-center justify-between w-full group mb-1"
+                    >
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest group-hover:text-gray-600 transition">Flags</span>
+                      <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${filterSections.flags ? '' : '-rotate-90'}`} />
+                    </button>
+                    {filterSections.flags && (
+                      <div className="grid grid-cols-2 gap-4 mt-3">
+                        <FlagToggle label="Renew" filterKey="renew" />
+                        <FlagToggle label="Eng. Ticket" filterKey="eng_ticket" />
+                      </div>
+                    )}
                   </div>
 
                 </div>
@@ -1763,15 +1803,37 @@ export default function PipelineDetailsPage() {
                           const parts = (quote.part_no ?? '').split(',').map((s: string) => s.trim()).filter(Boolean);
                           const first = parts[0] ?? '—';
                           const extra = parts.length - 1;
+                          const popId = `pn-${quote.id}`;
+                          const isOpen = partNoPopover?.id === popId;
                           return (
                             <td key={k} className="px-3 py-2.5 whitespace-nowrap">
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1.5 relative">
                                 <span className="font-mono text-gray-700 text-[11px]">{first}</span>
                                 {extra > 0 && (
-                                  <span
-                                    className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-blue-100 text-blue-700 cursor-default"
-                                    title={parts.slice(1).join(', ')}
-                                  >+{extra}</span>
+                                  <button
+                                    type="button"
+                                    onClick={e => { e.stopPropagation(); setPartNoPopover(isOpen ? null : { id: popId, parts }); }}
+                                    className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold border transition-all ${isOpen ? 'bg-blue-600 text-white border-blue-600' : 'bg-blue-100 text-blue-700 border-transparent hover:bg-blue-200'}`}
+                                  >+{extra}</button>
+                                )}
+                                {isOpen && (
+                                  <div className="absolute left-0 top-6 z-50 bg-white border border-gray-200 rounded-xl shadow-xl p-3 min-w-[180px]" onClick={e => e.stopPropagation()}>
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Todos os Part No ({parts.length})</p>
+                                    <div className="flex flex-col gap-1.5">
+                                      {parts.map((p, i) => (
+                                        <div key={i} className="flex items-center gap-2">
+                                          <span className="font-mono text-xs text-gray-800 font-medium">{p}</span>
+                                          <button
+                                            type="button"
+                                            onClick={() => { navigator.clipboard?.writeText(p); }}
+                                            className="ml-auto text-[10px] text-gray-400 hover:text-blue-600 transition"
+                                            title="Copiar"
+                                          >copiar</button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <button type="button" onClick={() => setPartNoPopover(null)} className="mt-2.5 w-full text-center text-[10px] text-gray-400 hover:text-gray-600 transition border-t border-gray-100 pt-2">Fechar</button>
+                                  </div>
                                 )}
                               </div>
                             </td>
@@ -2288,6 +2350,7 @@ export default function PipelineDetailsPage() {
                       <div className="flex rounded-lg border border-gray-200 overflow-hidden mb-3 w-fit">
                         {(['pipe', 'quote'] as const).map(tab => {
                           const label = tab === 'pipe' ? 'Pipe Comments' : 'Quote Comments';
+                          const isReadOnly = tab === 'quote';
                           const hasUnsaved = tab === 'pipe' ? pipeHasContent : quoteHasContent;
                           const histCount = (tab === 'pipe' ? pipeHistory : quoteHistory).length;
                           return (
@@ -2301,7 +2364,10 @@ export default function PipelineDetailsPage() {
                                   : 'bg-white text-gray-500 hover:bg-gray-50'
                               }`}
                             >
-                              {label}
+                              <span className="flex items-center gap-1">
+                                {isReadOnly && <Lock className="w-3 h-3 shrink-0 opacity-70" />}
+                                {label}
+                              </span>
                               {hasUnsaved && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />}
                               {histCount > 0 && (
                                 <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${activeTab === tab ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
@@ -2323,7 +2389,11 @@ export default function PipelineDetailsPage() {
                           changed={pipeHasContent}
                         />
                       ) : (
-                        <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 min-h-[80px]">
+                        <div className="rounded-lg border border-gray-200 bg-gray-50/80 ring-1 ring-gray-200 px-3 py-2.5 min-h-[80px]">
+                          <div className="flex items-center gap-1.5 mb-2 pb-1.5 border-b border-gray-200">
+                            <Lock className="w-3 h-3 text-gray-400" />
+                            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Somente leitura</span>
+                          </div>
                           {editingQuote.quote_comments
                             ? <div
                                 className="text-xs text-gray-700 prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-4 [&_a]:text-blue-600 [&_a]:underline"
