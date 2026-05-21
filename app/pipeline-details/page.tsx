@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { SlidersHorizontal, X, Pencil, Check, History, Loader2, ChevronUp, ChevronDown, HelpCircle, List, LayoutGrid, Columns3, Layers, ChevronRight, Star } from 'lucide-react';
+import { SlidersHorizontal, X, Pencil, Check, History, Loader2, ChevronUp, ChevronDown, HelpCircle, List, LayoutGrid, Columns3, Layers, ChevronRight, Star, BookmarkCheck, RotateCcw, Bookmark } from 'lucide-react';
 import { Breadcrumbs, Tooltip } from '@/components/common/breadcrumbs-tooltips';
 import { useOperationHistory } from '@/components/common/operation-history';
 import { useToast } from '@/components/common/toast';
@@ -338,18 +338,37 @@ export default function PipelineDetailsPage() {
 
   const DEFAULT_COL_ORDER = ALL_COLUMNS.map(c => c.key);
 
+  const mergeWithDefault = (parsed: (keyof Quote)[]) =>
+    [...parsed.filter(k => DEFAULT_COL_ORDER.includes(k)), ...DEFAULT_COL_ORDER.filter(k => !parsed.includes(k))];
+
   const [colOrder, setColOrder] = useState<(keyof Quote)[]>(() => {
     try {
+      // Preferred order takes priority on load
+      const preferred = localStorage.getItem('pipeline-col-order-preferred');
+      if (preferred) return mergeWithDefault(JSON.parse(preferred));
       const saved = localStorage.getItem('pipeline-col-order');
-      if (saved) {
-        const parsed: (keyof Quote)[] = JSON.parse(saved);
-        // Ensure all columns present (new columns added later)
-        const merged = [...parsed.filter(k => DEFAULT_COL_ORDER.includes(k)), ...DEFAULT_COL_ORDER.filter(k => !parsed.includes(k))];
-        return merged;
-      }
+      if (saved) return mergeWithDefault(JSON.parse(saved));
     } catch {}
     return DEFAULT_COL_ORDER;
   });
+
+  const [hasPreferredOrder, setHasPreferredOrder] = useState<boolean>(() => {
+    try { return !!localStorage.getItem('pipeline-col-order-preferred'); } catch { return false; }
+  });
+
+  // Whether the current order differs from the absolute default
+  const isDefaultOrder = colOrder.join() === DEFAULT_COL_ORDER.join();
+
+  // Whether the current order differs from the saved preferred order
+  const isPreferredOrder = hasPreferredOrder && (() => {
+    try {
+      const p = localStorage.getItem('pipeline-col-order-preferred');
+      return p ? JSON.parse(p).join() === colOrder.join() : false;
+    } catch { return false; }
+  })();
+
+  const [colMenuOpen, setColMenuOpen] = useState(false);
+  const colMenuRef = useRef<HTMLDivElement>(null);
 
   const [dragOverKey, setDragOverKey] = useState<keyof Quote | null>(null);
   const dragSrcKey = useRef<keyof Quote | null>(null);
@@ -426,6 +445,18 @@ export default function PipelineDetailsPage() {
   const [scenarioSavedFeedback, setScenarioSavedFeedback] = useState(false);
 
   // ── Esc closes the topmost open modal ────────────────────────────────────
+  // Close column order menu when clicking outside
+  useEffect(() => {
+    if (!colMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (colMenuRef.current && !colMenuRef.current.contains(e.target as Node)) {
+        setColMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [colMenuOpen]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
@@ -974,15 +1005,91 @@ export default function PipelineDetailsPage() {
 
           {/* Espacador + page size */}
           <div className="flex-1" />
-          {colOrder.join() !== DEFAULT_COL_ORDER.join() && (
-            <button
-              onClick={() => { setColOrder(DEFAULT_COL_ORDER); localStorage.removeItem('pipeline-col-order'); }}
-              data-tour="reset-cols"
-              className="px-3 py-2 text-xs font-medium text-gray-500 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition whitespace-nowrap shrink-0"
-              title="Restaurar ordem original das colunas"
-            >
-              Resetar colunas
-            </button>
+          {/* Column order actions */}
+          {(!isDefaultOrder || hasPreferredOrder) && (
+            <div className="relative shrink-0" ref={colMenuRef}>
+              <button
+                onClick={() => setColMenuOpen(o => !o)}
+                data-tour="reset-cols"
+                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition whitespace-nowrap ${
+                  isPreferredOrder
+                    ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
+                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {isPreferredOrder
+                  ? <BookmarkCheck className="w-3.5 h-3.5" />
+                  : <Columns3 className="w-3.5 h-3.5" />
+                }
+                <span>{isPreferredOrder ? 'Visao preferencial' : 'Colunas alteradas'}</span>
+                <ChevronDown className="w-3 h-3 opacity-60" />
+              </button>
+
+              {colMenuOpen && (
+                <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden py-1">
+                  {/* Save as preferred */}
+                  <button
+                    onClick={() => {
+                      localStorage.setItem('pipeline-col-order-preferred', JSON.stringify(colOrder));
+                      localStorage.setItem('pipeline-col-order', JSON.stringify(colOrder));
+                      setHasPreferredOrder(true);
+                      setColMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-700 hover:bg-gray-50 transition"
+                  >
+                    <Bookmark className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                    <div className="text-left">
+                      <p className="font-semibold">Salvar como preferencial</p>
+                      <p className="text-gray-400 text-[10px] leading-tight">Define esta ordem como padrao</p>
+                    </div>
+                  </button>
+
+                  {/* Restore preferred — only if there is one saved and current differs */}
+                  {hasPreferredOrder && !isPreferredOrder && (
+                    <button
+                      onClick={() => {
+                        try {
+                          const p = localStorage.getItem('pipeline-col-order-preferred');
+                          if (p) {
+                            const order = mergeWithDefault(JSON.parse(p));
+                            setColOrder(order);
+                            localStorage.setItem('pipeline-col-order', JSON.stringify(order));
+                          }
+                        } catch {}
+                        setColMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-700 hover:bg-gray-50 transition"
+                    >
+                      <BookmarkCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                      <div className="text-left">
+                        <p className="font-semibold">Restaurar preferencial</p>
+                        <p className="text-gray-400 text-[10px] leading-tight">Volta para sua visao salva</p>
+                      </div>
+                    </button>
+                  )}
+
+                  <div className="my-1 border-t border-gray-100" />
+
+                  {/* Reset to factory default */}
+                  <button
+                    onClick={() => {
+                      setColOrder(DEFAULT_COL_ORDER);
+                      localStorage.removeItem('pipeline-col-order');
+                      localStorage.removeItem('pipeline-col-order-preferred');
+                      setHasPreferredOrder(false);
+                      setColMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-700 hover:bg-red-50 transition group"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-gray-400 group-hover:text-red-500 shrink-0" />
+                    <div className="text-left">
+                      <p className="font-semibold group-hover:text-red-600">Resetar para original</p>
+                      <p className="text-gray-400 text-[10px] leading-tight">Remove qualquer customizacao</p>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
           )}
           <select value={pageSize} onChange={e => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }} data-tour="pagination" className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition shrink-0">
             <option value={25}>25 / pag</option>
