@@ -49,8 +49,9 @@ type Quote = {
   prod_type?: string;
   renew?: string;
   pipe_comments?: string;
+  pipeCommentHistory?: CommentEntry[];
   quote_comments?: string;
-  budgetary: string;
+  quoteCommentHistory?: CommentEntry[];
   hts_code?: string;
   hts_description?: string;
   is_engineering_ticket?: string;
@@ -142,8 +143,6 @@ const EDITABLE_FIELDS: { key: keyof Quote; label: string; type: 'text' | 'select
   { key: 'renew',                  label: 'Renew',              type: 'select',   options: ['Yes', 'No'] },
   { key: 'budgetary',              label: 'Budgetary Related',  type: 'select',   options: ['Yes', 'No'] },
   { key: 'is_engineering_ticket',  label: 'Eng. Ticket',        type: 'select',   options: ['Yes', 'No'] },
-  { key: 'pipe_comments',          label: 'Pipe Comments',      type: 'textarea' },
-  { key: 'quote_comments',         label: 'Quote Comments',     type: 'textarea' },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -626,21 +625,34 @@ export default function PipelineDetailsPage() {
     if (!editingQuote) return;
     const updated: Quote = { ...editingQuote, ...editDraft };
 
-    // Append non-empty comment to history, then clear the draft editor field
-    const rawComment = (editDraft.comments ?? '').replace(/<[^>]+>/g, '').trim();
-    if (editDraft.comments !== undefined && rawComment !== '') {
-      const entry: CommentEntry = {
-        id: `c-${Date.now()}`,
-        html: editDraft.comments,
-        author: 'TD SYNNEX',
-        timestamp: new Date().toISOString(),
-      };
-      updated.commentHistory = [...(editingQuote.commentHistory ?? []), entry];
-      updated.comments = '';
-    }
+    // Helper: append rich-text draft to history and clear draft
+    const appendHistory = (
+      draftKey: 'pipe_comments' | 'quote_comments' | 'comments',
+      historyKey: 'pipeCommentHistory' | 'quoteCommentHistory' | 'commentHistory',
+    ) => {
+      const html = (editDraft[draftKey] ?? '') as string;
+      const raw = html.replace(/<[^>]+>/g, '').trim();
+      if (editDraft[draftKey] !== undefined && raw !== '') {
+        const entry: CommentEntry = {
+          id: `c-${Date.now()}-${draftKey}`,
+          html,
+          author: 'TD SYNNEX',
+          timestamp: new Date().toISOString(),
+        };
+        (updated as Record<string, unknown>)[historyKey] = [
+          ...((editingQuote[historyKey] as CommentEntry[] | undefined) ?? []),
+          entry,
+        ];
+        (updated as Record<string, unknown>)[draftKey] = '';
+      }
+    };
+
+    appendHistory('pipe_comments', 'pipeCommentHistory');
+    appendHistory('quote_comments', 'quoteCommentHistory');
+    appendHistory('comments', 'commentHistory');
 
     (Object.keys(editDraft) as (keyof Quote)[]).forEach(key => {
-      if (key === 'comments') return; // handled above
+      if (key === 'pipe_comments' || key === 'quote_comments' || key === 'comments') return;
       const oldVal = String(editingQuote[key] ?? '');
       const newVal = String((editDraft as Record<string, unknown>)[key] ?? '');
       if (oldVal !== newVal) recordVersion(editingQuote.id, key, oldVal, newVal);
@@ -1713,9 +1725,15 @@ export default function PipelineDetailsPage() {
           );
         };
 
+        const richTextKeys = new Set(['pipe_comments', 'quote_comments', 'comments']);
         const changedCount = Object.keys(editDraft).filter(k => {
           const draftVal = (editDraft as Record<string, unknown>)[k];
-          return draftVal !== undefined && String(draftVal) !== String(editingQuote[k as keyof Quote] ?? '');
+          if (draftVal === undefined) return false;
+          // For rich-text fields count as changed only if there is actual visible content
+          if (richTextKeys.has(k)) {
+            return String(draftVal).replace(/<[^>]+>/g, '').trim() !== '';
+          }
+          return String(draftVal) !== String(editingQuote[k as keyof Quote] ?? '');
         }).length;
 
         return (
@@ -1796,52 +1814,83 @@ export default function PipelineDetailsPage() {
 
                 <div className="mx-6 border-t border-gray-100 dark:border-gray-800" />
 
-                {/* Grupo 2 — Comentarios simples */}
-                <div className="px-6 pt-4 pb-4">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Comentarios</p>
-                  <div className="flex flex-col gap-3">
-                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'pipe_comments')!} />
-                    <Field field={EDITABLE_FIELDS.find(f => f.key === 'quote_comments')!} />
-                  </div>
-                </div>
+                {/* Comentarios — Pipe Comments e Quote Comments com rich text + historico */}
+                <div className="px-6 pt-4 pb-5 flex flex-col gap-6">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest -mb-3">Comentarios</p>
 
-                <div className="mx-6 border-t border-gray-100 dark:border-gray-800" />
-
-                {/* Grupo 3 — Comentarios rich text + historico */}
-                <div className="px-6 pt-4 pb-5">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Notas Gerais (Rich Text)</p>
+                  {/* ── Pipe Comments ── */}
                   {(() => {
-                    const commentsChanged = editDraft.comments !== undefined &&
-                      (editDraft.comments ?? '').replace(/<[^>]+>/g, '').trim() !== '';
-                    const history = editingQuote.commentHistory ?? [];
+                    const draftHtml = (editDraft.pipe_comments ?? '') as string;
+                    const hasContent = draftHtml.replace(/<[^>]+>/g, '').trim() !== '';
+                    const history = editingQuote.pipeCommentHistory ?? [];
                     return (
                       <div className="flex flex-col gap-2">
                         <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-                          Novo Comentario
-                          {commentsChanged && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" title="Comentario nao salvo" />}
+                          Pipe Comments
+                          {hasContent && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" title="Comentario nao salvo" />}
                         </label>
                         <RichTextEditor
-                          value={editDraft.comments ?? ''}
-                          onChange={html => setEditDraft(d => ({ ...d, comments: html }))}
-                          placeholder="Adicione anotacoes, links, imagens ou qualquer observacao relevante sobre este quote..."
-                          changed={commentsChanged}
+                          value={draftHtml}
+                          onChange={html => setEditDraft(d => ({ ...d, pipe_comments: html }))}
+                          placeholder="Observacoes de pipeline: proximos passos, contato, contexto estrategico..."
+                          changed={hasContent}
                         />
-                        {/* Comment history timeline */}
                         {history.length > 0 && (
-                          <div className="mt-2">
+                          <div className="mt-1">
                             <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-2">
-                              Historico de Comentarios ({history.length})
+                              Historico — Pipe ({history.length})
                             </p>
-                            <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                               {[...history].reverse().map(entry => (
                                 <div key={entry.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
                                   <div className="flex items-center justify-between gap-2 mb-1.5">
                                     <span className="text-[11px] font-semibold text-gray-700">{entry.author}</span>
                                     <span className="text-[10px] text-gray-400">
-                                      {new Date(entry.timestamp).toLocaleString('pt-BR', {
-                                        day: '2-digit', month: '2-digit', year: 'numeric',
-                                        hour: '2-digit', minute: '2-digit',
-                                      })}
+                                      {new Date(entry.timestamp).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                  </div>
+                                  <div
+                                    className="text-xs text-gray-700 prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:pl-4 [&_a]:text-blue-600 [&_a]:underline [&_img]:max-w-full [&_img]:rounded"
+                                    dangerouslySetInnerHTML={{ __html: entry.html }}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* ── Quote Comments ── */}
+                  {(() => {
+                    const draftHtml = (editDraft.quote_comments ?? '') as string;
+                    const hasContent = draftHtml.replace(/<[^>]+>/g, '').trim() !== '';
+                    const history = editingQuote.quoteCommentHistory ?? [];
+                    return (
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+                          Quote Comments
+                          {hasContent && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" title="Comentario nao salvo" />}
+                        </label>
+                        <RichTextEditor
+                          value={draftHtml}
+                          onChange={html => setEditDraft(d => ({ ...d, quote_comments: html }))}
+                          placeholder="Observacoes da quote: condicoes comerciais, aprovacoes, restricoes..."
+                          changed={hasContent}
+                        />
+                        {history.length > 0 && (
+                          <div className="mt-1">
+                            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-2">
+                              Historico — Quote ({history.length})
+                            </p>
+                            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                              {[...history].reverse().map(entry => (
+                                <div key={entry.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                                    <span className="text-[11px] font-semibold text-gray-700">{entry.author}</span>
+                                    <span className="text-[10px] text-gray-400">
+                                      {new Date(entry.timestamp).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                     </span>
                                   </div>
                                   <div

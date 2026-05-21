@@ -50,8 +50,10 @@ export type Quote = {
   pay_meth_name?: string;
   prod_type?: string;
   renew?: string;             // 'Yes' | 'No'
-  pipe_comments?: string;
-  quote_comments?: string;
+  pipe_comments?: string;         // current rich-text draft for Pipe Comments
+  pipeCommentHistory?: CommentEntry[];
+  quote_comments?: string;        // current rich-text draft for Quote Comments
+  quoteCommentHistory?: CommentEntry[];
   hts_code?: string;
   hts_description?: string;
   is_engineering_ticket?: string; // 'Yes' | 'No'
@@ -59,10 +61,10 @@ export type Quote = {
   quote_age: number;
   status: string;
   vpc_code?: string;
-  comments?: string;          // current draft in rich text editor (cleared after append to history)
+  comments?: string;              // legacy field — no longer used in UI
   commentHistory?: CommentEntry[];
-  lost_reason?: string;       // required when stage = Net Lost
-  lost_comment?: string;      // required when stage = Net Lost
+  lost_reason?: string;           // required when stage = Net Lost
+  lost_comment?: string;          // required when stage = Net Lost
   scenarioGroupId?: string;
 };
 
