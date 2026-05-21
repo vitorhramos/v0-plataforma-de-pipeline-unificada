@@ -1,5 +1,27 @@
 // In-memory mock store shared between pages (resets on page refresh — demo only)
 
+// ── Comment history ───────────────────────────────────────────────────────────
+export type CommentEntry = {
+  id: string;
+  html: string;      // rich-text HTML content
+  author: string;
+  timestamp: string; // ISO string
+};
+
+// ── Loss reasons ─────────────────────────────────────────────────────────────
+export const LOSS_REASONS = [
+  'Preco',
+  'Concorrente',
+  'Orcamento cancelado',
+  'Projeto adiado',
+  'Requisito tecnico nao atendido',
+  'Relacionamento com cliente',
+  'Prazo de entrega',
+  'Outros',
+] as const;
+
+export type LossReason = (typeof LOSS_REASONS)[number] | string;
+
 export type Quote = {
   id: number;
   cpo_id: string;
@@ -20,7 +42,10 @@ export type Quote = {
   bu: string;
   quote_age: number;
   status: string;
-  comments?: string; // HTML string from rich text editor
+  comments?: string;          // current draft in rich text editor (cleared after append to history)
+  commentHistory?: CommentEntry[];
+  lost_reason?: string;       // required when stage = Net Lost
+  lost_comment?: string;      // required when stage = Net Lost
   scenarioGroupId?: string;
 };
 
@@ -126,6 +151,8 @@ function buildInitial(): Quote[] {
     quote_number: `QN-${String(i + 1001).padStart(4, '0').slice(-4)}`,
     stage: ['Pipelined', 'Pricing 25%', 'Up Selling 50%', 'Committed 75%', 'Net Lost'][i % 5],
     probability: [20, 40, 60, 80, 0][i % 5],
+    lost_reason: i % 5 === 4 ? LOSS_REASONS[i % LOSS_REASONS.length] : undefined,
+    lost_comment: i % 5 === 4 ? `Perda registrada automaticamente no seed de dados.` : undefined,
     usd_value: USD_VALUES[i % USD_VALUES.length],
     budgetary: i % 3 === 0 ? 'Yes' : 'No',
     close_date: CLOSE_DATES[i % CLOSE_DATES.length],

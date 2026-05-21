@@ -9,9 +9,16 @@ import { useToast } from '@/components/common/toast';
 import { TourOverlay } from '@/components/common/tour-overlay';
 import { getQuotes, getScenarioGroups, addScenarioGroup, updateScenarioGroup, removeScenarioGroup, updateQuote as storeUpdateQuote } from '@/lib/mock-store';
 import type { ScenarioGroup, ScenarioMeta, ScenarioLikelihood } from '@/lib/mock-store';
-import { LIKELIHOOD_LABELS, LIKELIHOOD_COLORS } from '@/lib/mock-store';
+import { LIKELIHOOD_LABELS, LIKELIHOOD_COLORS, LOSS_REASONS } from '@/lib/mock-store';
 import { useTour } from '@/hooks/useTour';
 import { RichTextEditor } from '@/components/common/rich-text-editor';
+
+type CommentEntry = {
+  id: string;
+  html: string;
+  author: string;
+  timestamp: string;
+};
 
 type Quote = {
   id: number;
@@ -34,6 +41,10 @@ type Quote = {
   quote_age: number;
   status: string;
   comments?: string;
+  commentHistory?: CommentEntry[];
+  lost_reason?: string;
+  lost_comment?: string;
+  scenarioGroupId?: string;
 };
 
 type VersionEntry = {
@@ -354,6 +365,26 @@ export default function PipelineDetailsPage() {
   const [editDraft, setEditDraft] = useState<Partial<Quote>>({});
   const [historyQuote, setHistoryQuote] = useState<Quote | null>(null);
 
+  // Net Lost popup
+  const [netLostOpen, setNetLostOpen] = useState(false);
+  const [netLostReason, setNetLostReason] = useState('');
+  const [netLostComment, setNetLostComment] = useState('');
+  const netLostValid = netLostReason !== '' && netLostComment.trim() !== '';
+
+  const confirmNetLost = () => {
+    if (!netLostValid) return;
+    setEditDraft(d => ({ ...d, stage: 'Net Lost', probability: 0, lost_reason: netLostReason, lost_comment: netLostComment }));
+    setNetLostOpen(false);
+    setNetLostReason('');
+    setNetLostComment('');
+  };
+
+  const cancelNetLost = () => {
+    setNetLostOpen(false);
+    setNetLostReason('');
+    setNetLostComment('');
+  };
+
   // Bulk edit
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkField, setBulkField] = useState<keyof Quote | ''>('');
@@ -371,6 +402,7 @@ export default function PipelineDetailsPage() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       // Priority: confirmation dialogs first, then modals from top to bottom
+      if (netLostOpen) { cancelNetLost(); return; }
       if (confirmEditSave) { setConfirmEditSave(false); return; }
       if (confirmScenarioSave) { setConfirmScenarioSave(false); return; }
       if (confirmBulk) { setConfirmBulk(false); return; }
@@ -380,7 +412,7 @@ export default function PipelineDetailsPage() {
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [confirmEditSave, confirmScenarioSave, confirmBulk, scenarioModalOpen, historyQuote, editingQuote]);
+  }, [netLostOpen, confirmEditSave, confirmScenarioSave, confirmBulk, scenarioModalOpen, historyQuote, editingQuote, cancelNetLost]);
 
   // Tour steps definition
   const TOUR_STEPS = [
@@ -560,13 +592,31 @@ export default function PipelineDetailsPage() {
   // ── Save single edit ──
   const saveEdit = () => {
     if (!editingQuote) return;
-    const updated = { ...editingQuote, ...editDraft };
+    const updated: Quote = { ...editingQuote, ...editDraft };
+
+    // Append non-empty comment to history, then clear the draft editor field
+    const rawComment = (editDraft.comments ?? '').replace(/<[^>]+>/g, '').trim();
+    if (editDraft.comments !== undefined && rawComment !== '') {
+      const entry: CommentEntry = {
+        id: `c-${Date.now()}`,
+        html: editDraft.comments,
+        author: 'TD SYNNEX',
+        timestamp: new Date().toISOString(),
+      };
+      updated.commentHistory = [...(editingQuote.commentHistory ?? []), entry];
+      updated.comments = '';
+    }
+
     (Object.keys(editDraft) as (keyof Quote)[]).forEach(key => {
+      if (key === 'comments') return; // handled above
       const oldVal = String(editingQuote[key] ?? '');
       const newVal = String((editDraft as Record<string, unknown>)[key] ?? '');
       if (oldVal !== newVal) recordVersion(editingQuote.id, key, oldVal, newVal);
     });
     setQuotes(prev => prev.map(q => q.id === editingQuote.id ? updated : q));
+    // Keep editingQuote in sync so history appears immediately after save
+    setEditingQuote(updated);
+    setEditDraft({});
     addToHistory('Edit', `Editado ${editingQuote.cpo_id}`, 'success');
     toast.success(`${editingQuote.cpo_id} atualizado`);
     setConfirmEditSave(false);
@@ -1519,7 +1569,15 @@ export default function PipelineDetailsPage() {
               {field.type === 'select' ? (
                 <select
                   value={val}
-                  onChange={e => setEditDraft(d => ({ ...d, [field.key]: e.target.value }))}
+                  onChange={e => {
+                    const newVal = e.target.value;
+                    // Intercept Net Lost: open popup when changing TO it
+                    if (field.key === 'stage' && newVal === 'Net Lost' && editingQuote.stage !== 'Net Lost') {
+                      setNetLostOpen(true);
+                    } else {
+                      setEditDraft(d => ({ ...d, [field.key]: newVal }));
+                    }
+                  }}
                   className={`${inp} ${changed ? 'ring-1 ring-amber-400 border-amber-300' : ''}`}
                 >
                   {field.key === 'status'
@@ -1641,19 +1699,47 @@ export default function PipelineDetailsPage() {
                 <div className="px-6 pt-4 pb-5">
                   {(() => {
                     const commentsChanged = editDraft.comments !== undefined &&
-                      editDraft.comments !== (editingQuote.comments ?? '');
+                      (editDraft.comments ?? '').replace(/<[^>]+>/g, '').trim() !== '';
+                    const history = editingQuote.commentHistory ?? [];
                     return (
-                      <div className="flex flex-col gap-1">
+                      <div className="flex flex-col gap-2">
                         <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-                          Comentarios
-                          {commentsChanged && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" title="Alterado" />}
+                          Novo Comentario
+                          {commentsChanged && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" title="Comentario nao salvo" />}
                         </label>
                         <RichTextEditor
-                          value={editDraft.comments ?? editingQuote.comments ?? ''}
+                          value={editDraft.comments ?? ''}
                           onChange={html => setEditDraft(d => ({ ...d, comments: html }))}
                           placeholder="Adicione anotacoes, links, imagens ou qualquer observacao relevante sobre este quote..."
                           changed={commentsChanged}
                         />
+                        {/* Comment history timeline */}
+                        {history.length > 0 && (
+                          <div className="mt-2">
+                            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-2">
+                              Historico de Comentarios ({history.length})
+                            </p>
+                            <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                              {[...history].reverse().map(entry => (
+                                <div key={entry.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                                    <span className="text-[11px] font-semibold text-gray-700">{entry.author}</span>
+                                    <span className="text-[10px] text-gray-400">
+                                      {new Date(entry.timestamp).toLocaleString('pt-BR', {
+                                        day: '2-digit', month: '2-digit', year: 'numeric',
+                                        hour: '2-digit', minute: '2-digit',
+                                      })}
+                                    </span>
+                                  </div>
+                                  <div
+                                    className="text-xs text-gray-700 prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:pl-4 [&_a]:text-blue-600 [&_a]:underline [&_img]:max-w-full [&_img]:rounded"
+                                    dangerouslySetInnerHTML={{ __html: entry.html }}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })()}
@@ -1722,6 +1808,78 @@ export default function PipelineDetailsPage() {
           </div>
         );
       })()}
+
+      {/* ── Net Lost Popup — appears when stage changes to Net Lost ── */}
+      {netLostOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col">
+            {/* Header */}
+            <div className="flex items-start gap-3 px-6 pt-5 pb-4 border-b border-gray-100">
+              <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center shrink-0">
+                <X className="w-4 h-4 text-red-600" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-gray-900">Registrar Perda</h2>
+                <p className="text-xs text-gray-500 mt-0.5">Preencha os campos obrigatorios para marcar este quote como Net Lost.</p>
+              </div>
+            </div>
+            {/* Body */}
+            <div className="px-6 py-5 space-y-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
+                  Motivo da Perda <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={netLostReason}
+                  onChange={e => setNetLostReason(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-red-400 bg-white"
+                >
+                  <option value="">Selecione um motivo...</option>
+                  {LOSS_REASONS.map(r => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
+                  Comentario sobre a Perda <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={netLostComment}
+                  onChange={e => setNetLostComment(e.target.value)}
+                  rows={4}
+                  placeholder="Descreva o contexto da perda, concorrente, proposta apresentada..."
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-red-400 resize-none"
+                />
+                {netLostComment.trim() === '' && netLostReason !== '' && (
+                  <p className="text-[11px] text-red-500">Comentario obrigatorio.</p>
+                )}
+              </div>
+            </div>
+            {/* Footer */}
+            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+              <button
+                onClick={cancelNetLost}
+                className="px-4 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmNetLost}
+                disabled={!netLostValid}
+                className={`flex items-center gap-2 px-5 py-2 text-xs font-semibold rounded-lg transition ${
+                  netLostValid
+                    ? 'bg-red-600 text-white hover:bg-red-700 shadow-sm'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                <Check className="w-3.5 h-3.5" />
+                Confirmar Perda
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Confirm Bulk Edit Modal ── */}
       {confirmBulk && (

@@ -11,7 +11,7 @@ import { HelpCircle, Layers } from 'lucide-react';
 import { useTour } from '@/hooks/useTour';
 import { TourOverlay } from '@/components/common/tour-overlay';
 import { getQuotes, getScenarioGroups, getPrimaryQuotes } from '@/lib/mock-store';
-import { LIKELIHOOD_LABELS, LIKELIHOOD_COLORS } from '@/lib/mock-store';
+import { LIKELIHOOD_LABELS, LIKELIHOOD_COLORS, LOSS_REASONS } from '@/lib/mock-store';
 
 // KPI accent colors per index
 const KPI_COLORS = [
@@ -143,6 +143,59 @@ export default function DashboardPage() {
     const q = allQuotes.find(qq => qq.id === primaryMeta.quoteId);
     return s + (q?.usd_value ?? 0);
   }, 0);
+
+  // ── Maiores Ofensores de Lost ─────────────────────────────────────────────
+  const [lostFilterReason, setLostFilterReason] = useState('');
+  const [lostFilterRevenda, setLostFilterRevenda] = useState('');
+  const [lostFilterDateFrom, setLostFilterDateFrom] = useState('');
+  const [lostFilterDateTo, setLostFilterDateTo] = useState('');
+  const [lostFilterMinVal, setLostFilterMinVal] = useState('');
+  const [lostFilterMaxVal, setLostFilterMaxVal] = useState('');
+  const [lostViewMode, setLostViewMode] = useState<'valor' | 'quantidade'>('valor');
+
+  const lostOffendersData = useMemo(() => {
+    const lostQuotes = allQuotes.filter(q => {
+      if (q.stage !== 'Net Lost') return false;
+      if (lostFilterReason && q.lost_reason !== lostFilterReason) return false;
+      if (lostFilterRevenda && !q.master_customer.toLowerCase().includes(lostFilterRevenda.toLowerCase())) return false;
+      if (lostFilterDateFrom && q.close_date < lostFilterDateFrom) return false;
+      if (lostFilterDateTo && q.close_date > lostFilterDateTo) return false;
+      if (lostFilterMinVal && q.usd_value < Number(lostFilterMinVal)) return false;
+      if (lostFilterMaxVal && q.usd_value > Number(lostFilterMaxVal)) return false;
+      return true;
+    });
+
+    // Group by revenda (master_customer)
+    const map = new Map<string, { valor: number; quantidade: number; reasons: string[] }>();
+    for (const q of lostQuotes) {
+      const key = q.master_customer;
+      const prev = map.get(key) ?? { valor: 0, quantidade: 0, reasons: [] };
+      map.set(key, {
+        valor: prev.valor + q.usd_value,
+        quantidade: prev.quantidade + 1,
+        reasons: q.lost_reason ? [...prev.reasons, q.lost_reason] : prev.reasons,
+      });
+    }
+
+    return Array.from(map.entries())
+      .map(([name, d]) => ({
+        name,
+        valor: d.valor,
+        quantidade: d.quantidade,
+        topReason: d.reasons.length
+          ? d.reasons.sort((a, b) =>
+              d.reasons.filter(r => r === b).length - d.reasons.filter(r => r === a).length
+            )[0]
+          : '—',
+      }))
+      .sort((a, b) => b[lostViewMode] - a[lostViewMode])
+      .slice(0, 10);
+  }, [allQuotes, lostFilterReason, lostFilterRevenda, lostFilterDateFrom, lostFilterDateTo, lostFilterMinVal, lostFilterMaxVal, lostViewMode]);
+
+  const lostTotal = useMemo(
+    () => lostOffendersData.reduce((s, d) => s + d.valor, 0),
+    [lostOffendersData]
+  );
 
   useKeyboardShortcuts({
     export: () => alert('Exportando dados...'),
@@ -451,6 +504,186 @@ export default function DashboardPage() {
                 </LineChart>
               </ResponsiveContainer>
             </div>
+          </div>
+        </div>
+
+        {/* ── Maiores Ofensores de Net Lost ── */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          {/* Header */}
+          <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-gray-100">
+            <div>
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" />
+                <h3 className="text-sm font-semibold text-gray-900">Maiores Ofensores — Net Lost</h3>
+              </div>
+              <p className="text-[11px] text-gray-400 mt-0.5 ml-[18px]">
+                Top 10 revendas com maior perda acumulada
+                {lostOffendersData.length > 0 && (
+                  <> · Total: <span className="font-semibold text-red-600">${(lostTotal / 1_000_000).toFixed(1)}M</span></>
+                )}
+              </p>
+            </div>
+            {/* View toggle */}
+            <div className="flex items-center gap-1 bg-gray-100 p-0.5 rounded-lg shrink-0">
+              <button
+                onClick={() => setLostViewMode('valor')}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition ${lostViewMode === 'valor' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Por valor
+              </button>
+              <button
+                onClick={() => setLostViewMode('quantidade')}
+                className={`px-3 py-1 text-xs font-medium rounded-md transition ${lostViewMode === 'quantidade' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Por qtd
+              </button>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="px-5 py-3 bg-gray-50 border-b border-gray-100 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div>
+              <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Motivo</label>
+              <select
+                value={lostFilterReason}
+                onChange={e => setLostFilterReason(e.target.value)}
+                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-red-400"
+              >
+                <option value="">Todos</option>
+                {LOSS_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Revenda</label>
+              <input
+                type="text"
+                value={lostFilterRevenda}
+                onChange={e => setLostFilterRevenda(e.target.value)}
+                placeholder="Buscar..."
+                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Periodo de</label>
+              <input
+                type="date"
+                value={lostFilterDateFrom}
+                onChange={e => setLostFilterDateFrom(e.target.value)}
+                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Periodo ate</label>
+              <input
+                type="date"
+                value={lostFilterDateTo}
+                onChange={e => setLostFilterDateTo(e.target.value)}
+                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Valor Min ($)</label>
+              <input
+                type="number"
+                value={lostFilterMinVal}
+                onChange={e => setLostFilterMinVal(e.target.value)}
+                placeholder="0"
+                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Valor Max ($)</label>
+              <input
+                type="number"
+                value={lostFilterMaxVal}
+                onChange={e => setLostFilterMaxVal(e.target.value)}
+                placeholder="sem limite"
+                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400"
+              />
+            </div>
+          </div>
+
+          {/* Chart */}
+          <div className="p-5">
+            {lostOffendersData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-48 text-gray-400 gap-2">
+                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <p className="text-sm font-medium">Nenhuma perda registrada com esses filtros</p>
+                <p className="text-xs text-gray-400">Marque quotes como Net Lost para ver os dados aqui</p>
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={Math.max(180, lostOffendersData.length * 38)}>
+                  <BarChart data={lostOffendersData} layout="vertical" barSize={20} margin={{ left: 8, right: 40 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
+                    <XAxis
+                      type="number"
+                      tick={{ fontSize: 10, fill: '#6b7280' }}
+                      tickFormatter={v =>
+                        lostViewMode === 'valor'
+                          ? `$${(v / 1_000_000).toFixed(1)}M`
+                          : `${v}`
+                      }
+                    />
+                    <YAxis dataKey="name" type="category" width={88} tick={{ fontSize: 10, fill: '#374151' }} />
+                    <Tooltip
+                      formatter={(value, name) =>
+                        name === 'valor'
+                          ? [`$${(Number(value) / 1_000_000).toFixed(2)}M`, 'Valor Perdido']
+                          : [`${value}`, 'Quotes Perdidas']
+                      }
+                      labelFormatter={label => `Revenda: ${label}`}
+                    />
+                    <Bar dataKey={lostViewMode} radius={[0, 6, 6, 0]}>
+                      {lostOffendersData.map((_, i) => (
+                        <Cell
+                          key={i}
+                          fill={i === 0 ? '#dc2626' : i === 1 ? '#ef4444' : i === 2 ? '#f87171' : '#fca5a5'}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+
+                {/* Table summary */}
+                <div className="mt-4 border border-gray-200 rounded-xl overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-200">
+                        <th className="px-3 py-2 text-left font-semibold text-gray-500 uppercase tracking-wide text-[10px]">#</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-500 uppercase tracking-wide text-[10px]">Revenda</th>
+                        <th className="px-3 py-2 text-right font-semibold text-gray-500 uppercase tracking-wide text-[10px]">Valor Perdido</th>
+                        <th className="px-3 py-2 text-right font-semibold text-gray-500 uppercase tracking-wide text-[10px]">Qtd</th>
+                        <th className="px-3 py-2 text-left font-semibold text-gray-500 uppercase tracking-wide text-[10px]">Principal Motivo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {lostOffendersData.map((row, i) => (
+                        <tr key={row.name} className="border-b border-gray-100 last:border-0 hover:bg-red-50 transition">
+                          <td className="px-3 py-2 font-bold text-gray-400">{i + 1}</td>
+                          <td className="px-3 py-2 font-medium text-gray-800">{row.name}</td>
+                          <td className="px-3 py-2 text-right font-semibold text-red-600">${(row.valor / 1_000_000).toFixed(2)}M</td>
+                          <td className="px-3 py-2 text-right text-gray-600">{row.quantidade}</td>
+                          <td className="px-3 py-2">
+                            {row.topReason !== '—' ? (
+                              <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-[10px] font-medium">
+                                {row.topReason}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
