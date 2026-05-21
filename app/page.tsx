@@ -3,8 +3,6 @@ import {
   BarChart3,
   ArrowRightLeft,
   ListFilter,
-  PlusCircle,
-  Cog,
   ArrowRight,
   TrendingUp,
   Filter,
@@ -49,26 +47,6 @@ const NAV_CARDS = [
     textAccent: 'text-blue-600',
     borderAccent: 'hover:border-blue-300',
     stats: ['15 Colunas', 'Export CSV'],
-  },
-  {
-    href: '/quote-details',
-    label: 'New Quote',
-    desc: 'Crie um novo quote com todos os campos e ele aparece automaticamente em Details.',
-    icon: PlusCircle,
-    color: 'bg-teal-600',
-    textAccent: 'text-teal-600',
-    borderAccent: 'hover:border-teal-300',
-    stats: ['Criacao rapida', 'Sync automatico'],
-  },
-  {
-    href: '/batch-process',
-    label: 'Process',
-    desc: 'Processamento em lote de quotes com regras de negocio e automacoes.',
-    icon: Cog,
-    color: 'bg-gray-700',
-    textAccent: 'text-gray-700',
-    borderAccent: 'hover:border-gray-300',
-    stats: ['Processamento', 'Automacao'],
   },
 ];
 
@@ -153,26 +131,26 @@ export default function Home() {
 
       {/* ── Nav cards ── */}
       <section className="max-w-6xl mx-auto w-full px-6 sm:px-10 lg:px-16 -mt-5 mb-14">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {NAV_CARDS.map(({ href, label, desc, icon: Icon, color, textAccent, borderAccent, stats }) => (
             <Link key={href} href={href} className="group">
-              <div className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 ${borderAccent} p-5 h-full flex flex-col gap-4 transition-all duration-200 shadow-md hover:shadow-xl hover:-translate-y-1`}>
-                <div className={`w-10 h-10 ${color} rounded-xl flex items-center justify-center shrink-0`}>
-                  <Icon className="w-5 h-5 text-white" />
+              <div className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 ${borderAccent} p-7 h-full flex flex-col gap-5 transition-all duration-200 shadow-md hover:shadow-xl hover:-translate-y-1`}>
+                <div className={`w-12 h-12 ${color} rounded-xl flex items-center justify-center shrink-0`}>
+                  <Icon className="w-6 h-6 text-white" />
                 </div>
                 <div className="flex-1 min-h-0">
-                  <h3 className={`text-sm font-bold ${textAccent} mb-1`}>{label}</h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{desc}</p>
+                  <h3 className={`text-base font-bold ${textAccent} mb-1.5`}>{label}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{desc}</p>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {stats.map(s => (
-                    <span key={s} className="text-[10px] font-semibold text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+                    <span key={s} className="text-[11px] font-semibold text-gray-400 bg-gray-100 dark:bg-gray-700 px-2.5 py-1 rounded-full">
                       {s}
                     </span>
                   ))}
                 </div>
-                <div className={`flex items-center gap-1 text-[11px] font-semibold ${textAccent} opacity-0 group-hover:opacity-100 transition-opacity`}>
-                  Acessar <ArrowRight className="w-3 h-3" />
+                <div className={`flex items-center gap-1 text-xs font-semibold ${textAccent} opacity-0 group-hover:opacity-100 transition-opacity`}>
+                  Acessar <ArrowRight className="w-3.5 h-3.5" />
                 </div>
               </div>
             </Link>
