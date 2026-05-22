@@ -266,6 +266,66 @@ export function MyComponent({ quote, onSave, isEditing = false }: MyComponentPro
 
 ---
 
+## 🗄️ Mapeamento de Campos para Banco de Dados
+
+A aplicação atualmente usa **mock data** em memória. Quando integrar com o **BI Pipeline (DEV_NORMALIZED.FACT_PIPELINE)**, use o mapeamento abaixo:
+
+| Campo Frontend | Coluna BI / DB | Editável? | Status |
+|---|---|---|---|
+| **IDENTIFICACAO** | | | |
+| cpo_id | CPO_ID | Não | ✅ Mapeado |
+| status | CPO_STATUS | Não | ✅ Mapeado |
+| vpc_code | VPC_CODE | Não | ✅ Mapeado |
+| part_no | SKU_NO ou PART_NO | Não | ✅ Mapeado |
+| description | ? | Não | ⚠️ Indefinido |
+| **CLASSIFICACAO** | | | |
+| sales_territory | SALES_TERR | Não | ✅ Mapeado |
+| team | ? | n/a | ⚠️ Indefinido |
+| vendor | VEND_NO | Não | ✅ Mapeado |
+| master_customer | CPO_CUST_NO | Não | ✅ Mapeado |
+| bill_to | SOLD_TO_MASTER_ACC | Não | ✅ Mapeado |
+| end_user | END_USER | Não | ✅ Mapeado |
+| prod_type | ? | Não | ⚠️ Indefinido |
+| **VALORES FINANCEIROS** | | | |
+| usd_value (CIF) | ? | Não | ⚠️ Indefinido |
+| net_value (NET) | SO_NET_PRICE | Não | ✅ Mapeado |
+| fob_value (FOB) | CPO_UNIT_COST | Não | ✅ Mapeado |
+| gm_pct (GM%) | CPO_GM_PERCENT | Não | ✅ Mapeado |
+| cpo_qty | CPO_LINE_QTY | Não | ✅ Mapeado |
+| **DATAS** | | | |
+| created_date | CPO_DATE | Não | ✅ Mapeado |
+| close_date | CLOSE_DATE | Não | ✅ Mapeado |
+| **PIPELINE & STAGE** | | | |
+| stage | PROBABILITY (Range) | Sim | ✅ Mapeado |
+| probability | PROBABILITY | Sim | ✅ Mapeado |
+| lost_reason | ? | Sim | ⚠️ Indefinido |
+| **COMERCIAL** | | | |
+| cpo_no | CPO_NO | Não | ✅ Mapeado |
+| cpo_pay_meth | CPO_PAY_METH | Não | ✅ Mapeado |
+| pay_meth_name | ? | Não | ⚠️ Indefinido |
+| opportunity | OPPORTUNITY_NAME | Não | ✅ Mapeado |
+| renew | NEW_RENEW | Sim | ✅ Mapeado |
+| is_engineering_ticket | ? | Sim | ⚠️ Indefinido |
+| **COMENTARIOS** | | | |
+| pipe_comments | ? | Sim | ⚠️ Indefinido |
+| quote_comments | ? | Sim | ⚠️ Indefinido |
+| **OUTROS** | | | |
+| hts_code | HTS_CODE | n/a | ✅ Mapeado |
+| hts_description | ? | n/a | ⚠️ Indefinido |
+
+**Legenda**:
+- ✅ **Mapeado**: Campo tem origem clara no BI/DB
+- ⚠️ **Indefinido**: Campo com `?` — necessário confirmar origem ou criar novo field no BI
+- **Editável**: Sim = pode ser alterado pelo usuário; Não = read-only; n/a = não aplica (ex: HTS)
+
+**Próximas ações**:
+1. Confirmar origem dos campos marcados com `?`
+2. Ajustar query SQL para trazer todos os 30+ campos
+3. Implementar transformação BI → tipos TypeScript do frontend
+4. Migrar mock-store.ts para usar dados reais do BI
+
+---
+
 ## 📝 Notas Importantes
 
 ### **Multi-PN Handling**
