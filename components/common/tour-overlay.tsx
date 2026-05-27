@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, X, BarChart3, Sliders, Table2, Settings, Zap, Lightbulb } from 'lucide-react';
 import type { TourStep } from '@/hooks/useTour';
 
 interface TourOverlayProps {
@@ -11,6 +11,8 @@ interface TourOverlayProps {
   onNext: () => void;
   onPrev: () => void;
   onClose: () => void;
+  onSkip: () => void;
+  onNeverShow: () => void;
   totalSteps: number;
 }
 
@@ -25,6 +27,15 @@ const PAD = 10;
 const GAP = 16;
 const TOOLTIP_W = 340;
 
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  'BarChart3': BarChart3,
+  'Sliders': Sliders,
+  'Table2': Table2,
+  'Settings': Settings,
+  'Zap': Zap,
+  'Lightbulb': Lightbulb,
+};
+
 export function TourOverlay({
   isActive,
   currentStep,
@@ -32,6 +43,8 @@ export function TourOverlay({
   onNext,
   onPrev,
   onClose,
+  onSkip,
+  onNeverShow,
   totalSteps,
 }: TourOverlayProps) {
   const [targetRect, setTargetRect] = useState<TargetRect | null>(null);
@@ -208,7 +221,7 @@ export function TourOverlay({
             }}
             onClick={onClose}
           />
-          {/* Blue spotlight ring */}
+          {/* Blue spotlight ring with pulsing animation */}
           <div
             className="fixed pointer-events-none rounded-lg z-[41]"
             style={{
@@ -219,8 +232,30 @@ export function TourOverlay({
               outline: '2px solid #3b82f6',
               outlineOffset: '2px',
               boxShadow: '0 0 0 4px rgba(59,130,246,0.25)',
+              animation: 'pulse-spotlight 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
             }}
           />
+          {/* Animated step badge */}
+          <div
+            className="fixed pointer-events-none z-[42] flex items-center justify-center w-12 h-12 rounded-full bg-blue-600 text-white font-bold shadow-lg"
+            style={{
+              top: targetRect.top - 28,
+              right: targetRect.left + targetRect.width - 40,
+              animation: 'bounce-badge 2s ease-in-out infinite',
+            }}
+          >
+            {currentStep + 1}
+          </div>
+          <style>{`
+            @keyframes pulse-spotlight {
+              0%, 100% { box-shadow: 0 0 0 4px rgba(59,130,246,0.25); }
+              50% { box-shadow: 0 0 0 8px rgba(59,130,246,0.15); }
+            }
+            @keyframes bounce-badge {
+              0%, 100% { transform: translateY(0); }
+              50% { transform: translateY(-8px); }
+            }
+          `}</style>
         </>
       ) : ready ? (
         /* No targetRect — full-screen overlay (element off-screen or not found) */
@@ -242,21 +277,29 @@ export function TourOverlay({
         }}
         className="z-50 bg-white rounded-2xl shadow-2xl border border-gray-100 p-5 pointer-events-auto"
       >
-        {/* Progress dots */}
-        <div className="flex items-center gap-1 mb-3">
+        {/* Progress bar */}
+        <div className="flex gap-1 mb-4">
           {steps.map((_, i) => (
             <div
               key={i}
-              className={`h-1 rounded-full transition-all duration-300 ${
-                i === currentStep ? 'w-6 bg-blue-600' : 'w-2 bg-gray-200'
+              className={`flex-1 h-1.5 rounded-full transition-all duration-300 ${
+                i < currentStep ? 'bg-emerald-500' : i === currentStep ? 'bg-blue-600' : 'bg-gray-200'
               }`}
             />
           ))}
         </div>
 
-        {/* Header */}
-        <div className="flex items-start justify-between mb-2">
-          <h3 className="text-sm font-bold text-gray-900 pr-4">{step.title}</h3>
+        {/* Header with icon */}
+        <div className="flex items-start gap-3 mb-3">
+          {step.icon && ICON_MAP[step.icon] && (
+            React.createElement(ICON_MAP[step.icon], {
+              className: 'w-5 h-5 text-blue-600 shrink-0 mt-0.5',
+            })
+          )}
+          <div className="flex-1 pr-2">
+            <h3 className="text-sm font-bold text-gray-900">{step.title}</h3>
+            <p className="text-[11px] text-gray-500 mt-0.5">Passo {currentStep + 1} de {totalSteps}</p>
+          </div>
           <button
             onClick={onClose}
             className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition shrink-0"
@@ -266,13 +309,32 @@ export function TourOverlay({
         </div>
 
         {/* Description */}
-        <p className="text-xs text-gray-600 leading-relaxed mb-4">{step.description}</p>
+        <p className="text-xs text-gray-600 leading-relaxed mb-3">{step.description}</p>
+
+        {/* Call to action */}
+        {step.callToAction && (
+          <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mb-3">
+            <p className="text-xs text-blue-700 font-medium">{step.callToAction}</p>
+          </div>
+        )}
+
+        {/* Pro tip */}
+        {step.proTip && (
+          <div className="flex gap-2 mb-3 p-2.5 bg-amber-50 rounded-lg border border-amber-100">
+            <Lightbulb className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-700">{step.proTip}</p>
+          </div>
+        )}
+
+        {/* Next step hint */}
+        {step.nextStep && (
+          <div className="text-xs text-gray-500 italic mb-4 pl-3 border-l-2 border-gray-300">
+            {step.nextStep}
+          </div>
+        )}
 
         {/* Nav footer */}
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-medium text-gray-400">
-            {currentStep + 1} de {totalSteps}
-          </span>
+        <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <button
               onClick={onPrev}
@@ -284,12 +346,25 @@ export function TourOverlay({
             </button>
             <button
               onClick={onNext}
-              className="flex items-center gap-1 px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition"
+              className="flex-1 flex items-center justify-center gap-1 px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition"
             >
               {currentStep === totalSteps - 1 ? 'Concluir' : 'Seguir'}
               {currentStep < totalSteps - 1 && <ChevronRight className="w-3.5 h-3.5" />}
             </button>
+            <button
+              onClick={onSkip}
+              className="px-2 py-1.5 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
+              title="Pular tour"
+            >
+              Pular
+            </button>
           </div>
+          <button
+            onClick={onNeverShow}
+            className="w-full text-xs text-gray-400 hover:text-gray-600 py-1 border-t border-gray-100 pt-3 transition"
+          >
+            Nunca mostrar novamente
+          </button>
         </div>
       </div>
     </>

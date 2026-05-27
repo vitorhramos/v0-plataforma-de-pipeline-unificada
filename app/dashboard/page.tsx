@@ -80,18 +80,78 @@ const mockData = {
 };
 
 const DASHBOARD_TOUR_STEPS = [
-  { id: 'kpis', selector: '[data-tour="kpi-grid"]', title: 'KPIs Executivos', description: 'Cards com os principais indicadores do pipeline. Passe o mouse em cada card para ver o detalhamento. As cores das bordas diferenciam cada estagio.', position: 'bottom' as const },
-  { id: 'filters', selector: '[data-tour="dash-filters-btn"]', title: 'Filtros Rapidos', description: 'Filtre os dados por Stage, Territory, Vendor e BU. Os graficos e KPIs atualizam em tempo real. Atalho: Ctrl+F.', position: 'bottom' as const },
-  { id: 'bar-chart', selector: '[data-tour="bar-chart"]', title: 'Grafico de Barras por Stage', description: 'Visualize o valor total ($) e a quantidade de quotes agrupados por estagio do pipeline.', position: 'top' as const },
-  { id: 'line-chart', selector: '[data-tour="line-chart"]', title: 'Evolucao Mensal', description: 'Acompanhe a evolucao do pipeline mes a mes com a tendencia de crescimento.', position: 'top' as const },
-  { id: 'pie-chart', selector: '[data-tour="pie-chart"]', title: 'Distribuicao por Vendor', description: 'Proporcao de participacao de cada fabricante no pipeline total.', position: 'top' as const },
-  { id: 'additional', selector: '[data-tour="additional-charts"]', title: 'Graficos Adicionais', description: 'Analises complementares por territorio, BU e evolucao historica de win rate.', position: 'top' as const },
+  {
+    id: 'kpis',
+    selector: '[data-tour="kpi-grid"]',
+    title: 'KPIs Executivos',
+    description: 'Cards com os principais indicadores do pipeline em tempo real. Veja Total Pipeline, Not Classified, High Prob, Lost Value e outros.',
+    position: 'bottom' as const,
+    icon: 'Zap',
+    callToAction: 'Clique no primeiro KPI (Total Pipeline) para expandir os detalhes',
+    proTip: 'Combine os KPIs para identificar oportunidades de crescimento: compare High Prob vs Lost Value',
+    nextStep: 'Próximo: use os filtros rápidos para segmentar esses dados',
+  },
+  {
+    id: 'filters',
+    selector: '[data-tour="dash-filters-btn"]',
+    title: 'Filtros Rápidos',
+    description: 'Filtre por Stage, Territory, Vendor e Produto Type. Os gráficos e KPIs atualizam em tempo real conforme você aplica filtros.',
+    position: 'bottom' as const,
+    icon: 'Sliders',
+    callToAction: 'Clique em "Filtros" agora e tente filtrar por Stage = "Committed 75%"',
+    proTip: 'Use múltiplos filtros simultâneos para análises mais precisas (ex: Territory + Vendor)',
+    nextStep: 'Próximo: explore os gráficos que se atualizam com seus filtros',
+  },
+  {
+    id: 'bar-chart',
+    selector: '[data-tour="bar-chart"]',
+    title: 'Distribuição por Stage',
+    description: 'Gráfico de barras mostrando valor total (USD) e quantidade de quotes por estágio do pipeline. Cada barra representa um estágio (Not Classified até Net Lost).',
+    position: 'top' as const,
+    icon: 'BarChart3',
+    callToAction: 'Passe o mouse sobre as barras para ver detalhes de cada estágio',
+    proTip: 'Foque no crescimento de "Committed 75%" e na redução de "Net Lost" para avaliar saúde do pipeline',
+    nextStep: 'Próximo: veja como o pipeline evolui ao longo dos meses',
+  },
+  {
+    id: 'line-chart',
+    selector: '[data-tour="line-chart"]',
+    title: 'Evolução Mensal (Últimos 6 meses)',
+    description: 'Gráfico de linhas mostrando a tendência do pipeline mês a mês. Cada linha representa um estágio, permitindo acompanhar o movimento.',
+    position: 'top' as const,
+    icon: 'BarChart3',
+    callToAction: 'Observe a tendência de cada linha: está crescendo ou diminuindo?',
+    proTip: 'Correlacione com eventos comerciais: campanhas, lançamentos, fechamentos para entender os picos e vales',
+    nextStep: 'Próximo: veja a participação de cada vendor/fabricante',
+  },
+  {
+    id: 'pie-chart',
+    selector: '[data-tour="pie-chart"]',
+    title: 'Distribuição por Vendor',
+    description: 'Gráfico de pizza mostrando a proporção de participação de cada fornecedor no pipeline total. Identifique os maiores e menores contribuidores.',
+    position: 'top' as const,
+    icon: 'BarChart3',
+    callToAction: 'Clique nos segmentos da pizza para filtrar por vendor específico',
+    proTip: 'Identifique dependências: se um vendor representa >50% do pipeline, negocie SLAs estratégicos',
+    nextStep: 'Próximo: explore análises complementares de território e win rate',
+  },
+  {
+    id: 'additional',
+    selector: '[data-tour="additional-charts"]',
+    title: 'Análises Complementares',
+    description: 'Seção com gráficos adicionais: Top Revendas, Top Fornecedores, Distribuição por Território, e histórico de Win Rate.',
+    position: 'top' as const,
+    icon: 'Table2',
+    callToAction: 'Explore cada gráfico: clique, paire o mouse e veja qual é mais relevante para sua análise',
+    proTip: 'Win Rate é o indicador de saúde mais crítico: mantenha >35% para garantir pipeline saudável',
+    nextStep: 'Parabéns! Você dominou o Dashboard Executivo. Visite Manager ou Details para editar quotes.',
+  },
 ];
 
 export default function DashboardPage() {
   const [expandFilters, setExpandFilters] = useState(false);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
-  const tour = useTour(DASHBOARD_TOUR_STEPS);
+  const tour = useTour(DASHBOARD_TOUR_STEPS, 'dashboard-tour');
 
   // ── Real data from mock-store ──────────────────────────────────────────────
   const allQuotes = useMemo(() => getQuotes(), []);
@@ -697,6 +757,8 @@ export default function DashboardPage() {
         onNext={tour.nextStep}
         onPrev={tour.prevStep}
         onClose={tour.closeTour}
+        onSkip={tour.skipTour}
+        onNeverShow={tour.neverShowThisTourAgain}
         totalSteps={tour.totalSteps}
       />
     </div>
