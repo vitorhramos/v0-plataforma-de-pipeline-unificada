@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronLeft, BarChart3, ArrowRightLeft, ListFilter, Moon, Sun, List, Grid3x3, Kanban, Download, Sliders, HelpCircle } from 'lucide-react';
+import { ChevronLeft, BarChart3, ArrowRightLeft, ListFilter, Moon, Sun, List, Grid3x3, Kanban, Download, HelpCircle } from 'lucide-react';
 
 const PAGES = [
   { href: '/dashboard', label: 'Dashboard', icon: BarChart3 },
@@ -14,14 +14,12 @@ const PAGES = [
 // Funcionalidades disponíveis por página
 const FEATURES_BY_PAGE: Record<string, { label: string; icon: React.ComponentType<any>; action: string }[]> = {
   '/dashboard': [
-    { label: 'Filtros', icon: Sliders, action: 'filters' },
     { label: 'Tour', icon: HelpCircle, action: 'tour' },
   ],
   '/pipeline-manager': [
     { label: 'Gráficos', icon: BarChart3, action: 'view-charts' },
     { label: 'Tabela', icon: List, action: 'view-list' },
     { label: 'Exportar', icon: Download, action: 'export' },
-    { label: 'Filtros', icon: Sliders, action: 'filters' },
     { label: 'Tour', icon: HelpCircle, action: 'tour' },
   ],
   '/pipeline-details': [
@@ -29,7 +27,6 @@ const FEATURES_BY_PAGE: Record<string, { label: string; icon: React.ComponentTyp
     { label: 'Cards', icon: Grid3x3, action: 'view-cards' },
     { label: 'Kanban', icon: Kanban, action: 'view-kanban' },
     { label: 'Exportar', icon: Download, action: 'export' },
-    { label: 'Filtros', icon: Sliders, action: 'filters' },
     { label: 'Tour', icon: HelpCircle, action: 'tour' },
   ],
 };
