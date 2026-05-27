@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
 import { AppProvider } from '@/context/AppContext';
-import { Sidebar } from '@/components/layout/sidebar';
+import { SidebarWrapper } from '@/components/layout/sidebar-wrapper';
 import { ToastContainer } from '@/components/common/toast';
 import './globals.css';
 
@@ -31,7 +31,7 @@ export default function RootLayout({
       <body className="font-sans antialiased bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors">
         <AppProvider>
           <div className="flex min-h-screen">
-            <Sidebar />
+            <SidebarWrapper />
             <main className="flex-1">
               {children}
             </main>

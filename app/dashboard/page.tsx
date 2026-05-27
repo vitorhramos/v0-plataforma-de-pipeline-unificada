@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card } from '@/components/ui/card';
@@ -152,6 +152,23 @@ export default function DashboardPage() {
   const [expandFilters, setExpandFilters] = useState(false);
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const tour = useTour(DASHBOARD_TOUR_STEPS, 'dashboard-tour');
+
+  // Listen to sidebar feature actions
+  useEffect(() => {
+    const handleFeatureAction = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { action } = customEvent.detail;
+      
+      if (action === 'tour') {
+        tour.startTour();
+      } else if (action === 'filters') {
+        setExpandFilters(prev => !prev);
+      }
+    };
+
+    window.addEventListener('sidebar-feature-action', handleFeatureAction);
+    return () => window.removeEventListener('sidebar-feature-action', handleFeatureAction);
+  }, [tour]);
 
   // ── Real data from mock-store ──────────────────────────────────────────────
   const allQuotes = useMemo(() => getQuotes(), []);

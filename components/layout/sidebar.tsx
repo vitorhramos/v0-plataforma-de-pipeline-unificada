@@ -3,21 +3,45 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronLeft, BarChart3, ArrowRightLeft, ListFilter, Moon, Sun } from 'lucide-react';
+import { ChevronLeft, BarChart3, ArrowRightLeft, ListFilter, Moon, Sun, List, Grid3x3, Kanban, Download, Sliders, HelpCircle } from 'lucide-react';
 
-const NAV_GROUPS = [
-  {
-    label: 'Analise',
-    items: [
-      { href: '/dashboard', label: 'Dashboard', icon: BarChart3 },
-      { href: '/pipeline-manager', label: 'Manager', icon: ArrowRightLeft },
-      { href: '/pipeline-details', label: 'Details', icon: ListFilter },
-    ],
-  },
-
+const PAGES = [
+  { href: '/dashboard', label: 'Dashboard', icon: BarChart3 },
+  { href: '/pipeline-manager', label: 'Manager', icon: ArrowRightLeft },
+  { href: '/pipeline-details', label: 'Details', icon: ListFilter },
 ];
 
-export function Sidebar() {
+// Funcionalidades disponíveis por página
+const FEATURES_BY_PAGE: Record<string, { label: string; icon: React.ComponentType<any>; action: string }[]> = {
+  '/dashboard': [
+    { label: 'Filtros', icon: Sliders, action: 'filters' },
+    { label: 'Tour', icon: HelpCircle, action: 'tour' },
+  ],
+  '/pipeline-manager': [
+    { label: 'Lista', icon: List, action: 'view-list' },
+    { label: 'Cards', icon: Grid3x3, action: 'view-cards' },
+    { label: 'Kanban', icon: Kanban, action: 'view-kanban' },
+    { label: 'Exportar', icon: Download, action: 'export' },
+    { label: 'Filtros', icon: Sliders, action: 'filters' },
+    { label: 'Tour', icon: HelpCircle, action: 'tour' },
+  ],
+  '/pipeline-details': [
+    { label: 'Lista', icon: List, action: 'view-list' },
+    { label: 'Cards', icon: Grid3x3, action: 'view-cards' },
+    { label: 'Exportar', icon: Download, action: 'export' },
+    { label: 'Filtros', icon: Sliders, action: 'filters' },
+    { label: 'Tour', icon: HelpCircle, action: 'tour' },
+  ],
+};
+
+// Quais features são desabilitadas por página
+const DISABLED_FEATURES: Record<string, string[]> = {
+  '/dashboard': ['view-list', 'view-cards', 'view-kanban', 'export'],
+  '/pipeline-manager': [],
+  '/pipeline-details': ['view-kanban'],
+};
+
+export function Sidebar({ onFeatureAction }: { onFeatureAction?: (action: string) => void }) {
   const [collapsed, setCollapsed] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const pathname = usePathname();
@@ -38,6 +62,14 @@ export function Sidebar() {
   };
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href);
+  const currentFeatures = FEATURES_BY_PAGE[pathname] || [];
+  const disabledFeatures = DISABLED_FEATURES[pathname] || [];
+
+  const handleFeatureClick = (action: string, disabled: boolean) => {
+    if (!disabled && onFeatureAction) {
+      onFeatureAction(action);
+    }
+  };
 
   return (
     <aside
@@ -67,64 +99,76 @@ export function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
-        {collapsed ? (
-          // Collapsed: just icons, no group labels
-          NAV_GROUPS.flatMap(g => g.items).map(item => {
-            const Icon = item.icon;
-            const active = isActive(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                title={item.label}
-                className={`flex items-center justify-center w-10 h-10 mx-auto rounded-lg transition ${
-                  active
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-500 hover:bg-gray-800 hover:text-gray-200'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-              </Link>
-            );
-          })
-        ) : (
-          NAV_GROUPS.map(group => (
-            <div key={group.label}>
-              <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-3 mb-1">
-                {group.label}
+      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-6">
+        {/* NAVEGAÇÃO - Páginas */}
+        <div>
+          {!collapsed && (
+            <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-3 mb-2">
+              Navegação
+            </p>
+          )}
+          <div className="space-y-0.5">
+            {PAGES.map(page => {
+              const Icon = page.icon;
+              const active = isActive(page.href);
+              return (
+                <Link
+                  key={page.href}
+                  href={page.href}
+                  title={page.label}
+                  className={`flex items-center ${collapsed ? 'justify-center' : 'gap-2.5'} px-3 py-2.5 rounded-lg transition text-sm ${
+                    active
+                      ? 'bg-blue-600 text-white font-semibold'
+                      : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+                  }`}
+                >
+                  <Icon className="w-4 h-4 shrink-0" />
+                  {!collapsed && <span className="truncate">{page.label}</span>}
+                  {!collapsed && active && (
+                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white/60 shrink-0" />
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* FUNCIONALIDADES - Contextuais */}
+        {currentFeatures.length > 0 && (
+          <div>
+            {!collapsed && (
+              <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest px-3 mb-2">
+                Funcionalidades
               </p>
-              <div className="space-y-0.5">
-                {group.items.map(item => {
-                  const Icon = item.icon;
-                  const active = isActive(item.href);
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg transition text-sm ${
-                        active
-                          ? 'bg-blue-600 text-white font-semibold'
-                          : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4 shrink-0" />
-                      <span className="truncate">{item.label}</span>
-                      {active && (
-                        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white/60 shrink-0" />
-                      )}
-                    </Link>
-                  );
-                })}
-              </div>
+            )}
+            <div className="space-y-0.5">
+              {currentFeatures.map(feature => {
+                const Icon = feature.icon;
+                const isDisabled = disabledFeatures.includes(feature.action);
+                return (
+                  <button
+                    key={feature.action}
+                    onClick={() => handleFeatureClick(feature.action, isDisabled)}
+                    disabled={isDisabled}
+                    title={feature.label + (isDisabled ? ' (desabilitado nesta página)' : '')}
+                    className={`flex items-center ${collapsed ? 'justify-center' : 'gap-2.5'} w-full px-3 py-2.5 rounded-lg transition text-sm ${
+                      isDisabled
+                        ? 'text-gray-600 cursor-not-allowed opacity-40'
+                        : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    {!collapsed && <span className="truncate text-left">{feature.label}</span>}
+                  </button>
+                );
+              })}
             </div>
-          ))
+          </div>
         )}
       </nav>
 
       {/* Footer */}
       <div className="border-t border-gray-800/60 p-3 space-y-2">
-        {/* Dark mode toggle */}
         <button
           onClick={toggleDarkMode}
           className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm transition ${

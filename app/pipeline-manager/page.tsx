@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Breadcrumbs } from '@/components/common/breadcrumbs-tooltips';
 import { HelpCircle, Layers, Star } from 'lucide-react';
@@ -136,6 +136,31 @@ export default function PipelineManagerPage() {
   const tour = useTour(MANAGER_TOUR_STEPS, 'manager-tour');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 25;
+
+  // Listen to sidebar feature actions
+  useEffect(() => {
+    const handleFeatureAction = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { action } = customEvent.detail;
+      
+      if (action === 'tour') {
+        tour.startTour();
+      } else if (action === 'filters') {
+        // Open filters modal (if implemented)
+      } else if (action === 'view-list') {
+        setView('table');
+      } else if (action === 'view-cards') {
+        // Toggle card view if implemented
+      } else if (action === 'view-kanban') {
+        // Toggle kanban view if implemented
+      } else if (action === 'export') {
+        // Trigger export
+      }
+    };
+
+    window.addEventListener('sidebar-feature-action', handleFeatureAction);
+    return () => window.removeEventListener('sidebar-feature-action', handleFeatureAction);
+  }, [tour]);
 
   // ── Real store data ────────────────────────────────────────────────────────
   const allQuotes = useMemo(() => getQuotes(), []);

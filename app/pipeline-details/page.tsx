@@ -161,6 +161,25 @@ export default function PipelineDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [versions, setVersions] = useState<Record<number, VersionEntry[]>>({});
 
+  // Listen to sidebar feature actions
+  useEffect(() => {
+    const handleFeatureAction = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { action } = customEvent.detail;
+      
+      if (action === 'tour') {
+        tour.startTour();
+      } else if (action === 'filters') {
+        setFiltersOpen(prev => !prev);
+      } else if (action === 'export') {
+        exportToCsv();
+      }
+    };
+
+    window.addEventListener('sidebar-feature-action', handleFeatureAction);
+    return () => window.removeEventListener('sidebar-feature-action', handleFeatureAction);
+  }, []);
+
   // Parse URL params into filters on mount
   const getFiltersFromUrl = useCallback(() => {
     const f = { ...EMPTY_FILTERS };
