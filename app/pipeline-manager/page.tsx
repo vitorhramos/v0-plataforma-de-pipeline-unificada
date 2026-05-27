@@ -74,16 +74,66 @@ const mockData = {
 };
 
 const MANAGER_TOUR_STEPS = [
-  { id: 'summary', selector: '[data-tour="summary-cards"]', title: 'Resumo Executivo', description: 'Cards com os tres principais KPIs: pipeline total, valor committed e probabilidade media.', position: 'bottom' as const },
-  { id: 'view-toggle', selector: '[data-tour="view-toggle"]', title: 'Alternar entre Graficos e Tabela', description: 'Alterne entre a visao grafica para analise visual e a visao tabular para inspecionar cada quote.', position: 'bottom' as const },
-  { id: 'charts', selector: '[data-tour="manager-charts"]', title: 'Graficos Comparativos', description: 'Pipeline por Revenda, Vendor, distribuicao de Stage e tendencia mensal com multiplas linhas por estagio.', position: 'top' as const },
-  { id: 'table', selector: '[data-tour="manager-table"]', title: 'Tabela de Quotes', description: 'Visao tabular com paginacao. Cada linha tem badge de stage colorido e indicador de status.', position: 'top' as const },
-  { id: 'pagination', selector: '[data-tour="manager-pagination"]', title: 'Paginacao', description: 'Navegue entre as paginas de quotes com os controles de pagina.', position: 'top' as const },
+  {
+    id: 'summary',
+    selector: '[data-tour="summary-cards"]',
+    title: 'Resumo Executivo',
+    description: 'Cards com os três principais KPIs do pipeline: total em USD, valor committed (75%), e probabilidade média dos quotes.',
+    position: 'bottom' as const,
+    icon: 'Zap',
+    callToAction: 'Clique em qualquer card para expandir e ver detalhes completos',
+    proTip: 'Monitor o "Committed 75%": quanto maior, mais saudável o pipeline',
+    nextStep: 'Próximo: alterne entre visão gráfica e tabular conforme sua análise',
+  },
+  {
+    id: 'view-toggle',
+    selector: '[data-tour="view-toggle"]',
+    title: 'Alternar Visão: Gráficos vs Tabela',
+    description: 'Use os botões no topo para trocar entre a visão de gráficos (análise rápida) e tabela (detalhes por quote).',
+    position: 'bottom' as const,
+    icon: 'Layers',
+    callToAction: 'Clique no botão "Tabela" agora e veja a lista completa de quotes',
+    proTip: 'Gráficos são melhores para executivos; Tabela é melhor para trabalho operacional',
+    nextStep: 'Próximo: explore os gráficos comparativos por revenda e vendor',
+  },
+  {
+    id: 'charts',
+    selector: '[data-tour="manager-charts"]',
+    title: 'Gráficos Comparativos',
+    description: '4 visualizações: Pipeline por Revenda, por Vendor, Distribuição de Stage e Tendência Mensal com múltiplas linhas por estágio.',
+    position: 'top' as const,
+    icon: 'BarChart3',
+    callToAction: 'Passe o mouse sobre os gráficos para ver valores exactos. Clique em legendas para mostrar/ocultar séries',
+    proTip: 'Compare revendas: se uma está abaixo da média, ela pode precisar de suporte comercial',
+    nextStep: 'Próximo: vire para tabela para editar quotes individuais',
+  },
+  {
+    id: 'table',
+    selector: '[data-tour="manager-table"]',
+    title: 'Tabela de Quotes',
+    description: 'Visão tabular com 25 quotes por página. Cada linha mostra CPO, Part No, Stage (com cor), Vendor, Cliente e Valor. Clique em uma linha para editar.',
+    position: 'top' as const,
+    icon: 'Table2',
+    callToAction: 'Clique em qualquer linha da tabela para abrir o modal de edição completo',
+    proTip: 'Ordene pelo Stage: identifique "Net Lost" para análise pós-mortem de oportunidades perdidas',
+    nextStep: 'Próximo: use os controles de paginação para navegar entre as 85 quotes',
+  },
+  {
+    id: 'pagination',
+    selector: '[data-tour="manager-pagination"]',
+    title: 'Navegação entre Páginas',
+    description: 'Controles de paginação na base da tabela. Navigate entre as 85 quotes em blocos de 25 por página.',
+    position: 'top' as const,
+    icon: 'ChevronRight',
+    callToAction: 'Clique em "Próxima" ou selecione a página que deseja ver',
+    proTip: 'Use Search/Filter na barra de navegação para saltar direto para uma quote específica',
+    nextStep: 'Perfeito! Você dominou o Pipeline Manager. Visite Details para análises avançadas.',
+  },
 ];
 
 export default function PipelineManagerPage() {
   const [view, setView] = useState<'charts' | 'table'>('charts');
-  const tour = useTour(MANAGER_TOUR_STEPS);
+  const tour = useTour(MANAGER_TOUR_STEPS, 'manager-tour');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 25;
 
@@ -133,6 +183,14 @@ export default function PipelineManagerPage() {
               <HelpCircle className="w-4 h-4" />
               Iniciar Tour
             </button>
+            {tour.neverShowAgain && (
+              <button
+                onClick={tour.startTour}
+                className="text-xs text-gray-400 hover:text-blue-600 underline transition"
+              >
+                Mostrar tour novamente
+              </button>
+            )}
           {/* View toggle */}
           <div data-tour="view-toggle" className="flex items-center bg-gray-100 rounded-lg p-1 gap-1">
             <button
@@ -350,6 +408,8 @@ export default function PipelineManagerPage() {
         onNext={tour.nextStep}
         onPrev={tour.prevStep}
         onClose={tour.closeTour}
+        onSkip={tour.skipTour}
+        onNeverShow={tour.neverShowThisTourAgain}
         totalSteps={tour.totalSteps}
       />
     </div>

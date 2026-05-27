@@ -289,6 +289,14 @@ export default function DashboardPage() {
               <HelpCircle className="w-4 h-4" />
               Iniciar Tour
             </button>
+            {tour.neverShowAgain && (
+              <button
+                onClick={tour.startTour}
+                className="text-xs text-gray-400 hover:text-blue-600 underline transition"
+              >
+                Mostrar tour novamente
+              </button>
+            )}
             <button
               onClick={() => setExpandFilters(!expandFilters)}
               data-tour="dash-filters-btn"

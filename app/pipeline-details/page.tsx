@@ -484,23 +484,130 @@ export default function PipelineDetailsPage() {
 
   // Tour steps definition
   const TOUR_STEPS = [
-    { id: 'kpi-cards', selector: '[data-tour="kpi-cards"]', title: 'Cards de Filtro Rápido', description: 'Clique em "Previsao Expirada" ou "Alta Probabilidade" para filtrar a tabela instantaneamente. O card Pipeline Total mostra a soma de todas as quotes. Clique novamente para remover o filtro.', position: 'bottom' as const },
-    { id: 'search', selector: '[data-tour="search"]', title: 'Busca Rápida', description: 'Digite CPO ID, Part No ou Quote Name para filtrar instantaneamente na tabela.', position: 'bottom' as const },
-    { id: 'filters', selector: '[data-tour="filters-btn"]', title: 'Filtros Avançados', description: 'Clique aqui para abrir o painel com 15 filtros organizados em 4 grupos temáticos. Os filtros são persistidos na URL e podem ser compartilhados.', position: 'bottom' as const },
-    { id: 'tags', selector: '[data-tour="filter-tags"]', title: 'Filtros Ativos', description: 'Veja todos os filtros aplicados aqui. Remova um filtro clicando no X, ou clique "Limpar todos" para resetar.', position: 'bottom' as const },
-    { id: 'sort', selector: '[data-tour="table-header"]', title: 'Ordenação de Colunas', description: 'Clique em qualquer header de coluna para ordenar. O ícone de seta mostra a direção (asc/desc).', position: 'bottom' as const },
-    { id: 'drag', selector: '[data-tour="table-header"]', title: 'Reordenar Colunas', description: 'Arraste qualquer header para mover a coluna para outra posição. A ordem é salva automaticamente em localStorage.', position: 'bottom' as const },
-    { id: 'checkbox', selector: '[data-tour="row-checkbox"]', title: 'Seleção de Linhas', description: 'Marque uma ou mais caixinhas para selecionar quotes individuais. A edição em lote aplica somente nas linhas marcadas. Sem nenhuma seleção, aplica em todos os registros filtrados.', position: 'right' as const },
-    { id: 'edit', selector: '[data-tour="edit-pencil"]', title: 'Edição Individual', description: 'Clique no ícone de lápis para abrir o modal de edição. Os campos alterados ganham borda laranja e um ponto indicador.', position: 'left' as const },
-    { id: 'history', selector: '[data-tour="history-icon"]', title: 'Histórico de Versões', description: 'Clique no ícone de relógio para ver todas as alterações feitas naquele quote, com data e hora de cada mudança.', position: 'left' as const },
-    { id: 'bulk', selector: '[data-tour="bulk-field"]', title: 'Edição em Lote', description: 'Selecione um campo e um valor para aplicar a mesma alteração em múltiplos registros de uma vez. Requer confirmação.', position: 'top' as const },
-    { id: 'undo', selector: '[data-tour="undo-btn"]', title: 'Desfazer Ações', description: 'Após uma edição em lote, clique aqui para desfazer a última ação e restaurar o estado anterior.', position: 'bottom' as const },
-    { id: 'export', selector: '[data-tour="export-btn"]', title: 'Exportar CSV', description: 'Exporte os dados filtrados e ordenados em um arquivo CSV. Baixa automaticamente no seu computador.', position: 'bottom' as const },
-    { id: 'reset-cols', selector: '[data-tour="reset-cols"]', title: 'Resetar Colunas', description: 'Se você reordenou as colunas, clique aqui para restaurar a ordem original.', position: 'bottom' as const },
-    { id: 'pagination', selector: '[data-tour="pagination"]', title: 'Paginação', description: 'Controle quantos registros aparecem por página (25, 50 ou 100). Navegue entre páginas com os botões.', position: 'top' as const },
+    {
+      id: 'kpi-cards',
+      selector: '[data-tour="kpi-cards"]',
+      title: 'Cards de Filtro Rápido',
+      description: 'Clique em "Previsao Expirada" ou "Alta Probabilidade" para filtrar a tabela instantaneamente. O card Pipeline Total mostra a soma de todas as quotes.',
+      position: 'bottom' as const,
+      icon: 'Zap',
+      callToAction: 'Clique em qualquer card para aplicar o filtro e ver os resultados na tabela abaixo',
+      proTip: 'Use múltiplos cards em sequência para criar filtros combinados (ex: Pipeline Total + Previsao Expirada)',
+      nextStep: 'Próximo: use a busca rápida para encontrar quotes específicas',
+    },
+    {
+      id: 'search',
+      selector: '[data-tour="search"]',
+      title: 'Busca Rápida',
+      description: 'Digite CPO ID, Part No ou Quote Name para filtrar instantaneamente. A busca é case-insensitive.',
+      position: 'bottom' as const,
+      icon: 'Sliders',
+      callToAction: 'Digite "CPO-1001" ou qualquer Part No que você veja na tabela',
+      proTip: 'Combine busca + filtros avançados para análises super segmentadas',
+      nextStep: 'Próximo: explore os filtros avançados colapsiveis',
+    },
+    {
+      id: 'filters',
+      selector: '[data-tour="filters-btn"]',
+      title: 'Filtros Avançados Colapsiveis',
+      description: 'Painel com 15 filtros organizados em 4 seções: Identificacao, Classificacao, Valores+Datas e Flags. Clique no título de cada seção para abrir/fechar.',
+      position: 'bottom' as const,
+      icon: 'Sliders',
+      callToAction: 'Clique no botão "Filtros" e escolha uma seção para expandir',
+      proTip: 'Filtros colapsiveis mantêm a UI limpa: você vê só o que precisa',
+      nextStep: 'Próximo: veja os filtros já aplicados em tempo real',
+    },
+    {
+      id: 'tags',
+      selector: '[data-tour="filter-tags"]',
+      title: 'Filtros Ativos (Tags)',
+      description: 'Todos os filtros aplicados aparecem aqui como tags coloridas. Remova um clicando no X, ou clique "Limpar todos" para resetar tudo.',
+      position: 'bottom' as const,
+      icon: 'X',
+      callToAction: 'Aplique alguns filtros acima, depois volte aqui para vê-los como tags',
+      proTip: 'Tags são compartilháveis: copie a URL para enviar filtros específicos para colegas',
+      nextStep: 'Próximo: ordene e reorganize as colunas da tabela',
+    },
+    {
+      id: 'sort',
+      selector: '[data-tour="table-header"]',
+      title: 'Ordenação de Colunas',
+      description: 'Clique em qualquer header de coluna (CPO ID, Stage, CIF, etc) para ordenar. O ícone de seta mostra se é asc ou desc.',
+      position: 'bottom' as const,
+      icon: 'BarChart3',
+      callToAction: 'Clique no header "CIF" para ordenar por valor (maior para menor)',
+      proTip: 'Combine ordenação + filtros: ex: Committed 75% ordenado por CIF DESC = suas maiores oportunidades',
+      nextStep: 'Próximo: selecione linhas para editar em lote',
+    },
+    {
+      id: 'checkbox',
+      selector: '[data-tour="row-checkbox"]',
+      title: 'Seleção de Linhas para Edição em Lote',
+      description: 'Marque uma ou mais caixinhas no início de cada linha para selecionar quotes. A edição em lote aplica nos selecionados.',
+      position: 'right' as const,
+      icon: 'Check',
+      callToAction: 'Marque 3-5 linhas agora e veja o painel de edição em lote aparecer',
+      proTip: 'Sem seleção = edição em lote aplica a TODOS os filtrados (cuidado!). Sempre selecione quando tiver dúvida',
+      nextStep: 'Próximo: clique no lápis para editar um quote individual',
+    },
+    {
+      id: 'edit',
+      selector: '[data-tour="edit-pencil"]',
+      title: 'Edição Individual via Modal',
+      description: 'Clique no ícone de lápis em qualquer linha para abrir um modal completo com todos os 30+ campos editáveis.',
+      position: 'left' as const,
+      icon: 'Pencil',
+      callToAction: 'Clique em qualquer ícone de lápis para abrir e explorar a edição completa',
+      proTip: 'Campos alterados ficam com borda laranja + ponto indicador. Salve ou descarte antes de fechar',
+      nextStep: 'Próximo: veja o histórico de mudanças de um quote',
+    },
+    {
+      id: 'history',
+      selector: '[data-tour="history-icon"]',
+      title: 'Histórico de Versões (Audit Log)',
+      description: 'Clique no ícone de relógio para ver todas as alterações feitas naquele quote: data, hora, campo que mudou e valor anterior vs novo.',
+      position: 'left' as const,
+      icon: 'History',
+      callToAction: 'Edite um quote, depois clique no ícone de histórico para ver o audit trail completo',
+      proTip: 'Use o histórico para rastrear quem mudou quê e quando: critical para compliance',
+      nextStep: 'Próximo: edite múltiplos quotes de uma vez com edição em lote',
+    },
+    {
+      id: 'bulk',
+      selector: '[data-tour="bulk-field"]',
+      title: 'Edição em Lote (Batch Update)',
+      description: 'Selecione linhas, escolha um campo e um novo valor, depois aplique. A mesma alteração é aplicada em todos os selecionados.',
+      position: 'top' as const,
+      icon: 'Layers',
+      callToAction: 'Selecione 3 linhas, escolha "Stage" = "Committed 75%", e clique "Aplicar"',
+      proTip: 'Edição em lote economiza tempo: mudance stage de 10 quotes em 3 cliques',
+      nextStep: 'Próximo: desfaça uma ação com undo',
+    },
+    {
+      id: 'undo',
+      selector: '[data-tour="undo-btn"]',
+      title: 'Desfazer (Undo) Ações',
+      description: 'Após uma edição individual ou em lote, clique aqui para reverter a ação anterior e restaurar o estado.',
+      position: 'bottom' as const,
+      icon: 'RotateCcw',
+      callToAction: 'Faça uma edição, depois clique "Desfazer" para ver a mágica',
+      proTip: 'Undo é seu amigo: não tenha medo de experimentar com bulk edits',
+      nextStep: 'Próximo: exporte os dados para análise externa',
+    },
+    {
+      id: 'export',
+      selector: '[data-tour="export-btn"]',
+      title: 'Exportar para CSV',
+      description: 'Exporte os dados filtrados, ordenados e selecionados em um arquivo CSV. Abre automaticamente em Excel/Sheets.',
+      position: 'bottom' as const,
+      icon: 'Download',
+      callToAction: 'Clique em "Exportar CSV" e salve em seu computador para abrir em Excel',
+      proTip: 'CSV exportado respeita seus filtros: ex: se filtrou "Committed 75%", export tem apenas esses',
+      nextStep: 'Parabéns! Você dominou o Pipeline Details. Agora use isso em seu trabalho diário!',
+    },
   ];
 
-  const tour = useTour(TOUR_STEPS);
+  const tour = useTour(TOUR_STEPS, 'details-tour');
 
   const { add: addToHistory } = useOperationHistory();
   const toast = useToast();
@@ -865,6 +972,14 @@ export default function PipelineDetailsPage() {
               <HelpCircle className="w-4 h-4 text-blue-500" />
               Iniciar Tour
             </button>
+            {tour.neverShowAgain && (
+              <button
+                onClick={tour.startTour}
+                className="text-xs text-gray-400 hover:text-blue-600 underline transition whitespace-nowrap"
+              >
+                Mostrar tour novamente
+              </button>
+            )}
           </div>
         </div>
 
@@ -2614,6 +2729,8 @@ export default function PipelineDetailsPage() {
         onNext={tour.nextStep}
         onPrev={tour.prevStep}
         onClose={tour.closeTour}
+        onSkip={tour.skipTour}
+        onNeverShow={tour.neverShowThisTourAgain}
         totalSteps={tour.totalSteps}
       />
 

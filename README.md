@@ -139,6 +139,83 @@ interface ScenarioGroup {
 
 ---
 
+## 🎓 Sistema de Tours Interativos
+
+Cada página (Dashboard, Manager, Details) possui um **tour completo e contextual** que guia usuários pelas funcionalidades principais.
+
+### Features do Tour:
+
+**Visuais:**
+- Barra de progresso colorida (completo em emerald, current em blue, pending em gray)
+- Badge animado com número do step (bounce + pulsing spotlight)
+- Ícones lucide em cada passo (BarChart3, Sliders, Table2, Zap, etc)
+- Tooltip rico com múltiplas seções
+
+**Conteúdo:**
+- **Call-to-Action**: "Clique em X para fazer Y" — exemplos práticos
+- **Pro Tips**: Insights estratégicos (ex: "Combine filtros para análises mais precisas")
+- **Próximo Passo**: Dica de qual é a próxima funcionalidade a explorar
+- **Descrição detalhada**: Contexto completo de cada feature
+
+**Funcionalidade:**
+- localStorage: Salva tours completados e "nunca mostrar novamente"
+- Botão "Pular tour" explícito
+- Botão "Nunca mostrar novamente"
+- Link "Mostrar tour novamente" (aparece quando tour foi skipado)
+- Navegação: Voltar, Seguir, Concluir
+
+### Tours Disponíveis:
+
+1. **Dashboard Tour** (6 steps)
+   - KPIs Executivos → Filtros Rápidos → Gráfico de Barras → Evolução Mensal → Vendor → Análises Complementares
+
+2. **Pipeline Manager Tour** (5 steps)
+   - Resumo Executivo → Alternar Visão → Gráficos Comparativos → Tabela de Quotes → Paginação
+
+3. **Pipeline Details Tour** (10 steps)
+   - Cards de Filtro → Busca Rápida → Filtros Avançados → Tags Ativas → Ordenação → Seleção de Linhas → Edição Individual → Histórico → Edição em Lote → Export CSV
+
+### Uso do Hook `useTour`:
+
+```typescript
+import { useTour } from '@/hooks/useTour';
+
+// Define os steps
+const TOUR_STEPS = [
+  {
+    id: 'kpis',
+    selector: '[data-tour="kpi-grid"]',
+    title: 'KPIs Executivos',
+    description: '...',
+    position: 'bottom' as const,
+    icon: 'Zap',                      // Lucide icon name
+    callToAction: 'Clique no primeiro KPI...',
+    proTip: 'Mantenha >35% para pipeline saudável',
+    nextStep: 'Próximo: use os filtros rápidos',
+  },
+  // ... mais steps
+];
+
+// Cria o tour com chave para localStorage
+const tour = useTour(TOUR_STEPS, 'dashboard-tour');
+
+// No JSX:
+// <button onClick={tour.startTour}>Iniciar Tour</button>
+// <TourOverlay
+//   isActive={tour.isTourActive}
+//   currentStep={tour.currentStep}
+//   steps={TOUR_STEPS}
+//   onNext={tour.nextStep}
+//   onPrev={tour.prevStep}
+//   onClose={tour.closeTour}
+//   onSkip={tour.skipTour}
+//   onNeverShow={tour.neverShowThisTourAgain}
+//   totalSteps={tour.totalSteps}
+// />
+```
+
+---
+
 ## 🎯 Features & Comportamentos
 
 ### **1. Dashboard Executivo** (`/dashboard`)
