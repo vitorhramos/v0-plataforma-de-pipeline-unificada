@@ -148,11 +148,11 @@ export default function PipelineManagerPage() {
       } else if (action === 'filters') {
         // Open filters modal (if implemented)
       } else if (action === 'view-list') {
-        setView('table');
+        setView('charts');
       } else if (action === 'view-cards') {
-        // Toggle card view if implemented
+        // Cards view functionality (if implemented)
       } else if (action === 'view-kanban') {
-        // Toggle kanban view if implemented
+        // Kanban view functionality (if implemented)
       } else if (action === 'export') {
         // Trigger export
       }
@@ -199,45 +199,6 @@ export default function PipelineManagerPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Pipeline Manager</h1>
             <p className="text-sm text-gray-500 mt-0.5">Graficos e tabela de 85 quotes ativos.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={tour.startTour}
-              className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-100 transition font-medium text-sm shadow-sm"
-            >
-              <HelpCircle className="w-4 h-4" />
-              Iniciar Tour
-            </button>
-            {tour.neverShowAgain && (
-              <button
-                onClick={tour.startTour}
-                className="text-xs text-gray-400 hover:text-blue-600 underline transition"
-              >
-                Mostrar tour novamente
-              </button>
-            )}
-          {/* View toggle */}
-          <div data-tour="view-toggle" className="flex items-center bg-gray-100 rounded-lg p-1 gap-1">
-            <button
-              onClick={() => setView('charts')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition ${
-                view === 'charts' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-              Graficos
-            </button>
-            <button
-              onClick={() => setView('table')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition ${
-                view === 'table' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18M10 4v16M3 6a1 1 0 011-1h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6z" /></svg>
-              Tabela
-            </button>
-          </div>
-          </div>
           </div>
         </div>
 

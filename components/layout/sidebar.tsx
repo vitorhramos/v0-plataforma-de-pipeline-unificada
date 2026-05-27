@@ -18,9 +18,8 @@ const FEATURES_BY_PAGE: Record<string, { label: string; icon: React.ComponentTyp
     { label: 'Tour', icon: HelpCircle, action: 'tour' },
   ],
   '/pipeline-manager': [
-    { label: 'Lista', icon: List, action: 'view-list' },
-    { label: 'Cards', icon: Grid3x3, action: 'view-cards' },
-    { label: 'Kanban', icon: Kanban, action: 'view-kanban' },
+    { label: 'Gráficos', icon: BarChart3, action: 'view-charts' },
+    { label: 'Tabela', icon: List, action: 'view-list' },
     { label: 'Exportar', icon: Download, action: 'export' },
     { label: 'Filtros', icon: Sliders, action: 'filters' },
     { label: 'Tour', icon: HelpCircle, action: 'tour' },
@@ -28,6 +27,7 @@ const FEATURES_BY_PAGE: Record<string, { label: string; icon: React.ComponentTyp
   '/pipeline-details': [
     { label: 'Lista', icon: List, action: 'view-list' },
     { label: 'Cards', icon: Grid3x3, action: 'view-cards' },
+    { label: 'Kanban', icon: Kanban, action: 'view-kanban' },
     { label: 'Exportar', icon: Download, action: 'export' },
     { label: 'Filtros', icon: Sliders, action: 'filters' },
     { label: 'Tour', icon: HelpCircle, action: 'tour' },
@@ -37,8 +37,8 @@ const FEATURES_BY_PAGE: Record<string, { label: string; icon: React.ComponentTyp
 // Quais features são desabilitadas por página
 const DISABLED_FEATURES: Record<string, string[]> = {
   '/dashboard': ['view-list', 'view-cards', 'view-kanban', 'export'],
-  '/pipeline-manager': [],
-  '/pipeline-details': ['view-kanban'],
+  '/pipeline-manager': ['view-cards', 'view-kanban'],
+  '/pipeline-details': [],
 };
 
 export function Sidebar({ onFeatureAction }: { onFeatureAction?: (action: string) => void }) {

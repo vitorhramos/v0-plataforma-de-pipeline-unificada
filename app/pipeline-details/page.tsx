@@ -173,6 +173,12 @@ export default function PipelineDetailsPage() {
         setFiltersOpen(prev => !prev);
       } else if (action === 'export') {
         exportToCsv();
+      } else if (action === 'view-list') {
+        setViewMode('list');
+      } else if (action === 'view-cards') {
+        setViewMode('cards');
+      } else if (action === 'view-kanban') {
+        setViewMode('kanban');
       }
     };
 
@@ -957,48 +963,6 @@ export default function PipelineDetailsPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Pipeline Details</h1>
             <p className="text-sm text-gray-500 mt-0.5">Busca em tempo real, edicao individual e em lote.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Toggle de visualizacao */}
-            <div className="flex items-center bg-white border border-gray-200 rounded-lg p-0.5 shadow-sm">
-              {([
-                { mode: 'list',   icon: List,        title: 'Lista' },
-                { mode: 'cards',  icon: LayoutGrid,  title: 'Cards' },
-                { mode: 'kanban', icon: Columns3,     title: 'Kanban' },
-              ] as const).map(({ mode, icon: Icon, title }) => (
-                <button
-                  key={mode}
-                  onClick={() => setViewMode(mode)}
-                  title={title}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
-                    viewMode === mode
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{title}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Item 4 — botao Tour com borda e bg mais ancorados */}
-            <button
-              onClick={tour.startTour}
-              className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition whitespace-nowrap font-medium text-sm shadow-sm"
-              title="Clique para ver um tour interativo de todas as funcionalidades"
-            >
-              <HelpCircle className="w-4 h-4 text-blue-500" />
-              Iniciar Tour
-            </button>
-            {tour.neverShowAgain && (
-              <button
-                onClick={tour.startTour}
-                className="text-xs text-gray-400 hover:text-blue-600 underline transition whitespace-nowrap"
-              >
-                Mostrar tour novamente
-              </button>
-            )}
           </div>
         </div>
 
