@@ -201,8 +201,6 @@ export default function PipelineManagerPage() {
             <p className="text-sm text-gray-500 mt-0.5">Graficos e tabela de 85 quotes ativos.</p>
           </div>
         </div>
-
-        {/* Summary cards — KPIs from primary quotes only */}
         <div data-tour="summary-cards" className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
           <div className="bg-white rounded-xl border border-gray-200 border-l-4 border-l-blue-500 px-4 py-3">
             <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Quotes Totais</p>
@@ -332,7 +330,9 @@ export default function PipelineManagerPage() {
                               {scenarioMeta?.isPrimary && <Star className="w-2 h-2 fill-current" />}
                             </span>
                           )}
-                        </div>
+        </div>
+
+        {/* Summary cards — KPIs from primary quotes only */}
                       </td>
                       <td className="px-3 py-2.5 font-mono text-gray-700 whitespace-nowrap">{q.part_no}</td>
                       <td className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{q.sales_territory}</td>
@@ -387,17 +387,19 @@ export default function PipelineManagerPage() {
             </div>
           </div>
         )}
-      <TourOverlay
-        isActive={tour.isTourActive}
-        currentStep={tour.currentStep}
-        steps={MANAGER_TOUR_STEPS}
-        onNext={tour.nextStep}
-        onPrev={tour.prevStep}
-        onClose={tour.closeTour}
-        onSkip={tour.skipTour}
-        onNeverShow={tour.neverShowThisTourAgain}
-        totalSteps={tour.totalSteps}
-      />
+
+        <TourOverlay
+          isActive={tour.isTourActive}
+          currentStep={tour.currentStep}
+          steps={MANAGER_TOUR_STEPS}
+          onNext={tour.nextStep}
+          onPrev={tour.prevStep}
+          onClose={tour.closeTour}
+          onSkip={tour.skipTour}
+          onNeverShow={tour.neverShowThisTourAgain}
+          totalSteps={tour.totalSteps}
+        />
+      </div>
     </div>
   );
 }

@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+
+export const dynamic = 'force-dynamic';
 import { SlidersHorizontal, X, Pencil, Check, History, Loader2, ChevronUp, ChevronDown, HelpCircle, List, LayoutGrid, Columns3, Layers, ChevronRight, Star, BookmarkCheck, RotateCcw, Bookmark, Lock } from 'lucide-react';
 import { Breadcrumbs, Tooltip } from '@/components/common/breadcrumbs-tooltips';
 import { useOperationHistory } from '@/components/common/operation-history';
@@ -154,6 +156,14 @@ const EDITABLE_FIELDS: { key: keyof Quote; label: string; type: 'text' | 'select
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function PipelineDetailsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PipelineDetailsContent />
+    </Suspense>
+  );
+}
+
+function PipelineDetailsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -1623,7 +1633,7 @@ export default function PipelineDetailsPage() {
           </div>
         )}
 
-        {/* ── View: Kanban ─────────��──────────────────────────��────────────────── */}
+        {/* ── View: Kanban ─────────����──────────────────────────��────────────────── */}
         {viewMode === 'kanban' && (() => {
           const kanbanGroups = STAGES_LIST.map(stage => ({
             stage,
