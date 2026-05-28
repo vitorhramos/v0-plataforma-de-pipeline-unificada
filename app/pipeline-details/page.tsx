@@ -66,6 +66,7 @@ type Quote = {
   commentHistory?: CommentEntry[];
   lost_comment?: string;
   scenarioGroupId?: string;
+  vendor_opportunity_id?: string;
 };
 
 type VersionEntry = {
@@ -82,7 +83,11 @@ type VersionEntry = {
 const VENDORS_LIST = ['Cisco', 'HPE', 'Dell', 'Lenovo'];
 const TERRITORIES_LIST = ['Sao Paulo', 'Rio de Janeiro', 'Minas Gerais'];
 const BU_LIST = ['BU Storage', 'BU Network', 'BU Compute'];
-const STAGES_LIST = ['Not Classified', 'Pipelined', 'Pricing 25%', 'Up Selling 50%', 'Committed 75%', 'Net Lost'];
+// STAGES_LIST: opções editáveis — "Pipelined" não é um stage editável,
+// é um agrupador de filtro que representa 25% + 50% + 75%.
+const STAGES_LIST = ['Not Classified', 'Pricing 25%', 'Up Selling 50%', 'Committed 75%', 'Net Lost'];
+// Para filtros, KPI cards e exibição (inclui Pipelined como grupo virtual)
+const STAGES_ALL  = ['Not Classified', 'Pipelined', 'Pricing 25%', 'Up Selling 50%', 'Committed 75%', 'Net Lost'];
 const REVENDA_LIST = ['Revenda A', 'Revenda B', 'Revenda C', 'Revenda D', 'Revenda E'];
 const PROD_TYPES_LIST = ['Hardware', 'Software', 'Services', 'Renew'];
 const ALL_STATUSES = ['BACKORDER', 'BOSOSPLIT', 'CONVERTOK', 'PARTIALBO', 'SALESORDER', 'TERMSFIX', 'QUOTEPO', 'QUOTESHEET', 'READYAF', 'POCHANGE', 'POLINEQC', 'CANCELLED'];
@@ -675,9 +680,17 @@ function PipelineDetailsContent() {
     if (applied.part_no && !q.part_no.toLowerCase().includes(applied.part_no.toLowerCase())) return false;
     if (applied.quote_name && !q.quote_name.toLowerCase().includes(applied.quote_name.toLowerCase())) return false;
     // Classification — Stage and Prod Type are multi-select (comma-separated)
+    // "Pipelined" é um agrupador virtual que representa Pricing 25% + Up Selling 50% + Committed 75%
     if (applied.stage) {
       const sel = applied.stage.split(',').map(s => s.trim()).filter(Boolean);
-      if (sel.length > 0 && !sel.includes(q.stage)) return false;
+      if (sel.length > 0) {
+        const expanded = sel.flatMap(s =>
+          s === 'Pipelined'
+            ? ['Pricing 25%', 'Up Selling 50%', 'Committed 75%']
+            : [s]
+        );
+        if (!expanded.includes(q.stage)) return false;
+      }
     }
     if (applied.prod_type) {
       const sel = applied.prod_type.split(',').map(s => s.trim()).filter(Boolean);
@@ -1473,7 +1486,7 @@ function PipelineDetailsContent() {
                     <div className="grid grid-cols-2 gap-x-8 gap-y-2">
                       <div>
                         <label className={lbl}>Stage</label>
-                        <ChipGroup options={STAGES_LIST} filterKey="stage" colorMap={STAGE_COLORS} />
+                        <ChipGroup options={STAGES_ALL} filterKey="stage" colorMap={STAGE_COLORS} />
                       </div>
                       <div>
                         <label className={lbl}>Prod Type</label>
@@ -1635,7 +1648,7 @@ function PipelineDetailsContent() {
 
         {/* ── View: Kanban ─────────����──────────────────────────��────────────────── */}
         {viewMode === 'kanban' && (() => {
-          const kanbanGroups = STAGES_LIST.map(stage => ({
+          const kanbanGroups = STAGES_ALL.map(stage => ({
             stage,
             // filtra do state original quotes, nao do filteredQuotes, para refletir moves
             quotes: quotes.filter(q => filteredQuotes.some(fq => fq.id === q.id) && q.stage === stage),
@@ -2276,6 +2289,30 @@ function PipelineDetailsContent() {
                             <span className="text-gray-400 block leading-none mb-0.5">Vendor</span>
                             <span className="font-semibold text-gray-800">{editingQuote.vendor}</span>
                           </div>
+                          {/* Registro de Oportunidade no Vendor — editavel, texto livre */}
+                          {(() => {
+                            const voVal = String((editDraft as Record<string, unknown>)['vendor_opportunity_id'] ?? editingQuote.vendor_opportunity_id ?? '');
+                            const voChanged = (editDraft as Record<string, unknown>)['vendor_opportunity_id'] !== undefined &&
+                              String((editDraft as Record<string, unknown>)['vendor_opportunity_id']) !== String(editingQuote.vendor_opportunity_id ?? '');
+                            return (
+                              <div className="col-span-1 sm:col-span-2">
+                                <span className="text-gray-400 block leading-none mb-0.5 flex items-center gap-1">
+                                  Reg. Oportunidade Vendor
+                                  {voChanged && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" title="Alterado" />}
+                                </span>
+                                <input
+                                  type="text"
+                                  placeholder="—"
+                                  value={voVal}
+                                  onChange={e => setEditDraft(d => ({ ...d, vendor_opportunity_id: e.target.value }))}
+                                  pattern="[A-Za-z0-9\-_#]*"
+                                  className={`px-2 py-1 text-xs border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 w-full ${
+                                    voChanged ? 'ring-1 ring-amber-400 border-amber-300' : 'border-gray-200'
+                                  } text-gray-700`}
+                                />
+                              </div>
+                            );
+                          })()}
                           <div>
                             <span className="text-gray-400 block leading-none mb-0.5">Master Customer</span>
                             <span className="font-semibold text-gray-800">{editingQuote.master_customer}</span>
