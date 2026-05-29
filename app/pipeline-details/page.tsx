@@ -1648,9 +1648,9 @@ function PipelineDetailsContent() {
 
         {/* ── View: Kanban ─────────����──────────────────────────��────────────────── */}
         {viewMode === 'kanban' && (() => {
-          const kanbanGroups = STAGES_ALL.map(stage => ({
+          // Kanban usa STAGES_LIST (sem Pipelined) — Pipelined é apenas filtro/agrupador virtual
+          const kanbanGroups = STAGES_LIST.map(stage => ({
             stage,
-            // filtra do state original quotes, nao do filteredQuotes, para refletir moves
             quotes: quotes.filter(q => filteredQuotes.some(fq => fq.id === q.id) && q.stage === stage),
             total:  quotes.filter(q => filteredQuotes.some(fq => fq.id === q.id) && q.stage === stage).reduce((s, q) => s + q.usd_value, 0),
           }));
@@ -2281,7 +2281,7 @@ function PipelineDetailsContent() {
                         </div>
                       )}
 
-                      {/* Row 1 — Identificacao */}
+                      {/* Row 1 �� Identificacao */}
                       <div>
                         <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Identificacao</p>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1.5 text-[11px]">
