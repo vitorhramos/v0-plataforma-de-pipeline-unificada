@@ -155,6 +155,7 @@ const EMPTY_FILTERS = {
 const EDITABLE_FIELDS: { key: keyof Quote; label: string; type: 'text' | 'select' | 'number' | 'date' | 'textarea'; options?: string[] }[] = [
   { key: 'stage',                  label: 'Stage',              type: 'select',   options: STAGES_LIST },
   { key: 'probability',            label: 'Prob %',             type: 'number' },
+  { key: 'close_date',             label: 'Close Date',         type: 'date' },
   { key: 'renew',                  label: 'Renew',              type: 'select',   options: ['Yes', 'No'] },
   { key: 'is_engineering_ticket',  label: 'Eng. Ticket',        type: 'select',   options: ['Yes', 'No'] },
 ];
