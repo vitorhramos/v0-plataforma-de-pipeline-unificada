@@ -57,6 +57,7 @@ type Quote = {
   hts_code?: string;
   hts_description?: string;
   is_engineering_ticket?: string;
+  credito_aprovado?: string;
   // internal only (not shown as columns)
   quote_number: string;
   bu: string;
@@ -155,6 +156,7 @@ const EMPTY_FILTERS = {
 const EDITABLE_FIELDS: { key: keyof Quote; label: string; type: 'text' | 'select' | 'number' | 'date' | 'textarea'; options?: string[] }[] = [
   { key: 'stage',                  label: 'Stage',              type: 'select',   options: STAGES_LIST },
   { key: 'close_date',             label: 'Close Date',         type: 'date' },
+  { key: 'credito_aprovado',       label: 'Credito Aprovado',   type: 'select',   options: ['Sim', 'Não'] },
   { key: 'renew',                  label: 'Renew',              type: 'select',   options: ['Yes', 'No'] },
   { key: 'is_engineering_ticket',  label: 'Eng. Ticket',        type: 'select',   options: ['Yes', 'No'] },
 ];
@@ -352,37 +354,37 @@ function PipelineDetailsContent() {
 
   // Column definitions (source of truth) — 33 columns per spec
   const ALL_COLUMNS: { label: string; key: keyof Quote }[] = [
-    { label: 'CPO ID',          key: 'cpo_id' },
-    { label: 'CPO Status',      key: 'status' },
-    { label: 'VPC Code',        key: 'vpc_code' },
-    { label: 'Part No',         key: 'part_no' },
-    { label: 'Part Desc',       key: 'description' },
     { label: 'Sales Terr',      key: 'sales_territory' },
     { label: 'Team',            key: 'team' },
     { label: 'Vendor',          key: 'vendor' },
-    { label: 'Master Customer', key: 'master_customer' },
-    { label: 'Bill To',         key: 'bill_to' },
-    { label: 'End User',        key: 'end_user' },
-    { label: 'CIF',             key: 'usd_value' },
-    { label: 'NET',             key: 'net_value' },
-    { label: 'FOB',             key: 'fob_value' },
-    { label: 'GM %',            key: 'gm_pct' },
-    { label: 'CPO QTY',        key: 'cpo_qty' },
+    { label: 'Opportunity',     key: 'quote_name' },
+    { label: 'CPO ID',          key: 'cpo_id' },
+    { label: 'CPO No',          key: 'cpo_no' },
+    { label: 'CPO Status',      key: 'status' },
     { label: 'Stage',           key: 'stage' },
-    { label: 'Lost',            key: 'lost_reason' },
+    { label: 'Renew',           key: 'renew' },
+    { label: 'Master Customer', key: 'master_customer' },
+    { label: 'End User',        key: 'end_user' },
+    { label: 'Bill To',         key: 'bill_to' },
+    { label: 'NET',             key: 'net_value' },
+    { label: 'GM %',            key: 'gm_pct' },
+    { label: 'Pay Meth Name',   key: 'pay_meth_name' },
+    { label: 'CIF',             key: 'usd_value' },
+    { label: 'FOB',             key: 'fob_value' },
     { label: 'Created Date',    key: 'created_date' },
     { label: 'Close Date',      key: 'close_date' },
-    { label: 'CPO No',         key: 'cpo_no' },
-    { label: 'CPO Pay Meth',    key: 'cpo_pay_meth' },
-    { label: 'Pay Meth Name',   key: 'pay_meth_name' },
-    { label: 'Opportunity',     key: 'quote_name' },
-    { label: 'Prod Type',       key: 'prod_type' },
-    { label: 'Renew',           key: 'renew' },
+    { label: 'Lost',            key: 'lost_reason' },
     { label: 'Pipe Comments',   key: 'pipe_comments' },
     { label: 'Quote Comments',  key: 'quote_comments' },
+    { label: 'VPC Code',        key: 'vpc_code' },
+    { label: 'Part No',         key: 'part_no' },
+    { label: 'Part Desc',       key: 'description' },
+    { label: 'Prod Type',       key: 'prod_type' },
+    { label: 'CPO QTY',         key: 'cpo_qty' },
     { label: 'HTS Code',        key: 'hts_code' },
     { label: 'HTS Description', key: 'hts_description' },
     { label: 'Eng. Ticket',     key: 'is_engineering_ticket' },
+    { label: 'Credito Aprovado', key: 'credito_aprovado' },
   ];
 
   const DEFAULT_COL_ORDER = ALL_COLUMNS.map(c => c.key);
