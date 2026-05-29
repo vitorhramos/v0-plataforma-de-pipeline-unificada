@@ -2402,44 +2402,73 @@ function PipelineDetailsContent() {
                 <div className="px-6 pt-4 pb-4">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Pipeline</p>
 
-                  {/* Stage — full width */}
-                  <div className="mb-3">
-                    {(() => {
-                      const stageField = EDITABLE_FIELDS.find(f => f.key === 'stage')!;
-                      const val = String((editDraft as Record<string, unknown>)['stage'] ?? editingQuote['stage'] ?? '');
-                      const changed = (editDraft as Record<string, unknown>)['stage'] !== undefined &&
-                        String((editDraft as Record<string, unknown>)['stage']) !== String(editingQuote['stage'] ?? '');
-                      const STAGE_PROB: Record<string, number> = {
-                        'Not Classified': 0, 'Pipelined': 20, 'Pricing 25%': 25, 'Up Selling 50%': 50, 'Committed 75%': 75, 'Net Lost': 0,
-                      };
-                      return (
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-                            Stage
-                            {changed && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" title="Alterado" />}
-                          </label>
-                          <select
-                            value={val}
-                            onChange={e => {
-                              const newStage = e.target.value;
-                              if (newStage === 'Net Lost' && editingQuote.stage !== 'Net Lost') {
-                                setNetLostOpen(true);
-                              } else {
-                                const suggestedProb = STAGE_PROB[newStage];
-                                setEditDraft(d => ({
-                                  ...d,
-                                  stage: newStage,
-                                  ...(suggestedProb !== undefined ? { probability: suggestedProb } : {}),
-                                }));
-                              }
-                            }}
-                            className={`${inp} bg-white ${changed ? 'ring-1 ring-amber-400 border-amber-300' : ''}`}
-                          >
-                            {stageField.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                          </select>
-                        </div>
-                      );
-                    })()}
+                  {/* Stage + Credito Aprovado — two columns */}
+                  <div className="grid grid-cols-2 gap-4 mb-3">
+                    {/* Stage */}
+                    <div>
+                      {(() => {
+                        const stageField = EDITABLE_FIELDS.find(f => f.key === 'stage')!;
+                        const val = String((editDraft as Record<string, unknown>)['stage'] ?? editingQuote['stage'] ?? '');
+                        const changed = (editDraft as Record<string, unknown>)['stage'] !== undefined &&
+                          String((editDraft as Record<string, unknown>)['stage']) !== String(editingQuote['stage'] ?? '');
+                        const STAGE_PROB: Record<string, number> = {
+                          'Not Classified': 0, 'Pipelined': 20, 'Pricing 25%': 25, 'Up Selling 50%': 50, 'Committed 75%': 75, 'Net Lost': 0,
+                        };
+                        return (
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+                              Stage
+                              {changed && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" title="Alterado" />}
+                            </label>
+                            <select
+                              value={val}
+                              onChange={e => {
+                                const newStage = e.target.value;
+                                if (newStage === 'Net Lost' && editingQuote.stage !== 'Net Lost') {
+                                  setNetLostOpen(true);
+                                } else {
+                                  const suggestedProb = STAGE_PROB[newStage];
+                                  setEditDraft(d => ({
+                                    ...d,
+                                    stage: newStage,
+                                    ...(suggestedProb !== undefined ? { probability: suggestedProb } : {}),
+                                  }));
+                                }
+                              }}
+                              className={`${inp} bg-white ${changed ? 'ring-1 ring-amber-400 border-amber-300' : ''}`}
+                            >
+                              {stageField.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    {/* Credito Aprovado */}
+                    <div>
+                      {(() => {
+                        const creditoField = EDITABLE_FIELDS.find(f => f.key === 'credito_aprovado')!;
+                        const val = String((editDraft as Record<string, unknown>)['credito_aprovado'] ?? editingQuote.credito_aprovado ?? '');
+                        const changed = (editDraft as Record<string, unknown>)['credito_aprovado'] !== undefined &&
+                          String((editDraft as Record<string, unknown>)['credito_aprovado']) !== String(editingQuote.credito_aprovado ?? '');
+                        return (
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+                              Credito Aprovado
+                              {changed && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" title="Alterado" />}
+                            </label>
+                            <select
+                              value={val}
+                              onChange={e => setEditDraft(d => ({ ...d, credito_aprovado: e.target.value }))}
+                              className={`${inp} bg-white ${changed ? 'ring-1 ring-amber-400 border-amber-300' : ''}`}
+                            >
+                              <option value="">—</option>
+                              {creditoField.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                          </div>
+                        );
+                      })()}
+                    </div>
                   </div>
 
                   {/* Renew (read-only) + Eng. Ticket (number input) */}
