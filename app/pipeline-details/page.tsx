@@ -1209,93 +1209,7 @@ function PipelineDetailsContent() {
 
           {/* Espacador + page size */}
           <div className="flex-1" />
-          {/* Column order actions */}
-          {(!isDefaultOrder || hasPreferredOrder) && (
-            <div className="relative shrink-0" ref={colMenuRef}>
-              <button
-                onClick={() => setColMenuOpen(o => !o)}
-                data-tour="reset-cols"
-                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition whitespace-nowrap ${
-                  isPreferredOrder
-                    ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
-                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {isPreferredOrder
-                  ? <BookmarkCheck className="w-3.5 h-3.5" />
-                  : <Columns3 className="w-3.5 h-3.5" />
-                }
-                <span>{isPreferredOrder ? 'Visao preferencial' : 'Colunas alteradas'}</span>
-                <ChevronDown className="w-3 h-3 opacity-60" />
-              </button>
-
-              {colMenuOpen && (
-                <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden py-1">
-                  {/* Save as preferred */}
-                  <button
-                    onClick={() => {
-                      localStorage.setItem('pipeline-col-order-preferred', JSON.stringify(colOrder));
-                      localStorage.setItem('pipeline-col-order', JSON.stringify(colOrder));
-                      setHasPreferredOrder(true);
-                      setColMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-700 hover:bg-gray-50 transition"
-                  >
-                    <Bookmark className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                    <div className="text-left">
-                      <p className="font-semibold">Salvar como preferencial</p>
-                      <p className="text-gray-400 text-[10px] leading-tight">Define esta ordem como padrao</p>
-                    </div>
-                  </button>
-
-                  {/* Restore preferred — only if there is one saved and current differs */}
-                  {hasPreferredOrder && !isPreferredOrder && (
-                    <button
-                      onClick={() => {
-                        try {
-                          const p = localStorage.getItem('pipeline-col-order-preferred');
-                          if (p) {
-                            const order = mergeWithDefault(JSON.parse(p));
-                            setColOrder(order);
-                            localStorage.setItem('pipeline-col-order', JSON.stringify(order));
-                          }
-                        } catch {}
-                        setColMenuOpen(false);
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-700 hover:bg-gray-50 transition"
-                    >
-                      <BookmarkCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                      <div className="text-left">
-                        <p className="font-semibold">Restaurar preferencial</p>
-                        <p className="text-gray-400 text-[10px] leading-tight">Volta para sua visao salva</p>
-                      </div>
-                    </button>
-                  )}
-
-                  <div className="my-1 border-t border-gray-100" />
-
-                  {/* Reset to factory default */}
-                  <button
-                    onClick={() => {
-                      setColOrder(DEFAULT_COL_ORDER);
-                      localStorage.removeItem('pipeline-col-order');
-                      localStorage.removeItem('pipeline-col-order-preferred');
-                      setHasPreferredOrder(false);
-                      setColMenuOpen(false);
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-700 hover:bg-red-50 transition group"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5 text-gray-400 group-hover:text-red-500 shrink-0" />
-                    <div className="text-left">
-                      <p className="font-semibold group-hover:text-red-600">Resetar para original</p>
-                      <p className="text-gray-400 text-[10px] leading-tight">Remove qualquer customizacao</p>
-                    </div>
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-          <select value={pageSize} onChange={e => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }} data-tour="pagination" className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition shrink-0">
+          <select value={pageSize} onChange={e => { setPageSize(parseInt(e.target.value)); setCurrentPage(1); }} className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
             <option value={25}>25 / pag</option>
             <option value={50}>50 / pag</option>
             <option value={100}>100 / pag</option>
@@ -1562,17 +1476,106 @@ function PipelineDetailsContent() {
 
 
 
-        {/* Count */}
-        <p className="text-xs text-gray-500">
-          Mostrando <span className="font-semibold text-gray-700">{visibleQuotes.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, visibleQuotes.length)}</span> de <span className="font-semibold text-gray-700">{visibleQuotes.length}</span> registros
-          {nonPrimaryIds.size > 0 && !hasActiveSearch && (
-            <span className="ml-2 text-[11px] text-violet-600">({nonPrimaryIds.size} subordinadas ocultas)</span>
+        {/* Count + Column Order Button */}
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-xs text-gray-500">
+            Mostrando <span className="font-semibold text-gray-700">{visibleQuotes.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, visibleQuotes.length)}</span> de <span className="font-semibold text-gray-700">{visibleQuotes.length}</span> registros
+            {nonPrimaryIds.size > 0 && !hasActiveSearch && (
+              <span className="ml-2 text-[11px] text-violet-600">({nonPrimaryIds.size} subordinadas ocultas)</span>
+            )}
+            {nonPrimaryIds.size > 0 && hasActiveSearch && (
+              <span className="ml-2 text-[11px] text-violet-600">(subordinadas incluidas na busca)</span>
+            )}
+            {selectedIds.size > 0 && <span className="ml-3 text-blue-600 font-semibold">{selectedIds.size} selecionados para edicao em lote</span>}
+          </p>
+
+          {/* Column Order Button — only show when order differs from default */}
+          {(!isDefaultOrder || hasPreferredOrder) && (
+            <div className="relative" ref={colMenuRef}>
+              <button
+                onClick={() => setColMenuOpen(o => !o)}
+                data-tour="reset-cols"
+                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border transition whitespace-nowrap shrink-0 ${
+                  isPreferredOrder
+                    ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
+                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {isPreferredOrder
+                  ? <BookmarkCheck className="w-3.5 h-3.5" />
+                  : <Columns3 className="w-3.5 h-3.5" />
+                }
+                <span>{isPreferredOrder ? 'Visao preferencial' : 'Colunas alteradas'}</span>
+                <ChevronDown className="w-3 h-3 opacity-60" />
+              </button>
+
+              {colMenuOpen && (
+                <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden py-1">
+                  {/* Save as preferred */}
+                  <button
+                    onClick={() => {
+                      localStorage.setItem('pipeline-col-order-preferred', JSON.stringify(colOrder));
+                      localStorage.setItem('pipeline-col-order', JSON.stringify(colOrder));
+                      setHasPreferredOrder(true);
+                      setColMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-700 hover:bg-gray-50 transition"
+                  >
+                    <Bookmark className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                    <div className="text-left">
+                      <p className="font-semibold">Salvar como preferencial</p>
+                      <p className="text-gray-400 text-[10px] leading-tight">Define esta ordem como padrao</p>
+                    </div>
+                  </button>
+
+                  {/* Restore preferred — only if there is one saved and current differs */}
+                  {hasPreferredOrder && !isPreferredOrder && (
+                    <button
+                      onClick={() => {
+                        try {
+                          const p = localStorage.getItem('pipeline-col-order-preferred');
+                          if (p) {
+                            const order = mergeWithDefault(JSON.parse(p));
+                            setColOrder(order);
+                            localStorage.setItem('pipeline-col-order', JSON.stringify(order));
+                          }
+                        } catch {}
+                        setColMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-700 hover:bg-gray-50 transition"
+                    >
+                      <BookmarkCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                      <div className="text-left">
+                        <p className="font-semibold">Restaurar preferencial</p>
+                        <p className="text-gray-400 text-[10px] leading-tight">Volta para sua visao salva</p>
+                      </div>
+                    </button>
+                  )}
+
+                  <div className="my-1 border-t border-gray-100" />
+
+                  {/* Reset to factory default */}
+                  <button
+                    onClick={() => {
+                      setColOrder(DEFAULT_COL_ORDER);
+                      localStorage.removeItem('pipeline-col-order');
+                      localStorage.removeItem('pipeline-col-order-preferred');
+                      setHasPreferredOrder(false);
+                      setColMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-700 hover:bg-gray-50 transition"
+                  >
+                    <HardReset className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                    <div className="text-left">
+                      <p className="font-semibold">Resetar para original</p>
+                      <p className="text-gray-400 text-[10px] leading-tight">Volta para a ordem inicial</p>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
           )}
-          {nonPrimaryIds.size > 0 && hasActiveSearch && (
-            <span className="ml-2 text-[11px] text-violet-600">(subordinadas incluidas na busca)</span>
-          )}
-          {selectedIds.size > 0 && <span className="ml-3 text-blue-600 font-semibold">{selectedIds.size} selecionados para edicao em lote</span>}
-        </p>
+        </div>
 
         {/* ── View: Cards ─────────────────────────────────────────────────────── */}
         {viewMode === 'cards' && (
