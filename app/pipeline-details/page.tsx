@@ -1477,7 +1477,7 @@ function PipelineDetailsContent() {
 
 
         {/* Count + Column Order Button */}
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
           <p className="text-xs text-gray-500">
             Mostrando <span className="font-semibold text-gray-700">{visibleQuotes.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, visibleQuotes.length)}</span> de <span className="font-semibold text-gray-700">{visibleQuotes.length}</span> registros
             {nonPrimaryIds.size > 0 && !hasActiveSearch && (
