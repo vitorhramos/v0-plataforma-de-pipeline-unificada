@@ -80,7 +80,7 @@ type VersionEntry = {
 
 
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// Constants
 const VENDORS_LIST = ['Cisco', 'HPE', 'Dell', 'Lenovo'];
 const TERRITORIES_LIST = ['Sao Paulo', 'Rio de Janeiro', 'Minas Gerais'];
 const BU_LIST = ['BU Storage', 'BU Network', 'BU Compute'];
@@ -161,7 +161,7 @@ const EDITABLE_FIELDS: { key: keyof Quote; label: string; type: 'text' | 'select
   { key: 'is_engineering_ticket',  label: 'Eng. Ticket',        type: 'select',   options: ['Yes', 'No'] },
 ];
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// Component
 export default function PipelineDetailsPage() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
@@ -235,7 +235,7 @@ function PipelineDetailsContent() {
   const [viewMode, setViewMode] = useState<'list' | 'cards' | 'kanban'>('list');
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
 
-  // ── Scenario group states ──────────────────────────────────────��───────────
+  // -- Scenario group states --------------------------------------��----------
   const [scenarioGroups, setScenarioGroups] = useState<ScenarioGroup[]>(() => getScenarioGroups());
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [scenarioModalOpen, setScenarioModalOpen] = useState(false);
@@ -326,7 +326,7 @@ function PipelineDetailsContent() {
     removeScenarioGroup(groupId);
     refreshGroups();
   };
-  // ──────────────────────────────────────────────────────────────────────────
+  // --------------------------------------------------------------------------
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -495,7 +495,7 @@ function PipelineDetailsContent() {
   const [confirmScenarioSave, setConfirmScenarioSave] = useState(false);
   const [scenarioSavedFeedback, setScenarioSavedFeedback] = useState(false);
 
-  // ── Esc closes the topmost open modal ────────────────────────────────────
+  // -- Esc closes the topmost open modal ------------------------------------
   // Close column order menu when clicking outside
   useEffect(() => {
     if (!colMenuOpen) return;
@@ -663,7 +663,7 @@ function PipelineDetailsContent() {
     // no adjustment needed, but stage/prod_type are already strings so they count correctly
   ;
 
-  // ── Filtering ──
+  // -- Filtering --
   const filteredQuotes = quotes.filter(q => {
     const term = searchTerm.toLowerCase();
     if (term) {
@@ -835,7 +835,7 @@ function PipelineDetailsContent() {
     toast.success(`Exportados ${sortedQuotes.length} registros em ${format}`);
   };
 
-  // ── Record a version entry ──
+  // -- Record a version entry --
   const recordVersion = (id: number, field: string, oldValue: string, newValue: string) => {
     const entry: VersionEntry = {
       timestamp: new Date().toLocaleString('pt-BR'),
@@ -847,7 +847,7 @@ function PipelineDetailsContent() {
     setVersions(prev => ({ ...prev, [id]: [entry, ...(prev[id] ?? [])] }));
   };
 
-  // ── Save single edit ──
+  // -- Save single edit --
   const saveEdit = () => {
     if (!editingQuote) return;
     const updated: Quote = { ...editingQuote, ...editDraft };
@@ -902,7 +902,7 @@ function PipelineDetailsContent() {
     setConfirmEditSave(false);
   };
 
-  // ── Bulk edit with confirmation ──
+  // -- Bulk edit with confirmation --
   const applyBulkEdit = () => {
     if (!bulkField || bulkValue === '') return;
     const targetIds = selectedIds.size > 0 ? selectedIds : new Set(filteredQuotes.map(q => q.id));
@@ -936,7 +936,7 @@ function PipelineDetailsContent() {
     addToHistory('Undo', last.desc, 'success');
   };
 
-  // ── Selection helpers ──
+  // -- Selection helpers --
   const toggleSelect = (id: number) => setSelectedIds(prev => {
     const n = new Set(prev);
     n.has(id) ? n.delete(id) : n.add(id);
@@ -1577,7 +1577,7 @@ function PipelineDetailsContent() {
           )}
         </div>
 
-        {/* ── View: Cards ─────────────────────────────────────────────────────── */}
+        {/* -- View: Cards ------------------------------------------------------ */}
         {viewMode === 'cards' && (
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
             {filteredQuotes.length === 0 ? (
@@ -1651,7 +1651,7 @@ function PipelineDetailsContent() {
           </div>
         )}
 
-        {/* ── View: Kanban ─────────����──────────────────────────��────────────────── */}
+        {/* -- View: Kanban --------����--------------------------��------------------ */}
         {viewMode === 'kanban' && (() => {
           // Kanban usa STAGES_LIST (sem Pipelined) — Pipelined é apenas filtro/agrupador virtual
           const kanbanGroups = STAGES_LIST.map(stage => ({
@@ -1767,7 +1767,7 @@ function PipelineDetailsContent() {
           );
         })()}
 
-        {/* ─��� View: List (tabela original) ────────────��────────────────────────── */}
+        {/* ��� View: List (tabela original) ------------��-------------------------- */}
         {viewMode === 'list' && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -2156,7 +2156,7 @@ function PipelineDetailsContent() {
         )}{/* fim viewMode === list */}
       </div>
 
-      {/* ── Edit Modal ── */}
+      {/* -- Edit Modal -- */}
       {editingQuote && (() => {
         const getVal = (key: keyof Quote) =>
           (editDraft as Record<string, unknown>)[key] !== undefined
@@ -2255,7 +2255,7 @@ function PipelineDetailsContent() {
               {/* Body */}
               <div className="overflow-y-auto flex-1">
 
-                {/* ── Read-only info strip ── */}
+                {/* -- Read-only info strip -- */}
                 {(() => {
                   const cif = editingQuote.usd_value;
                   const fmtVal = (v?: number) => v == null ? '—' : v >= 1_000_000 ? `$${(v/1_000_000).toFixed(2)}M` : `$${(v/1_000).toFixed(0)}K`;
@@ -2401,7 +2401,7 @@ function PipelineDetailsContent() {
                   );
                 })()}
 
-                {/* ── Pipeline (editaveis) ── */}
+                {/* -- Pipeline (editaveis) -- */}
                 <div className="px-6 pt-4 pb-4">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Pipeline</p>
 
@@ -2515,7 +2515,7 @@ function PipelineDetailsContent() {
 
                 <div className="mx-6 border-t border-gray-100 dark:border-gray-800" />
 
-                {/* ── Comentarios — abas Pipe | Quote ── */}
+                {/* -- Comentarios — abas Pipe | Quote -- */}
                 {(() => {
                   const activeTab = activeCommentTab;
                   const setActiveTab = setActiveCommentTab;
@@ -2687,7 +2687,7 @@ function PipelineDetailsContent() {
         );
       })()}
 
-      {/* ── Net Lost Popup — appears when stage changes to Net Lost ── */}
+      {/* -- Net Lost Popup — appears when stage changes to Net Lost -- */}
       {netLostOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col">
@@ -2759,7 +2759,7 @@ function PipelineDetailsContent() {
         </div>
       )}
 
-      {/* ── Confirm Bulk Edit Modal ── */}
+      {/* -- Confirm Bulk Edit Modal -- */}
       {confirmBulk && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={e => { if (e.target === e.currentTarget) setConfirmBulk(false); }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
@@ -2785,7 +2785,7 @@ function PipelineDetailsContent() {
         </div>
       )}
 
-      {/* ── Tour Overlay ── */}
+      {/* -- Tour Overlay -- */}
       <TourOverlay
         isActive={tour.isTourActive}
         currentStep={tour.currentStep}
@@ -2798,7 +2798,7 @@ function PipelineDetailsContent() {
         totalSteps={tour.totalSteps}
       />
 
-      {/* ── History Modal ── */}
+      {/* -- History Modal -- */}
       {historyQuote && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[80vh] flex flex-col">
@@ -2840,7 +2840,7 @@ function PipelineDetailsContent() {
         </div>
       )}
 
-      {/* ── Scenario Group Modal ── */}
+      {/* -- Scenario Group Modal -- */}
       {scenarioModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setScenarioModalOpen(false)} />
@@ -2982,7 +2982,7 @@ function PipelineDetailsContent() {
                   })}
                 </div>
 
-                {/* ── Add quote to group ── */}
+                {/* -- Add quote to group -- */}
                 {(() => {
                   const currentIds = new Set(scenarioDraft.scenarios.map(s => s.quoteId));
                   const freeQuotes = quotes.filter(q => !q.scenarioGroupId && !currentIds.has(q.id));
