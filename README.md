@@ -88,6 +88,8 @@ interface Quote {
   prod_type: 'Hardware' | 'Software' | 'Services' | 'Renewal';
   renew: 'Yes' | 'No';         // É renovação?
   is_engineering_ticket: string; // Número da engenharia (opcional)
+  credito_aprovado?: string;   // "Sim" | "Não" — editável (individual e em lote)
+  vendor_opportunity_id?: string; // Registro de Oportunidade no Vendor — texto livre, opcional
   lost_reason: string;         // Se stage=Net Lost, motivo da perda
   cpo_pay_meth: string;        // Método de pagamento CPO
   pay_meth_name: string;       // Nome do método
@@ -218,43 +220,113 @@ const tour = useTour(TOUR_STEPS, 'dashboard-tour');
 
 ## 🎯 Features & Comportamentos
 
-### **1. Dashboard Executivo** (`/dashboard`)
-- **KPIs em tempo real**: Total Pipeline, Not Classified, High Prob (75%), Lost Value, Avg CIF, Win Rate, Cenários Alternativos
-- **Gráficos**: Distribuição de Stages (últimos 6 meses), Cenários por Probabilidade, Top Revendas, Top Fornecedores, Território
-- **Filtros**: Territory, Revenda, Stage, Vendor, End User, Prod Type, datas
-- **Comportamento**: KPIs atualizados em tempo real conforme filtros aplicados
+> **IMPORTANTE para devs**: A maior parte da lógica do **Pipeline Details** (a tela mais rica do produto) vive em um único arquivo: **`app/pipeline-details/page.tsx`** (~3.100 linhas). As páginas `/dashboard` e `/pipeline-manager` têm suas próprias `page.tsx`. Os arquivos em `/components` (`dashboard.tsx`, `manager.tsx`, `details.tsx`, etc.) são versões/protótipos auxiliares — ao alterar comportamento de Details, edite **`app/pipeline-details/page.tsx`**.
 
-### **2. Pipeline Manager (Kanban/Tabela)** (`/pipeline-manager`)
-- **Visão Kanban**: Colunas por Stage (Not Classified, Pipelined, Pricing 25%, etc). Cards draggable entre stages
-- **Visão Tabela**: Mesmos dados em grid com colunas: CPO ID, Status, Part No, CIF, GM%, Stage, etc
-- **Multiedição**: Botão "Editar em Lote" permite alterar campo(s) em múltiplos cards/linhas de uma vez
-- **Comportamento**: Arrastar card de stage = atualiza stage + probability. Edição em lote = aplica a múltiplos registros
+---
 
-### **3. Pipeline Details (Tabela Completa)** (`/pipeline-details`)
-- **Tabela de 15+ colunas**: CPO ID, Status, Part No (multi-PN com popover "copiar todos"), CIF, NET, FOB, GM%, Stage, Lost, Created Date, Close Date, etc
-- **Filtros Avançados Colapsiveis**: 
-  - **Identificacao**: CPO ID, Part No, Quote Name
-  - **Classificacao**: Territory, Revenda, Stage, Vendor, End User, Prod Type
-  - **Valores, Datas e Idade**: CIF (USD), GM%, Age (dias), Close Date, Created Date
-  - **Flags**: Renew (Yes/No), Eng. Ticket (Yes/No)
-- **Edição Individual**: Clique no card → modal com todos os 30+ campos editáveis
-- **Comportamento**: Filtros abrem/fecham (seções colapsiveis). Part No com +N → popover com lista + "copiar todos". Quote Comments é read-only com ícone de cadeado
+### **1. Dashboard Executivo** (`app/dashboard/page.tsx`)
+- **KPIs em tempo real**: Total Pipeline, Not Classified, High Prob (75%), Lost Value, Avg CIF, Win Rate, Cenários Alternativos.
+- **Gráficos**: Distribuição de Stages (últimos 6 meses), Cenários por Probabilidade, Top Revendas, Top Fornecedores, Território.
+- **Filtros**: Territory, Revenda, Stage, Vendor, End User, Prod Type, datas.
+- **Comportamento**: Todos os KPIs e gráficos são recalculados via `useMemo` conforme os filtros aplicados — não há fetch, tudo deriva do array de quotes em memória.
 
-### **4. Card Modal (Edição de Quote)**
-- **Abas**: Pipe Comments (editável) | Quote Comments (read-only com lock icon)
-- **Secções**: Identificacao, Valores, Pipeline, Comentários
-- **Comportamento**: Salva alterações, exibe "alterações não salvas" se houver mudanças não commitadas
+---
 
-### **5. Grupo de Cenários Modal** (`Criar Grupo de Cenários`)
-- **Input**: Nome da oportunidade (ex: "Expansão Datacenter Cliente X")
-- **Select**: Probabilidade (Mais Provável, Alternativo, Menos Provável)
-- **Entrada**: Adiciona múltiplos CPOs com labels customizados
-- **Comportamento**: Agrupa quotes em um cenário com probabilidade compartilhada
+### **2. Pipeline Manager** (`app/pipeline-manager/page.tsx`)
+- **Alternar Visão (Charts / Table)**: toggle no topo (`viewMode === 'charts' | 'table'`). Charts mostra gráficos comparativos; Table mostra o grid de quotes.
+- **Paginação**: fixa em 25 por página (`pageSize = 25`), com navegação numérica no rodapé.
+- **Comportamento**: É uma visão mais executiva/resumida. A edição pesada acontece no Details.
 
-### **6. Export CSV**
-- **Botão**: "Editar Campo..." → select de quais colunas exportar
-- **Dados**: 31 campos (CPO ID até Eng. Ticket), respeitando filtros aplicados
-- **Formato**: CSV com headers em português
+---
+
+### **3. Pipeline Details** (`app/pipeline-details/page.tsx`) — tela principal
+
+Esta tela concentra a maioria das funcionalidades. Abaixo, **como cada controle funciona**:
+
+#### 3.1. Cards de KPI / Filtro Rápido (topo)
+- Linha de cards clicáveis no topo (ex: Pipelined, Alta Probabilidade, etc.).
+- **Clicar em um card aplica um filtro rápido** sobre a tabela. Clicar de novo remove. São atalhos para os filtros avançados.
+
+#### 3.2. Busca Rápida (search box)
+- Campo de texto que filtra em tempo real (`searchTerm`). Faz match em múltiplos campos (CPO ID, cliente, part no, etc.).
+- O **"x"** dentro do campo limpa a busca e volta para a página 1.
+
+#### 3.3. Seletor de Visão: **Lista / Cards / Kanban** (`viewMode`)
+- **Lista**: tabela completa com colunas reordenáveis (ver 3.8). É a visão padrão.
+- **Cards**: cada quote vira um cartão.
+- **Kanban**: colunas por Stage (`Not Classified`, `Pricing 25%`, `Up Selling 50%`, `Committed 75%`, `Net Lost`). **Arrastar um card entre colunas altera o Stage** da quote (e a probabilidade associada). *Pipelined NÃO é coluna do Kanban* — é apenas um agrupador virtual de filtro (25%+50%+75%).
+- A visão também pode ser trocada por ações da sidebar (evento `sidebar-feature-action`).
+
+#### 3.4. Botão **Filtros** (painel avançado colapsável)
+Abre/fecha o painel de filtros (`filtersOpen`). As seções são:
+- **Identificacao**: CPO ID, Part No, Quote Name.
+- **Classificacao**: Territory, Revenda, **Stage** (multi-seleção; selecionar "Pipelined" expande automaticamente para 25%+50%+75%), Vendor, End User, Prod Type.
+- **Valores, Datas e Idade**: CIF (USD), GM%, Age (dias), Close Date, Created Date.
+- **Flags**: Renew (Yes/No), Eng. Ticket (Yes/No).
+- **Filtros Ativos (Tags)**: cada filtro aplicado vira um chip removível abaixo da barra. Há também um botão para **limpar todos** os filtros.
+- **Persistência em URL**: os filtros aplicados são serializados na query string (`syncFiltersToUrl`), então a visão filtrada é compartilhável por link e sobrevive a refresh.
+
+#### 3.5. Ordenação por coluna (sort)
+- **Clicar no cabeçalho de uma coluna ordena** por ela; clicar de novo inverte a direção (`sortKey` + direção). Uma seta indica a coluna/direção ativa.
+- Importante: o clique no header **diferencia sort de drag** — se o mouse ficou pressionado mais de 200ms (arraste), trata como reordenação de coluna, não como sort (ver `handleHeaderClick`).
+
+#### 3.6. Seleção de Linhas + Edição em Lote
+- **Checkbox por linha** (`selectedIds`) e checkbox no header para selecionar/desmarcar a página inteira.
+- Com 1+ linhas marcadas, aparece a barra **"Editar em Lote"** com o select "Editar campo...". Campos disponíveis: **Stage, Close Date, Credito Aprovado, Renew, Eng. Ticket**.
+- **Se nenhuma linha estiver marcada**, a edição em lote aplica a **todas as quotes filtradas no momento**.
+- Há confirmação antes de aplicar (`confirmBulk`) e a ação entra na pilha de **Undo** (ver 3.10).
+
+#### 3.7. Agrupar Cenários
+- O botão **"Agrupar Cenarios (N)"** só aparece quando **2 ou mais** linhas estão selecionadas.
+- Abre um modal para criar um grupo de cenários (nome da oportunidade + probabilidade compartilhada) a partir dos CPOs selecionados.
+
+#### 3.8. **Reordenamento de Colunas (drag-and-drop)** — visão Lista
+Esta é a feature sobre a qual o time mais perguntou. Funciona assim:
+
+- **Ordem padrão (`DEFAULT_COL_ORDER`)**: derivada de `ALL_COLUMNS` no código. É a ordem "de fábrica" que todo usuário vê na primeira vez.
+- **Arrastar para reordenar**: cada cabeçalho de coluna é "draggable". Arraste um header e solte sobre outro — a coluna é movida para aquela posição (`handleDragStart` → `handleDragOver` → `handleDrop`).
+- **Persistência automática por usuário**: a cada arraste, a nova ordem é salva em `localStorage` na chave **`pipeline-col-order`**. Ou seja, a customização é por navegador/usuário e sobrevive a refresh — **não afeta os outros usuários**.
+- **Menu de colunas** (ícone no canto da barra) oferece 3 ações:
+  1. **Salvar como preferencial** → grava a ordem atual em **`pipeline-col-order-preferred`**. Essa "ordem preferencial" tem prioridade no carregamento da página.
+  2. **Restaurar preferencial** → só aparece quando existe uma preferencial salva E a ordem atual é diferente dela. Volta para a visão salva.
+  3. **Resetar para original** → remove ambas as chaves do localStorage e volta para `DEFAULT_COL_ORDER`.
+- **Prioridade no load** (em `useState` inicial de `colOrder`): `pipeline-col-order-preferred` > `pipeline-col-order` > `DEFAULT_COL_ORDER`.
+- **`mergeWithDefault`**: ao carregar uma ordem salva, o sistema reconcilia com `ALL_COLUMNS` — descarta chaves que não existem mais e adiciona no fim quaisquer colunas novas que foram criadas depois que o usuário salvou. Isso garante que **adicionar uma coluna nova no código nunca quebra** a preferência salva de quem já usava o produto.
+
+> **Para mudar a ordem padrão para todos**: edite a ordem do array **`ALL_COLUMNS`** em `app/pipeline-details/page.tsx`. Mas atenção: usuários que já salvaram preferência continuarão vendo a ordem deles (localStorage). Para forçar a nova ordem, eles precisam usar "Resetar para original".
+
+#### 3.9. Edição Individual (Modal de Quote)
+- **Clicar numa linha/card** abre o modal de edição com os blocos: **Identificacao, Valores, Pipeline, Comentários**.
+- Campos editáveis mostram um **ponto âmbar** quando alterados (diferença vs. valor salvo). Há confirmação ao salvar (`confirmEditSave`).
+- **Stage + Credito Aprovado** ficam na mesma linha (2 colunas). Mudar o Stage ajusta a probabilidade sugerida automaticamente.
+- **Mudar Stage para "Net Lost"** dispara um popup obrigatório (`netLostOpen`) pedindo **motivo + comentário** — não é possível concluir sem preencher os dois.
+- **Comentários**: abas **Pipe Comments** (editável, rich text) e **Quote Comments** (read-only, com ícone de cadeado). Cada comentário salvo entra num histórico com autor e timestamp.
+
+#### 3.10. Histórico, Versionamento e Undo
+- **Versionamento de campo** (`recordVersion`): toda alteração individual ou em lote grava old/new value por campo, visível no histórico da quote.
+- **Histórico de operações** (`addToHistory`): registra eventos (Edit, BulkEdit, Export, Undo) com status.
+- **Undo** (`handleUndo`): a edição em lote empilha o estado anterior (até 9 níveis) e pode ser desfeita.
+
+#### 3.11. Export CSV
+- Botão de exportar gera um **CSV respeitando os filtros e a ordenação atuais** (`sortedQuotes`).
+- O evento é registrado no histórico de operações. Headers em português.
+
+#### 3.12. Paginação
+- Select de tamanho de página (25/50/...) no topo; trocar reseta para a página 1.
+- Rodapé mostra "Mostrando X–Y de Z registros" e, quando há seleção, "N selecionados para edicao em lote".
+
+---
+
+### **4. Multi-PN (Part Numbers múltiplos)**
+Quotes podem ter vários Part Numbers separados por vírgula. A célula mostra o primeiro + um badge **"+N"**; o popover lista todos e oferece **"copiar todos"** (junta com `, `).
+
+---
+
+### **5. Tratamento do Stage "Pipelined"**
+`Pipelined` **não é um estágio editável** nem uma coluna do Kanban. Ele existe apenas como **agrupador de filtro**: representa a soma de `Pricing 25%` + `Up Selling 50%` + `Committed 75%`. Por isso:
+- Não aparece no select de Stage da edição (individual ou em lote).
+- Não é coluna no Kanban.
+- **Aparece** como opção no filtro de Stage e, quando selecionado, expande para os 3 estágios reais.
 
 ---
 
@@ -431,11 +503,18 @@ Preenchido automaticamente pelo sistema, com ícone de cadeado (Lock) para indic
 ### **Stages e Probabilidade**
 Cada stage tem uma probabilidade associada (não configurável por usuário):
 - Not Classified: 0%
-- Pipelined: 20%
+- Pipelined: 20% *(agrupador virtual — ver abaixo)*
 - Pricing 25%: 40%
 - Up Selling 50%: 60%
 - Committed 75%: 80%
 - Net Lost: 0%
+
+> **Pipelined não é um stage editável**: é um agrupador de filtro que representa `Pricing 25%` + `Up Selling 50%` + `Committed 75%`. Não aparece no select de edição nem como coluna do Kanban — apenas no filtro de Stage (onde expande para os 3 estágios reais).
+
+### **Reordenamento de Colunas (chaves localStorage)**
+- `pipeline-col-order` → ordem atual de trabalho (atualizada a cada arraste).
+- `pipeline-col-order-preferred` → "ordem preferencial" salva pelo usuário; tem prioridade no carregamento.
+- A ordem de fábrica vem de `ALL_COLUMNS` em `app/pipeline-details/page.tsx`. `mergeWithDefault` reconcilia preferências salvas com novas colunas adicionadas no código.
 
 ---
 
@@ -456,11 +535,13 @@ open http://localhost:3000
 
 ## 📞 Dúvidas & Suporte
 
+- **Pipeline Details (tela principal, todas as features)**: `app/pipeline-details/page.tsx`
+- **Dashboard**: `app/dashboard/page.tsx`
+- **Pipeline Manager**: `app/pipeline-manager/page.tsx`
 - **Estrutura de dados**: Consultar `/types/index.ts`
 - **Geração de dados mockados**: Consultar `/lib/mock-store.ts`
-- **Lógica de Dashboard**: Consultar `/components/dashboard.tsx`
 - **Design tokens**: Consultar `/globals.css`
 
 ---
 
-**Última atualização**: Mai 2026 | **Stack**: Next.js 16 + React 19 + TypeScript + Tailwind CSS v4
+**Última atualização**: Jun 2026 | **Stack**: Next.js 16 + React 19 + TypeScript + Tailwind CSS v4
