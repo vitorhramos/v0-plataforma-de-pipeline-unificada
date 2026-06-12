@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
-import { SlidersHorizontal, X, Pencil, Check, History, Loader2, ChevronUp, ChevronDown, HelpCircle, List, LayoutGrid, Columns3, Layers, ChevronRight, Star, BookmarkCheck, RotateCcw, Bookmark, Lock } from 'lucide-react';
+import { SlidersHorizontal, X, Pencil, Check, History, Loader2, ChevronUp, ChevronDown, HelpCircle, List, LayoutGrid, Columns3, Layers, ChevronRight, Star, BookmarkCheck, RotateCcw, Bookmark, Lock, RotateCw } from 'lucide-react';
 import { Breadcrumbs, Tooltip } from '@/components/common/breadcrumbs-tooltips';
 import { useOperationHistory } from '@/components/common/operation-history';
 import { useToast } from '@/components/common/toast';
@@ -1565,7 +1565,7 @@ function PipelineDetailsContent() {
                     }}
                     className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-700 hover:bg-gray-50 transition"
                   >
-                    <HardReset className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                    <RotateCw className="w-3.5 h-3.5 text-red-500 shrink-0" />
                     <div className="text-left">
                       <p className="font-semibold">Resetar para original</p>
                       <p className="text-gray-400 text-[10px] leading-tight">Volta para a ordem inicial</p>
