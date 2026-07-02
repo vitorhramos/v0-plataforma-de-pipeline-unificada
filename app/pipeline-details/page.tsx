@@ -1088,15 +1088,6 @@ function PipelineDetailsContent() {
         {/* AI Filter Bar + AI Buttons na mesma linha */}
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
-            {/* Filtro IA — flex-1 para ocupar o espaco disponivel */}
-            <div className="flex-1 min-w-0">
-              <AIFilterBar
-                onApplyFilters={handleAIFilter}
-                onClear={clearAIFilter}
-                activeInterpretation={aiInterpretation}
-                compact
-              />
-            </div>
             {/* Botoes IA — shrink-0 para nao comprimir */}
             <div className="flex items-center gap-1.5 shrink-0">
               <button
@@ -1120,6 +1111,15 @@ function PipelineDetailsContent() {
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 Chat IA
               </button>
+            </div>
+            {/* Filtro IA — flex-1 para ocupar o espaco disponivel */}
+            <div className="flex-1 min-w-0">
+              <AIFilterBar
+                onApplyFilters={handleAIFilter}
+                onClear={clearAIFilter}
+                activeInterpretation={aiInterpretation}
+                compact
+              />
             </div>
           </div>
         </div>
