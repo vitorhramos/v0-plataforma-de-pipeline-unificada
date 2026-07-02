@@ -14,6 +14,11 @@ import type { ScenarioGroup, ScenarioMeta, ScenarioLikelihood } from '@/lib/mock
 import { LIKELIHOOD_LABELS, LIKELIHOOD_COLORS, LOSS_REASONS } from '@/lib/mock-store';
 import { useTour } from '@/hooks/useTour';
 import { RichTextEditor } from '@/components/common/rich-text-editor';
+import { AIChatPanel } from '@/components/ai/AIChatPanel';
+import { AIInsightsPanel } from '@/components/ai/AIInsightsPanel';
+import { AIFilterBar } from '@/components/ai/AIFilterBar';
+import { AISuggestButton } from '@/components/ai/AISuggestButton';
+import { AISummaryModal } from '@/components/ai/AISummaryModal';
 
 type CommentEntry = {
   id: string;
@@ -339,6 +344,30 @@ function PipelineDetailsContent() {
   const [filters, setFilters] = useState(() => getFiltersFromUrl());
   const [applied, setApplied] = useState(() => getFiltersFromUrl());
 
+  // AI filter handler — maps AI JSON filters to the existing applied filter structure
+  const handleAIFilter = (aiFilters: Record<string, unknown>, interpreted: string) => {
+    const next: Record<string, string> = { cpo_id: '', part_no: '', quote_name: '', stage: '', prod_type: '', vendor: '', territory: '', bu: '', revenda: '', end_user: '', status: '', renew: '', eng_ticket: '', min_usd: '', max_usd: '', min_net: '', max_net: '', close_from: '', close_to: '' };
+    if (aiFilters.stage) next.stage = String(aiFilters.stage);
+    if (aiFilters.vendor) next.vendor = String(aiFilters.vendor);
+    if (aiFilters.territory) next.territory = String(aiFilters.territory);
+    if (aiFilters.team) next.bu = String(aiFilters.team);
+    if (aiFilters.cif_min) next.min_usd = String(aiFilters.cif_min);
+    if (aiFilters.cif_max) next.max_usd = String(aiFilters.cif_max);
+    if (aiFilters.renew) next.renew = String(aiFilters.renew).toLowerCase();
+    if (aiFilters.eng_ticket) next.eng_ticket = String(aiFilters.eng_ticket).toLowerCase();
+    if (aiFilters.close_date_from) next.close_from = String(aiFilters.close_date_from);
+    if (aiFilters.close_date_to) next.close_to = String(aiFilters.close_date_to);
+    if (aiFilters.search) next.cpo_id = String(aiFilters.search);
+    setFilters(next as typeof applied);
+    setApplied(next as typeof applied);
+    setAiInterpretation(interpreted);
+    setCurrentPage(1);
+  };
+
+  const clearAIFilter = () => {
+    setAiInterpretation('');
+  };
+
   // Sorting
   const [sortKey, setSortKey] = useState<keyof Quote | ''>('');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -456,6 +485,12 @@ function PipelineDetailsContent() {
     if (Date.now() - dragStartTime.current < 200) return;
     handleSort(key);
   };
+
+  // AI states
+  const [aiChatOpen, setAiChatOpen] = useState(false);
+  const [aiInsightsOpen, setAiInsightsOpen] = useState(false);
+  const [aiSummaryOpen, setAiSummaryOpen] = useState(false);
+  const [aiInterpretation, setAiInterpretation] = useState('');
 
   // Edit modal
   const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
@@ -601,7 +636,7 @@ function PipelineDetailsContent() {
       icon: 'Pencil',
       callToAction: 'Clique em qualquer ícone de lápis para abrir e explorar a edição completa',
       proTip: 'Campos alterados ficam com borda laranja + ponto indicador. Salve ou descarte antes de fechar',
-      nextStep: 'Próximo: veja o histórico de mudanças de um quote',
+      nextStep: 'Próximo: veja o histórico de mudan��as de um quote',
     },
     {
       id: 'history',
@@ -989,6 +1024,30 @@ function PipelineDetailsContent() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Pipeline Details</h1>
             <p className="text-sm text-gray-500 mt-0.5">Busca em tempo real, edicao individual e em lote.</p>
           </div>
+          {/* AI Action Buttons */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setAiInsightsOpen(o => !o)}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border transition ${aiInsightsOpen ? 'bg-violet-600 text-white border-violet-600' : 'bg-white border-gray-200 text-gray-600 hover:border-violet-300 hover:text-violet-600 hover:bg-violet-50'}`}
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M12 2L9.09 8.26L2 9.27L7 14.14L5.82 21.02L12 17.77L18.18 21.02L17 14.14L22 9.27L14.91 8.26L12 2z"/></svg>
+              Insights
+            </button>
+            <button
+              onClick={() => setAiSummaryOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              Resumo Executivo
+            </button>
+            <button
+              onClick={() => setAiChatOpen(o => !o)}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border transition ${aiChatOpen ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50'}`}
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              Chat IA
+            </button>
+          </div>
         </div>
 
         {/* Breadcrumbs */}
@@ -1041,6 +1100,20 @@ function PipelineDetailsContent() {
             <p className="text-[10px] text-gray-400 mt-1 leading-none">soma de todas as quotes</p>
           </div>
         </div>
+
+        {/* AI Insights Panel — shown when insights button is active */}
+        {aiInsightsOpen && (
+          <div className="flex justify-end">
+            <AIInsightsPanel onClose={() => setAiInsightsOpen(false)} />
+          </div>
+        )}
+
+        {/* AI Filter Bar */}
+        <AIFilterBar
+          onApplyFilters={handleAIFilter}
+          onClear={clearAIFilter}
+          activeInterpretation={aiInterpretation}
+        />
 
         {/* Toolbar — busca (limitada) + filtros + tags + page size, tudo em uma linha */}
         <div className="flex items-center gap-2" data-tour="search">
@@ -2422,6 +2495,13 @@ function PipelineDetailsContent() {
                             <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
                               Stage
                               {changed && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" title="Alterado" />}
+                              <AISuggestButton
+                                quote={editingQuote as unknown as Record<string, unknown>}
+                                onApply={(stage, closeDate) => {
+                                  const STAGE_PROB: Record<string, number> = { 'Not Classified': 0, 'Pipelined': 20, 'Pricing 25%': 25, 'Up Selling 50%': 50, 'Committed 75%': 75, 'Net Lost': 0 };
+                                  setEditDraft(d => ({ ...d, stage, close_date: closeDate, ...(STAGE_PROB[stage] !== undefined ? { probability: STAGE_PROB[stage] } : {}) }));
+                                }}
+                              />
                             </label>
                             <select
                               value={val}
@@ -3116,6 +3196,16 @@ function PipelineDetailsContent() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Floating AI Chat Panel */}
+      {aiChatOpen && (
+        <AIChatPanel onClose={() => setAiChatOpen(false)} />
+      )}
+
+      {/* AI Summary Modal */}
+      {aiSummaryOpen && (
+        <AISummaryModal onClose={() => setAiSummaryOpen(false)} />
       )}
     </div>
   );
