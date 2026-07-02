@@ -1,4 +1,4 @@
-import { generateText } from 'ai';
+import { generateText, gateway } from 'ai';
 
 export const runtime = 'nodejs';
 
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   }
 
   const { text } = await generateText({
-    model: 'openai/gpt-4o-mini',
+    model: gateway('openai/gpt-4o-mini'),
     system: `Voce converte perguntas em portugues em filtros JSON para um pipeline de vendas B2B.
 Responda APENAS com JSON valido, sem markdown, sem explicacoes.
 Inclua apenas os campos relevantes para o que foi pedido.

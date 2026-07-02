@@ -1,4 +1,4 @@
-import { streamText } from 'ai';
+import { streamText, gateway } from 'ai';
 import { buildPipelineContext, contextToPrompt } from '@/lib/ai-context';
 import { getQuotes } from '@/lib/mock-store';
 
@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   const contextString = contextToPrompt(ctx);
 
   const result = streamText({
-    model: 'openai/gpt-4o',
+    model: gateway('openai/gpt-4o'),
     system: `Voce e um analista de vendas senior que prepara resumos executivos para diretores.
 Escreva em portugues brasileiro, tom profissional e direto.
 Use paragrafos curtos. Nao use bullet points.`,

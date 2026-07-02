@@ -1,4 +1,4 @@
-import { generateText } from 'ai';
+import { generateText, gateway } from 'ai';
 import { buildPipelineContext, contextToPrompt } from '@/lib/ai-context';
 import { getQuotes } from '@/lib/mock-store';
 
@@ -25,7 +25,7 @@ Deal atual:
 `;
 
   const { text } = await generateText({
-    model: 'openai/gpt-4o-mini',
+    model: gateway('openai/gpt-4o-mini'),
     system: `Voce e um analista de vendas experiente em pipeline B2B.
 Com base nos dados do pipeline e no deal especifico, sugira o Stage mais adequado e uma Close Date realista.
 Responda APENAS com JSON valido, sem markdown.

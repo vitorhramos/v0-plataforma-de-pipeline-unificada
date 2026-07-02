@@ -1,4 +1,4 @@
-import { streamText } from 'ai';
+import { streamText, gateway } from 'ai';
 import { buildPipelineContext, contextToPrompt } from '@/lib/ai-context';
 import { getQuotes } from '@/lib/mock-store';
 
@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   const contextString = contextToPrompt(ctx);
 
   const result = streamText({
-    model: 'openai/gpt-4o-mini',
+    model: gateway('openai/gpt-4o-mini'),
     system: `Voce e um assistente especializado em vendas B2B e gestao de pipeline. 
 Responda sempre em portugues brasileiro de forma concisa e direta.
 Use os dados abaixo para responder perguntas sobre o pipeline atual.

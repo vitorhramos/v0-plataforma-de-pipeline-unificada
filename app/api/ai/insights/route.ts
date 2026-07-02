@@ -1,4 +1,4 @@
-import { generateText } from 'ai';
+import { generateText, gateway } from 'ai';
 import { buildPipelineContext, contextToPrompt } from '@/lib/ai-context';
 import { getQuotes } from '@/lib/mock-store';
 
@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   const contextString = contextToPrompt(ctx);
 
   const { text } = await generateText({
-    model: 'openai/gpt-4o-mini',
+    model: gateway('openai/gpt-4o-mini'),
     system: `Voce e um analista de vendas especializado em pipeline B2B.
 Analise os dados do pipeline e retorne exatamente 5 insights acionaveis em JSON.
 Responda APENAS com JSON valido, sem markdown, sem explicacoes adicionais.
