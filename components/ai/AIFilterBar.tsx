@@ -23,6 +23,7 @@ interface AIFilterBarProps {
   onApplyFilters: (filters: AIFilters, interpreted: string) => void;
   onClear: () => void;
   activeInterpretation?: string;
+  compact?: boolean;
 }
 
 const EXAMPLES = [
@@ -32,7 +33,7 @@ const EXAMPLES = [
   'renovacoes sem eng ticket',
 ];
 
-export function AIFilterBar({ onApplyFilters, onClear, activeInterpretation }: AIFilterBarProps) {
+export function AIFilterBar({ onApplyFilters, onClear, activeInterpretation, compact }: AIFilterBarProps) {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -60,7 +61,7 @@ export function AIFilterBar({ onApplyFilters, onClear, activeInterpretation }: A
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className={`flex flex-col ${compact ? 'gap-1' : 'gap-2'}`}>
       {/* Input row */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
@@ -90,8 +91,8 @@ export function AIFilterBar({ onApplyFilters, onClear, activeInterpretation }: A
         </button>
       </div>
 
-      {/* Examples */}
-      {!activeInterpretation && (
+      {/* Examples — only shown when not compact and no active interpretation */}
+      {!compact && !activeInterpretation && (
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-[10px] text-gray-400">Exemplos:</span>
           {EXAMPLES.map(ex => (

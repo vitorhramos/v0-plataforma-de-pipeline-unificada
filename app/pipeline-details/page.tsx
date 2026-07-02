@@ -1024,30 +1024,7 @@ function PipelineDetailsContent() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Pipeline Details</h1>
             <p className="text-sm text-gray-500 mt-0.5">Busca em tempo real, edicao individual e em lote.</p>
           </div>
-          {/* AI Action Buttons */}
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => setAiInsightsOpen(o => !o)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border transition ${aiInsightsOpen ? 'bg-violet-600 text-white border-violet-600' : 'bg-white border-gray-200 text-gray-600 hover:border-violet-300 hover:text-violet-600 hover:bg-violet-50'}`}
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M12 2L9.09 8.26L2 9.27L7 14.14L5.82 21.02L12 17.77L18.18 21.02L17 14.14L22 9.27L14.91 8.26L12 2z"/></svg>
-              Insights
-            </button>
-            <button
-              onClick={() => setAiSummaryOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition"
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-              Resumo Executivo
-            </button>
-            <button
-              onClick={() => setAiChatOpen(o => !o)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border transition ${aiChatOpen ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50'}`}
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              Chat IA
-            </button>
-          </div>
+
         </div>
 
         {/* Breadcrumbs */}
@@ -1108,12 +1085,44 @@ function PipelineDetailsContent() {
           </div>
         )}
 
-        {/* AI Filter Bar */}
-        <AIFilterBar
-          onApplyFilters={handleAIFilter}
-          onClear={clearAIFilter}
-          activeInterpretation={aiInterpretation}
-        />
+        {/* AI Filter Bar + AI Buttons na mesma linha */}
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-2">
+            {/* Filtro IA — flex-1 para ocupar o espaco disponivel */}
+            <div className="flex-1 min-w-0">
+              <AIFilterBar
+                onApplyFilters={handleAIFilter}
+                onClear={clearAIFilter}
+                activeInterpretation={aiInterpretation}
+                compact
+              />
+            </div>
+            {/* Botoes IA — shrink-0 para nao comprimir */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={() => setAiInsightsOpen(o => !o)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition whitespace-nowrap ${aiInsightsOpen ? 'bg-violet-600 text-white border-violet-600' : 'bg-white border-gray-200 text-gray-600 hover:border-violet-300 hover:text-violet-700 hover:bg-violet-50'}`}
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M12 2L9.09 8.26L2 9.27L7 14.14L5.82 21.02L12 17.77L18.18 21.02L17 14.14L22 9.27L14.91 8.26L12 2z"/></svg>
+                Insights
+              </button>
+              <button
+                onClick={() => setAiSummaryOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50 transition whitespace-nowrap"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                Resumo Executivo
+              </button>
+              <button
+                onClick={() => setAiChatOpen(o => !o)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition whitespace-nowrap ${aiChatOpen ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50'}`}
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                Chat IA
+              </button>
+            </div>
+          </div>
+        </div>
 
         {/* Toolbar — busca (limitada) + filtros + tags + page size, tudo em uma linha */}
         <div className="flex items-center gap-2" data-tour="search">
