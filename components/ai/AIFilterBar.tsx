@@ -33,31 +33,111 @@ const EXAMPLES = [
   'renovacoes sem eng ticket',
 ];
 
+// Interpretacao local de linguagem natural — sem chamar API
+// Em producao, substituir por chamada real ao /api/ai/filter com dados do Snowflake
+function interpretQuery(q: string): { filters: AIFilters; interpreted: string } | null {
+  const lower = q.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  const filters: AIFilters = {};
+  const parts: string[] = [];
+
+  // Vendor
+  if (lower.includes('hpe') || lower.includes('hewlett')) {
+    filters.vendor = 'HPE'; parts.push('Vendor: HPE');
+  } else if (lower.includes('cisco')) {
+    filters.vendor = 'Cisco'; parts.push('Vendor: Cisco');
+  } else if (lower.includes('dell')) {
+    filters.vendor = 'Dell'; parts.push('Vendor: Dell');
+  }
+
+  // Stage
+  if (lower.includes('committed') || lower.includes('75%')) {
+    filters.stage = 'Committed 75%'; parts.push('Stage: Committed 75%');
+  } else if (lower.includes('up selling') || lower.includes('upselling') || lower.includes('50%')) {
+    filters.stage = 'Up Selling 50%'; parts.push('Stage: Up Selling 50%');
+  } else if (lower.includes('pricing') || lower.includes('25%')) {
+    filters.stage = 'Pricing 25%'; parts.push('Stage: Pricing 25%');
+  } else if (lower.includes('pipelined') || lower.includes('pipeline')) {
+    filters.stage = 'Pipelined'; parts.push('Stage: Pipelined');
+  } else if (lower.includes('net lost') || lower.includes('netlost') || lower.includes('perdid')) {
+    filters.stage = 'Net Lost'; parts.push('Stage: Net Lost');
+  } else if (lower.includes('risco') || lower.includes('em risco')) {
+    // Risco = Net Lost + deals parados, representa Pipelined+Not Classified
+    filters.stage = 'Pipelined'; parts.push('Stage: Pipelined (em risco)');
+  }
+
+  // Valor minimo
+  const matchK = lower.match(/acima de\s+\$?([\d,]+)k/);
+  const matchM = lower.match(/acima de\s+\$?([\d,.]+)m/);
+  const matchDolar = lower.match(/acima de\s+\$?([\d,.]+)/);
+  if (matchK) {
+    filters.cif_min = parseInt(matchK[1].replace(',', '')) * 1000;
+    parts.push(`CIF > $${filters.cif_min.toLocaleString()}`);
+  } else if (matchM) {
+    filters.cif_min = parseFloat(matchM[1].replace(',', '')) * 1000000;
+    parts.push(`CIF > $${filters.cif_min.toLocaleString()}`);
+  } else if (matchDolar && !matchK && !matchM) {
+    filters.cif_min = parseInt(matchDolar[1].replace(/[,\.]/g, ''));
+    if (filters.cif_min > 100) parts.push(`CIF > $${filters.cif_min.toLocaleString()}`);
+    else filters.cif_min = undefined;
+  }
+
+  // Territorio
+  if (lower.includes('sao paulo') || lower.includes('sp')) {
+    filters.territory = 'Sao Paulo'; parts.push('Territorio: Sao Paulo');
+  } else if (lower.includes('sul') || lower.includes('rs') || lower.includes('sc') || lower.includes('pr')) {
+    filters.territory = 'Sul'; parts.push('Territorio: Sul');
+  } else if (lower.includes('nordeste') || lower.includes('ne')) {
+    filters.territory = 'Nordeste'; parts.push('Territorio: Nordeste');
+  }
+
+  // Renovacoes
+  if (lower.includes('renov')) {
+    filters.renew = 'yes'; parts.push('Renovacoes: Sim');
+  }
+
+  // Eng ticket
+  if (lower.includes('sem eng') || lower.includes('sem ticket') || lower.includes('sem engineering')) {
+    filters.eng_ticket = 'no'; parts.push('Eng Ticket: Nao');
+  }
+
+  // Close date — esse mes
+  if (lower.includes('esse mes') || lower.includes('este mes') || lower.includes('fechando') || lower.includes('fecha esse')) {
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+    filters.close_date_from = firstDay;
+    filters.close_date_to = lastDay;
+    parts.push(`Close date: ${now.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}`);
+  }
+
+  if (parts.length === 0) return null;
+
+  return { filters, interpreted: parts.join(' · ') };
+}
+
 export function AIFilterBar({ onApplyFilters, onClear, activeInterpretation, compact }: AIFilterBarProps) {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const apply = async (q: string) => {
+  const apply = (q: string) => {
     if (!q.trim()) return;
     setLoading(true);
     setError('');
-    try {
-      const res = await fetch('/api/ai/filter', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: q }),
-      });
-      const data = await res.json();
-      if (data.error && !data.interpreted) throw new Error(data.error);
-      onApplyFilters(data.filters ?? {}, data.interpreted ?? q);
-      setQuery('');
-    } catch {
-      setError('Nao entendi. Tente reformular.');
-    } finally {
+
+    // Simula latencia de 600ms para dar sensacao de processamento
+    setTimeout(() => {
+      const result = interpretQuery(q);
+      if (!result) {
+        setError('Nao entendi. Tente: "HPE acima de $500K" ou "Committed fechando esse mes".');
+      } else {
+        onApplyFilters(result.filters, result.interpreted);
+        setQuery('');
+      }
       setLoading(false);
-    }
+    }, 600);
   };
 
   return (
