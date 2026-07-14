@@ -1078,13 +1078,6 @@ function PipelineDetailsContent() {
           </div>
         </div>
 
-        {/* AI Insights Panel — shown when insights button is active */}
-        {aiInsightsOpen && (
-          <div className="flex justify-end">
-            <AIInsightsPanel onClose={() => setAiInsightsOpen(false)} />
-          </div>
-        )}
-
         {/* AI Filter Bar + AI Buttons na mesma linha */}
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
@@ -1123,6 +1116,11 @@ function PipelineDetailsContent() {
             </div>
           </div>
         </div>
+
+        {/* AI Insights Panel — logo abaixo dos botoes */}
+        {aiInsightsOpen && (
+          <AIInsightsPanel onClose={() => setAiInsightsOpen(false)} />
+        )}
 
         {/* Toolbar — busca (limitada) + filtros + tags + page size, tudo em uma linha */}
         <div className="flex items-center gap-2" data-tour="search">
