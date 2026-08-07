@@ -10,8 +10,8 @@ import { useOperationHistory } from '@/components/common/operation-history';
 import { useToast } from '@/components/common/toast';
 import { TourOverlay } from '@/components/common/tour-overlay';
 import { getQuotes, getScenarioGroups, addScenarioGroup, updateScenarioGroup, removeScenarioGroup, updateQuote as storeUpdateQuote } from '@/lib/mock-store';
-import type { ScenarioGroup, ScenarioMeta, ScenarioLikelihood } from '@/lib/mock-store';
-import { LIKELIHOOD_LABELS, LIKELIHOOD_COLORS, LOSS_REASONS } from '@/lib/mock-store';
+import type { ScenarioGroup, ScenarioMeta, ScenarioLikelihood, QuoteLine, BillingPeriodType } from '@/lib/mock-store';
+import { LIKELIHOOD_LABELS, LIKELIHOOD_COLORS, LOSS_REASONS, BILLING_PERIOD_TYPES, IMMEDIATE_BILLING_OPTIONS } from '@/lib/mock-store';
 import { useTour } from '@/hooks/useTour';
 import { RichTextEditor } from '@/components/common/rich-text-editor';
 import { AIChatPanel } from '@/components/ai/AIChatPanel';
@@ -73,6 +73,13 @@ type Quote = {
   lost_comment?: string;
   scenarioGroupId?: string;
   vendor_opportunity_id?: string;
+  // Multiple Part Numbers under the same CPO — detailed breakdown (grid expand)
+  lines?: QuoteLine[];
+  // Faturamento
+  immediate_billing?: string;         // 'Sim' | 'Não'
+  billing_period_type?: BillingPeriodType;
+  billing_period_count?: number;      // years (1-5) or months (12/24/36/48/60); 1 for Oneshot
+  billing_values?: number[];          // length = billing_period_count, sum must equal usd_value (CIF)
 };
 
 type VersionEntry = {
@@ -158,13 +165,26 @@ const EMPTY_FILTERS = {
 };
 
 // Editable fields config — only the authorized fields can be edited
-const EDITABLE_FIELDS: { key: keyof Quote; label: string; type: 'text' | 'select' | 'number' | 'date' | 'textarea'; options?: string[] }[] = [
+const EDITABLE_FIELDS: { key: keyof Quote; label: string; type: 'text' | 'select' | 'number' | 'date' | 'month' | 'textarea'; options?: string[] }[] = [
   { key: 'stage',                  label: 'Stage',              type: 'select',   options: STAGES_LIST },
-  { key: 'close_date',             label: 'Close Date',         type: 'date' },
+  { key: 'close_date',             label: 'Close Date',         type: 'month' },
   { key: 'credito_aprovado',       label: 'Credito Aprovado',   type: 'select',   options: ['Sim', 'Não'] },
   { key: 'renew',                  label: 'Renew',              type: 'select',   options: ['Yes', 'No'] },
   { key: 'is_engineering_ticket',  label: 'Eng. Ticket',        type: 'select',   options: ['Yes', 'No'] },
+  { key: 'immediate_billing',      label: 'Faturamento Imediato', type: 'select', options: [...IMMEDIATE_BILLING_OPTIONS] },
 ];
+
+// Formats a number as USD currency, e.g. 12345.6 -> "$12,345.60"
+const formatUSD = (v: number) =>
+  `$${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+// Short label for the "Periodo Fat." column
+const billingPeriodLabel = (q: Quote) => {
+  if (!q.billing_period_type) return '—';
+  if (q.billing_period_type === 'Oneshot') return 'Oneshot';
+  const count = q.billing_period_count ?? 0;
+  return q.billing_period_type === 'Anual' ? `Anual (${count}x)` : `Mensal (${count}x)`;
+};
 
 // Component
 export default function PipelineDetailsPage() {
@@ -339,6 +359,16 @@ function PipelineDetailsContent() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterSections, setFilterSections] = useState({ identificacao: true, classificacao: true, valores: true, flags: true });
   const [partNoPopover, setPartNoPopover] = useState<{ id: string; parts: string[] } | null>(null);
+  // -- Close Date inline edit (direto no grid, sem abrir o modal) --
+  const [editingCloseDateId, setEditingCloseDateId] = useState<number | null>(null);
+  // -- Linhas expandidas por CPO (agrupamento de Part Numbers) --
+  const [expandedLineRows, setExpandedLineRows] = useState<Set<number>>(new Set());
+  const toggleLineRows = (quoteId: number) =>
+    setExpandedLineRows(prev => {
+      const next = new Set(prev);
+      next.has(quoteId) ? next.delete(quoteId) : next.add(quoteId);
+      return next;
+    });
   const toggleFilterSection = (key: keyof typeof filterSections) =>
     setFilterSections(prev => ({ ...prev, [key]: !prev[key] }));
   const [filters, setFilters] = useState(() => getFiltersFromUrl());
@@ -414,6 +444,8 @@ function PipelineDetailsContent() {
     { label: 'HTS Description', key: 'hts_description' },
     { label: 'Eng. Ticket',     key: 'is_engineering_ticket' },
     { label: 'Credito Aprovado', key: 'credito_aprovado' },
+    { label: 'Fat. Imediato',   key: 'immediate_billing' },
+    { label: 'Periodo Fat.',    key: 'billing_period_type' },
   ];
 
   const DEFAULT_COL_ORDER = ALL_COLUMNS.map(c => c.key);
@@ -882,6 +914,18 @@ function PipelineDetailsContent() {
     setVersions(prev => ({ ...prev, [id]: [entry, ...(prev[id] ?? [])] }));
   };
 
+  // -- Update Close Date directly from the grid (no need to open the edit modal) --
+  const updateCloseDateInline = (quote: Quote, monthValue: string) => {
+    setEditingCloseDateId(null);
+    if (!monthValue) return;
+    const newDate = `${monthValue}-01`;
+    if (newDate === quote.close_date) return;
+    recordVersion(quote.id, 'close_date', quote.close_date, newDate);
+    setQuotes(prev => prev.map(q => q.id === quote.id ? { ...q, close_date: newDate } : q));
+    addToHistory('Edit', `Close Date de ${quote.cpo_id} atualizado`, 'success');
+    toast.success(`Close Date de ${quote.cpo_id} atualizado`);
+  };
+
   // -- Save single edit --
   const saveEdit = () => {
     if (!editingQuote) return;
@@ -941,6 +985,8 @@ function PipelineDetailsContent() {
   const applyBulkEdit = () => {
     if (!bulkField || bulkValue === '') return;
     const targetIds = selectedIds.size > 0 ? selectedIds : new Set(filteredQuotes.map(q => q.id));
+    // "YYYY-MM" (month input) is normalized to a full ISO date before saving
+    const normalizedBulkValue = bulkField === 'close_date' && /^\d{4}-\d{2}$/.test(bulkValue) ? `${bulkValue}-01` : bulkValue;
     // Save current state for undo
     setUndoStack(prev => [...prev.slice(-9), { quotes: [...quotes], desc: `Edicao em lote: ${bulkField}` }]);
     setQuotes(prev => prev.map(q => {
@@ -948,10 +994,10 @@ function PipelineDetailsContent() {
       const oldVal = String(q[bulkField] ?? '');
       const newVal = bulkField === 'probability' || bulkField === 'usd_value' || bulkField === 'quote_age'
         ? String(Number(bulkValue))
-        : bulkValue;
+        : normalizedBulkValue;
       if (oldVal === newVal) return q;
       recordVersion(q.id, bulkField, oldVal, newVal);
-      return { ...q, [bulkField]: (bulkField === 'probability' || bulkField === 'usd_value' || bulkField === 'quote_age') ? Number(bulkValue) : bulkValue };
+      return { ...q, [bulkField]: (bulkField === 'probability' || bulkField === 'usd_value' || bulkField === 'quote_age') ? Number(bulkValue) : normalizedBulkValue };
     }));
     const count = targetIds.size;
     addToHistory('BulkEdit', `Editado ${count} registros: ${bulkField} = ${bulkValue}`, 'success');
@@ -1265,7 +1311,7 @@ function PipelineDetailsContent() {
               }
             </select>
           )}
-          {bulkField && (bulkFieldConfig?.type === 'text' || bulkFieldConfig?.type === 'number' || bulkFieldConfig?.type === 'date') && (
+          {bulkField && (bulkFieldConfig?.type === 'text' || bulkFieldConfig?.type === 'number' || bulkFieldConfig?.type === 'date' || bulkFieldConfig?.type === 'month') && (
             <input
               type={bulkFieldConfig.type}
               placeholder="Novo valor..."
@@ -1958,6 +2004,7 @@ function PipelineDetailsContent() {
                         const k = col.key;
                         const fmtMoney = (v?: number) => v == null ? '—' : v >= 1_000_000 ? `$${(v/1_000_000).toFixed(1)}M` : `$${(v/1_000).toFixed(0)}K`;
                         const fmtDate  = (d?: string) => d ? d.split('-').reverse().join('/') : '—';
+                        const fmtMonthYear = (d?: string) => d && d.length >= 7 ? `${d.slice(5, 7)}/${d.slice(0, 4)}` : '—';
                         const yesNoBadge = (val?: string) => val === 'Yes'
                           ? <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">Yes</span>
                           : <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-500">No</span>;
@@ -2009,13 +2056,26 @@ function PipelineDetailsContent() {
                           const parts = (quote.part_no ?? '').split(',').map((s: string) => s.trim()).filter(Boolean);
                           const first = parts[0] ?? '—';
                           const extra = parts.length - 1;
+                          const hasLines = (quote.lines?.length ?? 0) > 1;
+                          const isRowsExpanded = expandedLineRows.has(quote.id);
                           const popId = `pn-${quote.id}`;
                           const isOpen = partNoPopover?.id === popId;
                           return (
                             <td key={k} className="px-3 py-2.5 whitespace-nowrap">
                               <div className="flex items-center gap-1.5 relative">
                                 <span className="font-mono text-gray-700 text-[11px]">{first}</span>
-                                {extra > 0 && (
+                                {extra > 0 && hasLines && (
+                                  <button
+                                    type="button"
+                                    onClick={e => { e.stopPropagation(); toggleLineRows(quote.id); }}
+                                    className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold border transition-all ${isRowsExpanded ? 'bg-blue-600 text-white border-blue-600' : 'bg-blue-100 text-blue-700 border-transparent hover:bg-blue-200'}`}
+                                    title={isRowsExpanded ? 'Recolher Part Numbers' : 'Ver detalhes por Part Number'}
+                                  >
+                                    +{extra}
+                                    {isRowsExpanded ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
+                                  </button>
+                                )}
+                                {extra > 0 && !hasLines && (
                                   <button
                                     type="button"
                                     onClick={e => { e.stopPropagation(); setPartNoPopover(isOpen ? null : { id: popId, parts }); }}
@@ -2092,7 +2152,36 @@ function PipelineDetailsContent() {
                         }
                         if (k === 'lost_reason')          return <td key={k} className="px-3 py-2.5 whitespace-nowrap">{quote.lost_reason ? <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700">{quote.lost_reason}</span> : <span className="text-gray-300">—</span>}</td>;
                         if (k === 'created_date')         return <td key={k} className="px-3 py-2.5 text-gray-600 whitespace-nowrap text-[11px]">{fmtDate(quote.created_date)}</td>;
-                        if (k === 'close_date')           return <td key={k} className="px-3 py-2.5 text-gray-700 whitespace-nowrap text-[11px]">{fmtDate(quote.close_date)}</td>;
+                        if (k === 'close_date') {
+                          const isEditingDate = editingCloseDateId === quote.id;
+                          return (
+                            <td key={k} className="px-3 py-2.5 whitespace-nowrap text-[11px]">
+                              {isEditingDate ? (
+                                <input
+                                  type="month"
+                                  autoFocus
+                                  defaultValue={quote.close_date.slice(0, 7)}
+                                  onBlur={e => updateCloseDateInline(quote, e.target.value)}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') updateCloseDateInline(quote, (e.target as HTMLInputElement).value);
+                                    if (e.key === 'Escape') setEditingCloseDateId(null);
+                                  }}
+                                  onClick={e => e.stopPropagation()}
+                                  className="px-1.5 py-0.5 border border-blue-400 rounded-md text-[11px] text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={e => { e.stopPropagation(); setEditingCloseDateId(quote.id); }}
+                                  className="text-gray-700 hover:text-blue-600 hover:underline transition"
+                                  title="Clique para editar o Close Date"
+                                >
+                                  {fmtMonthYear(quote.close_date)}
+                                </button>
+                              )}
+                            </td>
+                          );
+                        }
                         if (k === 'cpo_no')               return <td key={k} className="px-3 py-2.5 font-mono text-gray-600 whitespace-nowrap text-[11px]">{quote.cpo_no ?? '—'}</td>;
                         if (k === 'cpo_pay_meth')         return <td key={k} className="px-3 py-2.5 whitespace-nowrap"><span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700">{quote.cpo_pay_meth ?? '—'}</span></td>;
                         if (k === 'pay_meth_name')        return <td key={k} className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{quote.pay_meth_name ?? '—'}</td>;
@@ -2131,6 +2220,7 @@ function PipelineDetailsContent() {
                             const k = col.key;
                             const fmtM = (v?: number) => v == null ? '—' : v >= 1_000_000 ? `$${(v/1_000_000).toFixed(1)}M` : `$${(v/1_000).toFixed(0)}K`;
                             const fmtD = (d?: string) => d ? d.split('-').reverse().join('/') : '—';
+                        const fmtDMonthYear = (d?: string) => d && d.length >= 7 ? `${d.slice(5, 7)}/${d.slice(0, 4)}` : '—';
                             if (k === 'cpo_id') return (
                               <td key={k} className="px-3 py-2 whitespace-nowrap">
                                 <div className="flex items-center gap-1.5 pl-5">
@@ -2189,7 +2279,7 @@ function PipelineDetailsContent() {
                             }
                             if (k === 'lost_reason')          return <td key={k} className="px-3 py-2 whitespace-nowrap text-gray-400 text-[11px]">{altQuote.lost_reason ?? '—'}</td>;
                             if (k === 'created_date')         return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap text-[11px]">{fmtD(altQuote.created_date)}</td>;
-                            if (k === 'close_date')           return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap text-[11px]">{fmtD(altQuote.close_date)}</td>;
+                            if (k === 'close_date')           return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap text-[11px]">{fmtDMonthYear(altQuote.close_date)}</td>;
                             if (k === 'cpo_no')               return <td key={k} className="px-3 py-2 font-mono text-gray-400 whitespace-nowrap text-[11px]">{altQuote.cpo_no ?? '—'}</td>;
                             if (k === 'cpo_pay_meth')         return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap text-[11px]">{altQuote.cpo_pay_meth ?? '—'}</td>;
                             if (k === 'pay_meth_name')        return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap text-[11px]">{altQuote.pay_meth_name ?? '—'}</td>;
@@ -2275,6 +2365,13 @@ function PipelineDetailsContent() {
                   onChange={e => setEditDraft(d => ({ ...d, [field.key]: e.target.value }))}
                   className={`${inp} resize-none ${changed ? 'ring-1 ring-amber-400 border-amber-300' : ''}`}
                   placeholder={`${field.label}...`}
+                />
+              ) : field.type === 'month' ? (
+                <input
+                  type="month"
+                  value={val.slice(0, 7)}
+                  onChange={e => setEditDraft(d => ({ ...d, [field.key]: e.target.value ? `${e.target.value}-01` : '' }))}
+                  className={`${inp} ${changed ? 'ring-1 ring-amber-400 border-amber-300' : ''}`}
                 />
               ) : (
                 <input

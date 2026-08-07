@@ -23,6 +23,24 @@ export const LOSS_REASONS = [
 
 export type LossReason = (typeof LOSS_REASONS)[number] | string;
 
+// ── Billing period ────────────────────────────────────────────────────────────
+export const BILLING_PERIOD_TYPES = ['Oneshot', 'Anual', 'Mensalizado'] as const;
+export type BillingPeriodType = (typeof BILLING_PERIOD_TYPES)[number];
+
+export const IMMEDIATE_BILLING_OPTIONS = ['Sim', 'Não'] as const;
+
+// ── Quote line (Part Number detail — used when a CPO has multiple parts) ────
+export type QuoteLine = {
+  part_no: string;
+  description: string;
+  prod_type: string;
+  cpo_qty: number;
+  hts_code: string;
+  hts_description: string;
+  is_engineering_ticket: string; // 'Yes' | 'No'
+  usd_value: number;
+};
+
 export type Quote = {
   id: number;
   cpo_id: string;
@@ -66,6 +84,15 @@ export type Quote = {
   lost_reason?: string;           // required when stage = Net Lost
   lost_comment?: string;          // required when stage = Net Lost
   scenarioGroupId?: string;
+  credito_aprovado?: string;      // 'Sim' | 'Não'
+  vendor_opportunity_id?: string;
+  // Multiple Part Numbers under the same CPO — detailed breakdown (grid expand)
+  lines?: QuoteLine[];
+  // Faturamento
+  immediate_billing?: string;         // 'Sim' | 'Não'
+  billing_period_type?: BillingPeriodType;
+  billing_period_count?: number;      // years (1-5) or months (12/24/36/48/60); 1 for Oneshot
+  billing_values?: number[];          // length = billing_period_count, sum must equal usd_value (CIF)
 };
 
 // ── Scenario / Cenario types ──────────────────────────────────────────────────
@@ -163,23 +190,71 @@ const VPC_CODES = ['VPC-SP01', 'VPC-RJ02', 'VPC-MG03', 'VPC-BA04', 'VPC-PR05'];
 const BILL_TO_LIST = ['Matriz SP', 'Filial RJ', 'Filial MG', 'Filial BA', 'Filial PR'];
 const CPO_PAY_METHS = ['NET30', 'NET60', 'ADVANCE', 'COD'];
 
+// Splits `total` into `parts` integer chunks that sum exactly to `total`.
+function splitAmount(total: number, parts: number, weights?: number[]): number[] {
+  if (parts <= 1) return [total];
+  const w = weights ?? Array.from({ length: parts }, () => 1 / parts);
+  const wSum = w.reduce((s, x) => s + x, 0);
+  const raw = w.map(x => (x / wSum) * total);
+  const rounded = raw.map(x => Math.round(x));
+  const diff = total - rounded.reduce((s, x) => s + x, 0);
+  rounded[rounded.length - 1] += diff; // fix rounding drift on the last chunk
+  return rounded;
+}
+
+// Deterministic billing-period breakdown whose values always sum to `cifVal`.
+function buildBilling(cifVal: number, i: number): {
+  immediate_billing: string;
+  billing_period_type: BillingPeriodType;
+  billing_period_count: number;
+  billing_values: number[];
+} {
+  const immediate_billing = i % 2 === 0 ? 'Sim' : 'Não';
+  const mod = i % 3;
+  if (mod === 0) {
+    return { immediate_billing, billing_period_type: 'Oneshot', billing_period_count: 1, billing_values: [cifVal] };
+  }
+  if (mod === 1) {
+    const years = 1 + (i % 5); // 1..5
+    return { immediate_billing, billing_period_type: 'Anual', billing_period_count: years, billing_values: splitAmount(cifVal, years) };
+  }
+  const months = [12, 24, 36, 48, 60][i % 5];
+  return { immediate_billing, billing_period_type: 'Mensalizado', billing_period_count: months, billing_values: splitAmount(cifVal, months) };
+}
+
+// Detailed Part Number lines for CPOs that bundle multiple parts.
+function buildLines(cifVal: number, qty: number, i: number): QuoteLine[] {
+  const count = 3;
+  const values = splitAmount(cifVal, count, [0.5, 0.3, 0.2]);
+  const qtys = splitAmount(qty, count, [0.5, 0.3, 0.2]).map(q => Math.max(1, q));
+  return Array.from({ length: count }, (_, li) => ({
+    part_no: `${PART_PREFIXES[(i + li) % PART_PREFIXES.length]}-${String(10000 + i * 137 + li * 9973).slice(-5)}`,
+    description: `Solucao ${PART_PREFIXES[(i + li) % PART_PREFIXES.length]} Enterprise`,
+    prod_type: PROD_TYPES[(i + li) % PROD_TYPES.length],
+    cpo_qty: qtys[li],
+    hts_code: HTS_CODES[(i + li) % HTS_CODES.length],
+    hts_description: HTS_DESCS[(i + li) % HTS_DESCS.length],
+    is_engineering_ticket: (i + li) % 6 === 0 ? 'Yes' : 'No',
+    usd_value: values[li],
+  }));
+}
+
 function buildInitial(): Quote[] {
   return Array.from({ length: 85 }, (_, i) => {
     const cifVal = USD_VALUES[i % USD_VALUES.length];
     const netVal = Math.round(cifVal * 0.88);
     const fobVal = Math.round(cifVal * 0.82);
     const gm = parseFloat((8 + (i % 15)).toFixed(1));
+    const qty = 1 + (i % 10);
+    const isMultiPart = i % 3 === 0;
+    const lines = isMultiPart ? buildLines(cifVal, qty, i) : undefined;
+    const billing = buildBilling(cifVal, i);
     return {
       id: i + 1,
       cpo_id: `CPO-${String(i + 1001).padStart(4, '0').slice(-4)}`,
       vpc_code: VPC_CODES[i % VPC_CODES.length],
-      part_no: i % 3 === 0
-        ? [
-            `${PART_PREFIXES[i % PART_PREFIXES.length]}-${String(10000 + i * 137).slice(-5)}`,
-            `${PART_PREFIXES[(i + 1) % PART_PREFIXES.length]}-${String(20000 + i * 79).slice(-5)}`,
-            `${PART_PREFIXES[(i + 2) % PART_PREFIXES.length]}-${String(30000 + i * 53).slice(-5)}`,
-          ].join(', ')
-        : `${PART_PREFIXES[i % PART_PREFIXES.length]}-${String(10000 + i * 137).slice(-5)}`,
+      lines,
+      part_no: lines ? lines.map(l => l.part_no).join(', ') : `${PART_PREFIXES[i % PART_PREFIXES.length]}-${String(10000 + i * 137).slice(-5)}`,
       description: `Solucao ${PART_PREFIXES[i % PART_PREFIXES.length]} Enterprise`,
       sales_territory: ['Sao Paulo', 'Rio de Janeiro', 'Minas Gerais'][i % 3],
       team: ['Team Alpha', 'Team Beta', 'Team Gamma'][i % 3],
@@ -191,7 +266,11 @@ function buildInitial(): Quote[] {
       net_value: netVal,
       fob_value: fobVal,
       gm_pct: gm,
-      cpo_qty: 1 + (i % 10),
+      cpo_qty: qty,
+      immediate_billing: billing.immediate_billing,
+      billing_period_type: billing.billing_period_type,
+      billing_period_count: billing.billing_period_count,
+      billing_values: billing.billing_values,
       stage: ['Pipelined', 'Pricing 25%', 'Up Selling 50%', 'Committed 75%', 'Net Lost', 'Not Classified'][i % 6],
       probability: [20, 40, 60, 80, 0, 0][i % 6],
       lost_reason: i % 5 === 4 ? LOSS_REASONS[i % LOSS_REASONS.length] : undefined,
