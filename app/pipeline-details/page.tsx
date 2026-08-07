@@ -186,6 +186,23 @@ const billingPeriodLabel = (q: Quote) => {
   return q.billing_period_type === 'Anual' ? `Anual (${count}x)` : `Mensal (${count}x)`;
 };
 
+// Splits `total` into `n` equal currency values (2 decimals) that sum exactly to `total`
+const splitEvenCurrency = (total: number, n: number): number[] => {
+  if (n <= 1) return [Math.round(total * 100) / 100];
+  const base = Math.floor((total / n) * 100) / 100;
+  const values = Array.from({ length: n }, () => base);
+  const diff = Math.round((total - base * n) * 100) / 100;
+  values[values.length - 1] = Math.round((values[values.length - 1] + diff) * 100) / 100;
+  return values;
+};
+
+// Valid period-count options for each billing period type
+const BILLING_COUNT_OPTIONS: Record<BillingPeriodType, number[]> = {
+  Oneshot: [1],
+  Anual: [1, 2, 3, 4, 5],
+  Mensalizado: [12, 24, 36, 48, 60],
+};
+
 // Component
 export default function PipelineDetailsPage() {
   return (
@@ -527,6 +544,9 @@ function PipelineDetailsContent() {
   // Edit modal
   const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
   const [editDraft, setEditDraft] = useState<Partial<Quote>>({});
+  const [sameValueAllPeriods, setSameValueAllPeriods] = useState(false);
+  // Reset the "mesmo valor" checkbox whenever a different quote (or none) is opened for edit
+  useEffect(() => { setSameValueAllPeriods(false); }, [editingQuote?.id]);
   const [historyQuote, setHistoryQuote] = useState<Quote | null>(null);
   const [activeCommentTab, setActiveCommentTab] = useState<'pipe' | 'quote'>('pipe');
 
@@ -2194,6 +2214,35 @@ function PipelineDetailsContent() {
                         if (k === 'hts_code')             return <td key={k} className="px-3 py-2.5 font-mono text-gray-600 whitespace-nowrap text-[11px]">{quote.hts_code ?? '—'}</td>;
                         if (k === 'hts_description')      return <td key={k} className="px-3 py-2.5 text-gray-600 max-w-[130px]"><span className="block truncate text-[11px]" title={quote.hts_description}>{quote.hts_description ?? '—'}</span></td>;
                         if (k === 'is_engineering_ticket') return <td key={k} className="px-3 py-2.5 text-center whitespace-nowrap">{yesNoBadge(quote.is_engineering_ticket)}</td>;
+                        if (k === 'immediate_billing')     return <td key={k} className="px-3 py-2.5 text-center whitespace-nowrap">{yesNoBadge(quote.immediate_billing === 'Sim' ? 'Yes' : 'No')}</td>;
+                        if (k === 'billing_period_type') {
+                          const values = quote.billing_values ?? [];
+                          const showTooltip = values.length > 0;
+                          return (
+                            <td key={k} className="px-3 py-2.5 whitespace-nowrap text-[11px]">
+                              <span
+                                className={`relative inline-flex items-center gap-1 ${showTooltip ? 'group cursor-help border-b border-dashed border-gray-300' : ''} text-gray-700`}
+                              >
+                                {billingPeriodLabel(quote)}
+                                {showTooltip && (
+                                  <div className="invisible group-hover:visible absolute left-0 bottom-full mb-1.5 z-50 bg-gray-900 text-white rounded-lg shadow-xl p-2.5 min-w-[180px] max-h-48 overflow-y-auto">
+                                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Valores por periodo</p>
+                                    <div className="flex flex-col gap-1">
+                                      {values.map((v, i) => (
+                                        <div key={i} className="flex items-center justify-between gap-3 text-[10px]">
+                                          <span className="text-gray-400">
+                                            {quote.billing_period_type === 'Anual' ? `Ano ${i + 1}` : quote.billing_period_type === 'Mensalizado' ? `Mes ${i + 1}` : 'Total'}
+                                          </span>
+                                          <span className="font-mono font-medium text-white">{formatUSD(v)}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </span>
+                            </td>
+                          );
+                        }
                         return <td key={k} className="px-3 py-2.5 text-gray-500 whitespace-nowrap text-[11px]">{String((quote as Record<string, unknown>)[k as string] ?? '—')}</td>;
                       })}
                     </tr>
@@ -2299,7 +2348,37 @@ function PipelineDetailsContent() {
                     )
                     : [];
 
-                  return [mainRow, ...altRows];
+                  // Part Number detail sub-rows (shown when the "+N" badge is expanded)
+                  const lineRows = (quote.lines?.length ?? 0) > 1 && expandedLineRows.has(quote.id)
+                    ? quote.lines!.map((line, lineIdx) => (
+                        <tr key={`line-${quote.id}-${lineIdx}`} className="text-[11px] bg-blue-50/30">
+                          <td className="py-2 w-0 relative">
+                            <div className="absolute left-5 top-0 bottom-0 w-px bg-blue-200" />
+                          </td>
+                          <td className="px-1 py-2" />
+                          <td className="px-1 py-2" />
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <div className="flex items-center gap-1.5 pl-5">
+                              <span className="text-blue-300 font-mono text-[10px] shrink-0">└</span>
+                              <span className="font-mono text-blue-600 font-medium text-[11px]">{line.part_no}</span>
+                            </div>
+                          </td>
+                          {orderedColumns.slice(1).map(col => {
+                            const k = col.key;
+                            if (k === 'description')          return <td key={k} className="px-3 py-2 text-gray-500 max-w-[140px]"><span className="block truncate text-[11px]">{line.description}</span></td>;
+                            if (k === 'prod_type')            return <td key={k} className="px-3 py-2 text-gray-500 whitespace-nowrap text-[11px]">{line.prod_type}</td>;
+                            if (k === 'cpo_qty')              return <td key={k} className="px-3 py-2 text-center text-gray-500 whitespace-nowrap">{line.cpo_qty}</td>;
+                            if (k === 'usd_value')            return <td key={k} className="px-3 py-2 text-right text-emerald-600 font-medium whitespace-nowrap text-[11px]">{formatUSD(line.usd_value)}</td>;
+                            if (k === 'hts_code')             return <td key={k} className="px-3 py-2 font-mono text-gray-500 whitespace-nowrap text-[11px]">{line.hts_code}</td>;
+                            if (k === 'hts_description')      return <td key={k} className="px-3 py-2 text-gray-500 max-w-[130px]"><span className="block truncate text-[11px]">{line.hts_description}</span></td>;
+                            if (k === 'is_engineering_ticket') return <td key={k} className="px-3 py-2 text-center whitespace-nowrap">{yesNoBadge(line.is_engineering_ticket)}</td>;
+                            return <td key={k} className="px-3 py-2 text-gray-300 whitespace-nowrap text-[11px]">—</td>;
+                          })}
+                        </tr>
+                      ))
+                    : [];
+
+                  return [mainRow, ...lineRows, ...altRows];
                 })}
               </tbody>
             </table>
@@ -2395,6 +2474,11 @@ function PipelineDetailsContent() {
           }
           return String(draftVal) !== String(editingQuote[k as keyof Quote] ?? '');
         }).length;
+
+        // Block saving when the per-period billing values don't add up to the CIF total
+        const billingValuesForSave = ((editDraft as Record<string, unknown>)['billing_values'] ?? editingQuote.billing_values ?? [editingQuote.usd_value ?? 0]) as number[];
+        const billingSumForSave = billingValuesForSave.reduce((s, v) => s + (Number.isFinite(v) ? v : 0), 0);
+        const billingInvalid = Math.abs((editingQuote.usd_value ?? 0) - billingSumForSave) >= 0.01;
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -2532,9 +2616,9 @@ function PipelineDetailsContent() {
                                     {!closeOverdue && closeUrgent && daysLeft !== null && <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-700 ml-1">{daysLeft}d</span>}
                                   </span>
                                   <input
-                                    type="date"
-                                    value={cdVal}
-                                    onChange={e => setEditDraft(d => ({ ...d, close_date: e.target.value }))}
+                                    type="month"
+                                    value={cdVal.slice(0, 7)}
+                                    onChange={e => setEditDraft(d => ({ ...d, close_date: e.target.value ? `${e.target.value}-01` : '' }))}
                                     className={`px-2 py-1 text-xs border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 ${cdChanged ? 'ring-1 ring-amber-400 border-amber-300' : 'border-gray-200'} ${closeOverdue ? 'text-red-600' : closeUrgent ? 'text-amber-600' : 'text-gray-700'}`}
                                   />
                                 </div>
@@ -2699,6 +2783,167 @@ function PipelineDetailsContent() {
 
                 <div className="mx-6 border-t border-gray-100 dark:border-gray-800" />
 
+                {/* -- Faturamento -- */}
+                {(() => {
+                  const cifTotal = editingQuote.usd_value ?? 0;
+
+                  const immVal = String((editDraft as Record<string, unknown>)['immediate_billing'] ?? editingQuote.immediate_billing ?? '');
+                  const immChanged = (editDraft as Record<string, unknown>)['immediate_billing'] !== undefined &&
+                    String((editDraft as Record<string, unknown>)['immediate_billing']) !== String(editingQuote.immediate_billing ?? '');
+
+                  const periodType = ((editDraft as Record<string, unknown>)['billing_period_type'] ?? editingQuote.billing_period_type ?? 'Oneshot') as BillingPeriodType;
+                  const periodTypeChanged = (editDraft as Record<string, unknown>)['billing_period_type'] !== undefined &&
+                    String((editDraft as Record<string, unknown>)['billing_period_type']) !== String(editingQuote.billing_period_type ?? '');
+
+                  const periodCount = ((editDraft as Record<string, unknown>)['billing_period_count'] ?? editingQuote.billing_period_count ?? 1) as number;
+
+                  const billingValues = ((editDraft as Record<string, unknown>)['billing_values'] ?? editingQuote.billing_values ?? [cifTotal]) as number[];
+                  const billingValuesSum = billingValues.reduce((s, v) => s + (Number.isFinite(v) ? v : 0), 0);
+                  const billingSumDiff = Math.round((cifTotal - billingValuesSum) * 100) / 100;
+                  const billingSumMatches = Math.abs(billingSumDiff) < 0.01;
+
+                  // Applies a new period type: resets count to the first valid option and re-splits the CIF evenly
+                  const applyPeriodType = (newType: BillingPeriodType) => {
+                    const newCount = BILLING_COUNT_OPTIONS[newType][0];
+                    setEditDraft(d => ({
+                      ...d,
+                      billing_period_type: newType,
+                      billing_period_count: newCount,
+                      billing_values: splitEvenCurrency(cifTotal, newCount),
+                    }));
+                    setSameValueAllPeriods(true);
+                  };
+
+                  // Applies a new period count for the current type and re-splits the CIF evenly
+                  const applyPeriodCount = (newCount: number) => {
+                    setEditDraft(d => ({
+                      ...d,
+                      billing_period_count: newCount,
+                      billing_values: splitEvenCurrency(cifTotal, newCount),
+                    }));
+                    setSameValueAllPeriods(true);
+                  };
+
+                  const toggleSameValue = (checked: boolean) => {
+                    setSameValueAllPeriods(checked);
+                    if (checked) {
+                      setEditDraft(d => ({ ...d, billing_values: splitEvenCurrency(cifTotal, periodCount) }));
+                    }
+                  };
+
+                  const updateBillingValueAt = (idx: number, rawValue: string) => {
+                    const num = rawValue === '' ? 0 : Number(rawValue);
+                    const next = [...billingValues];
+                    next[idx] = Number.isFinite(num) ? num : 0;
+                    setEditDraft(d => ({ ...d, billing_values: next }));
+                    setSameValueAllPeriods(false);
+                  };
+
+                  const periodLabel = (idx: number) =>
+                    periodType === 'Anual' ? `Ano ${idx + 1}` : periodType === 'Mensalizado' ? `Mes ${idx + 1}` : 'Valor Total';
+
+                  return (
+                    <div className="px-6 pt-4 pb-4">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Faturamento</p>
+
+                      {/* Faturamento Imediato + Periodo de Faturamento */}
+                      <div className="grid grid-cols-2 gap-4 mb-3">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+                            Faturamento Imediato
+                            {immChanged && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" title="Alterado" />}
+                          </label>
+                          <select
+                            value={immVal}
+                            onChange={e => setEditDraft(d => ({ ...d, immediate_billing: e.target.value }))}
+                            className={`${inp} bg-white ${immChanged ? 'ring-1 ring-amber-400 border-amber-300' : ''}`}
+                          >
+                            <option value="">—</option>
+                            {IMMEDIATE_BILLING_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                          </select>
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+                            Periodo de Faturamento
+                            {periodTypeChanged && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" title="Alterado" />}
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={periodType}
+                              onChange={e => applyPeriodType(e.target.value as BillingPeriodType)}
+                              className={`${inp} bg-white flex-1 ${periodTypeChanged ? 'ring-1 ring-amber-400 border-amber-300' : ''}`}
+                            >
+                              {BILLING_PERIOD_TYPES.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                            {periodType !== 'Oneshot' && (
+                              <select
+                                value={periodCount}
+                                onChange={e => applyPeriodCount(Number(e.target.value))}
+                                className={`${inp} bg-white w-24`}
+                              >
+                                {BILLING_COUNT_OPTIONS[periodType].map(c => (
+                                  <option key={c} value={c}>{c}{periodType === 'Anual' ? (c === 1 ? ' ano' : ' anos') : ' meses'}</option>
+                                ))}
+                              </select>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Valores por periodo */}
+                      <div className="rounded-lg border border-gray-200 p-3">
+                        <div className="flex items-center justify-between mb-2.5">
+                          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Valores por Periodo</p>
+                          {periodCount > 1 && (
+                            <label className="flex items-center gap-1.5 text-[11px] text-gray-600 cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                checked={sameValueAllPeriods}
+                                onChange={e => toggleSameValue(e.target.checked)}
+                                className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              Igual todos os periodos
+                            </label>
+                          )}
+                        </div>
+
+                        <div className={`grid gap-2 ${periodCount > 6 ? 'grid-cols-4' : periodCount > 2 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                          {Array.from({ length: periodCount }, (_, idx) => (
+                            <div key={idx} className="flex flex-col gap-0.5">
+                              <span className="text-[10px] text-gray-400 leading-none">{periodLabel(idx)}</span>
+                              <div className="relative">
+                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-gray-400 pointer-events-none">$</span>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  step="0.01"
+                                  disabled={sameValueAllPeriods}
+                                  value={billingValues[idx] ?? 0}
+                                  onChange={e => updateBillingValueAt(idx, e.target.value)}
+                                  className={`${inp} pl-5 ${sameValueAllPeriods ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''} ${!billingSumMatches ? 'border-red-300' : ''}`}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Live validation vs. CIF total */}
+                        <div className={`mt-3 flex items-center justify-between text-[11px] rounded-md px-2.5 py-1.5 ${billingSumMatches ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+                          <span>Soma: <strong>{formatUSD(billingValuesSum)}</strong> / Total (CIF): <strong>{formatUSD(cifTotal)}</strong></span>
+                          {!billingSumMatches && (
+                            <span className="font-semibold">
+                              {billingSumDiff > 0 ? `Faltam ${formatUSD(billingSumDiff)}` : `Excesso de ${formatUSD(Math.abs(billingSumDiff))}`}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <div className="mx-6 border-t border-gray-100 dark:border-gray-800" />
+
                 {/* -- Comentarios — abas Pipe | Quote -- */}
                 {(() => {
                   const activeTab = activeCommentTab;
@@ -2852,17 +3097,18 @@ function PipelineDetailsContent() {
                   </button>
                   {!savedFeedback && (
                     <button
-                      onClick={() => { if (changedCount > 0) setConfirmEditSave(true); }}
-                      disabled={changedCount === 0 || confirmEditSave}
-                      className={`flex items-center gap-2 px-5 py-2 text-xs font-semibold rounded-lg transition-all ${
-                        changedCount > 0 && !confirmEditSave
-                          ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
-                          : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      }`}
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                      {changedCount > 0 ? `Salvar ${changedCount} ${changedCount === 1 ? 'alteracao' : 'alteracoes'}` : 'Sem alteracoes'}
-                    </button>
+                  onClick={() => { if (changedCount > 0 && !billingInvalid) setConfirmEditSave(true); }}
+                  disabled={changedCount === 0 || confirmEditSave || billingInvalid}
+                  title={billingInvalid ? 'A soma dos valores por periodo precisa ser igual ao valor CIF' : undefined}
+                  className={`flex items-center gap-2 px-5 py-2 text-xs font-semibold rounded-lg transition-all ${
+                    changedCount > 0 && !confirmEditSave && !billingInvalid
+                      ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  {billingInvalid ? 'Corrija os valores de faturamento' : changedCount > 0 ? `Salvar ${changedCount} ${changedCount === 1 ? 'alteracao' : 'alteracoes'}` : 'Sem alteracoes'}
+                </button>
                   )}
                 </div>
               </div>
