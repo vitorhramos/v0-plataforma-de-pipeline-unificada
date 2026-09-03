@@ -1995,15 +1995,18 @@ function PipelineDetailsContent() {
                   // A subordinate quote surfaced by an active search/filter
                   const isStandaloneSubordinate = nonPrimaryIds.has(quote.id);
 
+                  const isExpandedGroupPrimary = group && isPrimaryOfGroup && isGroupExpanded;
                   const mainRow = (
                     <tr key={`row-${quote.id}`} className={`transition-colors text-gray-900 ${
-                      isStandaloneSubordinate
-                        ? 'bg-violet-50/60 hover:bg-violet-100/60 border-l-2 border-l-violet-400'
-                        : selectedIds.has(quote.id)
-                          ? 'bg-blue-50 hover:bg-blue-50'
-                          : idx % 2 === 1
-                            ? 'bg-gray-50/50 hover:bg-blue-50'
-                            : 'bg-white hover:bg-blue-50'
+                      isExpandedGroupPrimary
+                        ? 'bg-violet-100/70 hover:bg-violet-100 border-l-4 border-l-violet-500 border-t border-t-violet-200'
+                        : isStandaloneSubordinate
+                          ? 'bg-violet-50/60 hover:bg-violet-100/60 border-l-2 border-l-violet-400'
+                          : selectedIds.has(quote.id)
+                            ? 'bg-blue-50 hover:bg-blue-50'
+                            : idx % 2 === 1
+                              ? 'bg-gray-50/50 hover:bg-blue-50'
+                              : 'bg-white hover:bg-blue-50'
                     }`}>
                       <td className="px-3 py-2.5">
                         <input type="checkbox" checked={selectedIds.has(quote.id)} onChange={() => toggleSelect(quote.id)} {...(idx === 0 ? { 'data-tour': 'row-checkbox' } : {})} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
@@ -2250,14 +2253,14 @@ function PipelineDetailsContent() {
 
                   // Alternate scenario rows (expanded inline)
                   const altRows = (group && isPrimaryOfGroup && isGroupExpanded)
-                    ? alternateScenarios.map(({ meta, altQuote }, altIdx) => altQuote ? (
-                        <tr key={`alt-${altQuote.id}`} className="text-[11px] bg-violet-50/40">
+                    ? alternateScenarios.map(({ meta, altQuote }, altIdx) => {
+                        const isLastAlt = altIdx === alternateScenarios.length - 1;
+                        return altQuote ? (
+                        <tr key={`alt-${altQuote.id}`} className={`text-[11px] bg-violet-50 hover:bg-violet-100/70 transition-colors border-l-4 border-l-violet-500 ${isLastAlt ? 'border-b-2 border-b-violet-300' : ''}`}>
                           {/* Indent cell with vertical connector line */}
                           <td className="py-2 w-0 relative">
-                            <div className="absolute left-5 top-0 bottom-0 w-px bg-violet-300" />
-                            {altIdx === alternateScenarios.length - 1 && (
-                              <div className="absolute left-5 top-0 h-1/2 w-px bg-violet-300" />
-                            )}
+                            <div className={`absolute left-5 top-0 w-px bg-violet-300 ${isLastAlt ? 'h-1/2' : 'bottom-0'}`} />
+                            <div className="absolute left-5 top-1/2 w-2 h-px bg-violet-300" />
                           </td>
                           <td className="px-1 py-2">
                             <button onClick={() => { setEditingQuote(altQuote); setEditDraft({}); }} className="p-1 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition">
@@ -2344,8 +2347,8 @@ function PipelineDetailsContent() {
                             return <td key={k} className="px-3 py-2 text-gray-400 whitespace-nowrap text-[11px]">{String((altQuote as Record<string, unknown>)[k as string] ?? '—')}</td>;
                           })}
                         </tr>
-                      ) : null
-                    )
+                      ) : null;
+                    })
                     : [];
 
                   // Part Number detail sub-rows (shown when the "+N" badge is expanded)
